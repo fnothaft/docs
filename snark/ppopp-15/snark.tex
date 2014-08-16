@@ -1,0 +1,76 @@
+\documentclass[10pt,twocolumn]{article}
+\topmargin=0.0in %length of margin at the top of the page (1 inch added by default)
+\oddsidemargin=0.0in %length of margin on sides for odd pages
+\evensidemargin=0in %length of margin on sides for even pages
+\textwidth=6.5in %How wide you want your text to be
+\marginparwidth=0.5in
+\headheight=0pt %1in margins at top and bottom (1 inch is added to this value by default)
+\headsep=0pt %Increase to increase white space in between headers and the top of the page
+\textheight=9.1in %How tall the text body is allowed to be on each page
+
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{authblk}
+\usepackage{wrapfig} % added from executive summary
+\usepackage{etaremune}
+\usepackage{hyperref}
+\usepackage{amsthm}
+\usepackage{listings} 
+
+\theoremstyle{plain}
+
+\widowpenalty=500
+\clubpenalty=500
+\setlength{\parskip}{3pt}
+
+\renewcommand\Authfont{\fontsize{12}{14.4}\selectfont}
+\renewcommand\Affilfont{\fontsize{9}{10.8}\selectfont}
+
+\lstdefinelanguage{scala}{morekeywords={class,object,trait,extends,with,new,if,while,for,def,val,var,this},
+otherkeywords={->,=>},
+sensitive=true,
+morecomment=[l]{//},
+morecomment=[s]{/*}{*/},
+morestring=[b]"}
+% Default settings for code listings
+\lstset{frame=tb,language=scala,aboveskip=3mm,belowskip=3mm,showstringspaces=false,columns=flexible,basicstyle={\small\ttfamily}}
+
+\date{}
+
+\begin{document}
+
+\title{\texttt{Snark}: a distributed programming framework for nested arrays}
+\author[1]{Frank~Austin~Nothaft}
+\author[2]{Michael Linderman}
+\affil[1]{Department of Electrical Engineering and Computer Science, University of California, Berkeley}
+\affil[2]{Carl Icahn School of Medicine at Mount Sinai}
+
+\maketitle
+
+\raggedbottom
+
+\abstract
+
+Nested arrays present a natural programming interface for expressing many different parallel
+algorithms. In this paper, we present the \textbf{S}calable \textbf{N}ested \textbf{AR}ray
+\textbf{K}it~(\texttt{Snark}), a distributed framework for expressing computation on nested arrays.
+
+\section{Introduction}
+
+\label{sec:introduction}
+
+The nested array programming model was introduced by Blelloch~\cite{blelloch90} as a
+functional programming model for expressing data parallel computation.
+
+Although several implementations of the nested vector model have been published, all of the
+implementations have been designed to exploit parallelism from multiple cores on a single node.
+\texttt{Snark} provides a distributed implementation of canonical nested array operations on top of the
+Apache Spark~\cite{zaharia10} in-memory map-reduce framework. Instead of using static techniques to
+extract parallelism from the computation, \texttt{Snark} dynamically inspects the structure of the nested
+arrays that are being computed upon to optimize the distribution of data and computation.
+
+\bibliographystyle{acm}
+
+\bibliography{snark}
+
+\end{document}
