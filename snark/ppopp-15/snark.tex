@@ -1,12 +1,35 @@
-\documentclass[10pt,twocolumn]{article}
-\topmargin=0.0in %length of margin at the top of the page (1 inch added by default)
-\oddsidemargin=0.0in %length of margin on sides for odd pages
-\evensidemargin=0in %length of margin on sides for even pages
-\textwidth=6.5in %How wide you want your text to be
-\marginparwidth=0.5in
-\headheight=0pt %1in margins at top and bottom (1 inch is added to this value by default)
-\headsep=0pt %Increase to increase white space in between headers and the top of the page
-\textheight=9.1in %How tall the text body is allowed to be on each page
+%-----------------------------------------------------------------------------
+%
+%               Template for sigplanconf LaTeX Class
+%
+% Name:         sigplanconf-template.tex
+%
+% Purpose:      A template for sigplanconf.cls, which is a LaTeX 2e class
+%               file for SIGPLAN conference proceedings.
+%
+% Guide:        Refer to "Author's Guide to the ACM SIGPLAN Class,"
+%               sigplanconf-guide.pdf
+%
+% Author:       Paul C. Anagnostopoulos
+%               Windfall Software
+%               978 371-2316
+%               paul@windfall.com
+%
+% Created:      15 February 2005
+%
+%-----------------------------------------------------------------------------
+
+
+\documentclass[preprint]{sigplanconf}
+
+% The following \documentclass options may be useful:
+
+% preprint      Remove this option only once the paper is in final form.
+% 10pt          To set in 10-point type instead of 9-point.
+% 11pt          To set in 11-point type instead of 9-point.
+% authoryear    To obtain author/year citation style instead of numeric.
+
+\usepackage{amsmath}
 
 \usepackage{url}
 \usepackage{graphicx}
@@ -19,12 +42,6 @@
 
 \theoremstyle{plain}
 
-\widowpenalty=500
-\clubpenalty=500
-\setlength{\parskip}{3pt}
-
-\renewcommand\Authfont{\fontsize{12}{14.4}\selectfont}
-\renewcommand\Affilfont{\fontsize{9}{10.8}\selectfont}
 
 \lstdefinelanguage{scala}{morekeywords={class,object,trait,extends,with,new,if,while,for,def,val,var,this},
 otherkeywords={->,=>},
@@ -35,39 +52,118 @@ morestring=[b]"}
 % Default settings for code listings
 \lstset{frame=tb,language=scala,aboveskip=3mm,belowskip=3mm,showstringspaces=false,columns=flexible,basicstyle={\small\ttfamily}}
 
-\date{}
-
 \begin{document}
 
-\title{\texttt{Snark}: a distributed programming framework for nested arrays}
-\author[1]{Frank~Austin~Nothaft}
-\author[2]{Michael Linderman}
-\affil[1]{Department of Electrical Engineering and Computer Science, University of California, Berkeley}
-\affil[2]{Carl Icahn School of Medicine at Mount Sinai}
+\special{papersize=8.5in,11in}
+\setlength{\pdfpageheight}{\paperheight}
+\setlength{\pdfpagewidth}{\paperwidth}
+
+\conferenceinfo{PPoPP '15}{February 7--11, 2015, San Francisco, CA, USA} 
+\copyrightyear{2015}
+\copyrightdata{978-1-nnnn-nnnn-n/yy/mm} 
+\doi{nnnnnnn.nnnnnnn}
+
+% Uncomment one of the following two, if you are not going for the 
+% traditional copyright transfer agreement.
+
+%\exclusivelicense                % ACM gets exclusive license to publish, 
+                                  % you retain copyright
+
+%\permissiontopublish             % ACM gets nonexclusive license to publish
+                                  % (paid open-access papers, 
+                                  % short abstracts)
+
+\titlebanner{Partition Balancing in Distributed Nested Data-Parallel Systems}
+\preprintfooter{DRAFT---do not distribute} 
+
+
+\title{Partition Balancing in Distributed Nested Data-Parallel Systems}
+\authorinfo{Frank~Austin~Nothaft}
+{Department of Electrical Engineering and Computer Science, University of California, Berkeley}
+{fnothaft@eecs.berkeley.edu}
+
+\authorinfo{Michael Linderman}
+{Carl Icahn School of Medicine at Mount Sinai}
+{michael.linderman@mssm.edu}
 
 \maketitle
 
 \raggedbottom
 
-\abstract
+\begin{abstract}
 
-Nested arrays present a natural programming interface for expressing many different parallel
-algorithms. In this paper, we present the \textbf{S}calable \textbf{N}ested \textbf{AR}ray
-\textbf{K}it~(\texttt{Snark}), a distributed framework for expressing computation on nested arrays.
+Map-reduce frameworks such as Apache Hadoop and Spark provide the abstraction of a large, flat
+array that is processed in parallel across many machines. While this simple programming model has
+enabled the broad adoption of data-parallel distributed frameworks, these systems cannot express
+irregular parallel computation, and their performance is impacted by data imbalance across nodes.
+In this paper, we present a distributed framework for implementing \emph{nested data parallel}~(NDP)
+computation. Unlike previous NDP systems described by Blelloch and Bergstrom et al. that relied on
+the use of a \emph{flattening} transformation at compile-time, we present a cost model that is used
+to select between multiple partitioning strategies at run-time. Through this, we provide a user-tunable
+means for trading node-to-node imbalance versus communication when executing distributed NDP
+programs.
+
+\end{abstract}
 
 \section{Introduction}
-
 \label{sec:introduction}
 
-The nested array programming model was introduced by Blelloch~\cite{blelloch90} as a
-functional programming model for expressing data parallel computation.
+The use of map-reduce as a flat data-parallel~(FDP) programming model for distributed systems has
+grown rapidly since it was introduced in Google's seminal 2004 paper~\cite{dean04}. The development
+of the open-source Apache Hadoop system enabled the use of this programming model outside of
+Google. Modern map-reduce systems such as Apache Spark~\cite{zaharia10} have refined the
+programming model further by reducing the dependency of the framework on disk via in-memory
+caching. While this refinement has enabled the use of map-reduce for iterative workloads, the
+programming model remains confined to computation that can be expressed via flat data-parallel
+operations. Specifically, Spark presents users with the abstraction of a resilient distributed
+dataset~(RDD), which appears as a flat array that is distributed across compute nodes in a
+cluster~\cite{zaharia12}.
 
-Although several implementations of the nested vector model have been published, all of the
-implementations have been designed to exploit parallelism from multiple cores on a single node.
-\texttt{Snark} provides a distributed implementation of canonical nested array operations on top of the
-Apache Spark~\cite{zaharia10} in-memory map-reduce framework. Instead of using static techniques to
-extract parallelism from the computation, \texttt{Snark} dynamically inspects the structure of the nested
-arrays that are being computed upon to optimize the distribution of data and computation.
+To expand the algorithms that could be expressed as a data-parallel computation, Blelloch introduced
+the nested data-\linebreak parallel~(NDP) model~\cite{blelloch90thesis}. In this programming model,
+users are provided the abstraction of an array whose elements are a nested level of arrays and
+data-parallel operators are applied on the nested arrays. A primary complication in the implementation
+of the NDP model is that the nested arrays frequently do not have uniform size. Several approaches
+have been suggested for balancing work in NDP programs, including the compile-time vectorization of
+NDP programs for execution on single-instruction multiple-data~(SIMD)
+machines~\cite{blelloch90thesis, blelloch90compiling} and flattening for multiple-instruction
+multiple-data~(MIMD) machines~\cite{bergstrom13}. Additionally, dynamic work-stealing approaches
+have been implemented~\cite{bergstrom10}.
+
+In this paper, we introduce a distributed programming framework for NDP algorithms. Our implementation
+is built on top of Apache Spark. We track the structure of the nested arrays at runtime and choose between
+two strategies~(\emph{uniform} and \emph{segmented}) for partitioning data across machines based on
+the estimated cost of each strategy. In the segmented partitioning strategy, all values in a single nested
+segment are co-located on a single compute node, and most computation can proceed without
+communication. The uniform strategy provides perfect load balance across all nodes, but many operations
+will need to communicate to execute. To choose between these strategies at runtime, we provide a cost
+model that evaluates the performance tradeoff of communication overhead versus node-to-node
+imbalance. Since the partitioning strategy is chosen at runtime, we can leverage knowledge of the nested
+array structure.
+
+\section{Background}
+\label{sec:background}
+
+\subsection{Nested Array Programming Models}
+\label{sec:nested-array-programming-models}
+
+\subsection{Data Parallel Distributed Computing Models}
+\label{sec:data-parallel-distributed-computing-models}
+
+\section{Characterizing and Modeling Imbalance in Nested Arrays}
+\label{sec:imbalance}
+
+\section{Implementation}
+\label{sec:implementation}
+
+\section{Performance}
+\label{sec:performance}
+
+\section{Discussion}
+\label{sec:discussion}
+
+\section{Conclusion}
+\label{sec:conclusion}
 
 \bibliographystyle{acm}
 
