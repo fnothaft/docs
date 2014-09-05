@@ -1,0 +1,197 @@
+\documentclass[10pt]{article}
+\topmargin=0.0in %length of margin at the top of the page (1 inch added by default)
+\oddsidemargin=0.0in %length of margin on sides for odd pages
+\evensidemargin=0in %length of margin on sides for even pages
+\textwidth=6.5in %How wide you want your text to be
+\marginparwidth=0.5in
+\headheight=0pt %1in margins at top and bottom (1 inch is added to this value by default)
+\headsep=0pt %Increase to increase white space in between headers and the top of the page
+\textheight=9.1in %How tall the text body is allowed to be on each page
+
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{listings}
+
+\begin{document}
+
+\title{EE227BT: Convex Optimization}
+
+\maketitle
+
+\section{Lecture 1---8/28/2014}
+
+Def: A set $C$ in $\mathbb{R}^n$ is convex if for any $X,y \in C$, the line segment $\theta x + (1 - \theta) y (\theta \ge 0)$ also lies in $C$
+
+Convex: $\theta_1 x + \theta_2 y \in C$, where $\theta_1, \theta_2 \ge 0$, and $\theta_1 + \theta_2 = 1$
+Linear: restrictions on $\theta_1, \theta_2$ are dropped
+Conic: if restriction $\theta_1 + \theta_2 = 1$ is dropped
+
+$S^n_+ = \{ X positive semidefinite \}$
+
+Is a convex cone, because $V^T Z V \ge 0 \forall V$
+
+Theorem: $C_1, C_2$ are convex, $C_1 \cap C_2$ is also convex
+
+Convex hull is the intersection of all convex sets that contain a point
+
+\section{Lecture 2---9/2/2014}
+
+epigraph: $epi f => \{(x, t), t \ge f(x) \}$
+
+$epi f$ is convex if $f$ is convex, and vv
+
+composition with affine functions: if we have a convex function, and we compose it with a linear/affine function, the resulting function composition will be convex
+
+adding convex functions will maintain convexity, subtracting will not necessarily
+how do you prove convexity with subtraction?
+
+$$
+\hat{f}(y) -> f(Ay + b) \\
+\nabla \hat{f}(y) = A^T \nabla f(Ay + b) \\
+\nabla^2 \hat{f}(y) = A^T \nabla^2 f(Ay + b) A
+$$
+
+\subsection{Fenchel Conjugate}
+
+Fenchel Conjugate: take a function, make another function that is always convex
+
+Let $||.||$ be a norm on $\mathbb{R}^n$. Its dual norm is $||u||_* := \sup \{ u^Tx | ||x|| \le 1 \}$
+
+The Fenchel Conjugate of a function f is:
+
+$f^*(z) = \sup_{x \in \dom f} x^T z - f(x)$
+
+indicator function is convex iff set is convex
+
+If $f(x)$ is convex (and a technical condition is met), $f^*^* = f(x)$
+
+\subsection{Subdifferentials}
+
+First order global under estimator: $f(x) \ge f(y) + <g, x - y>$
+
+Line supporting a graph: whole epigraph is on one side of the line, line passes through the point of interest
+
+If function is differentiable, there is a single line (slope matches the gradient), if the function is undifferentiable, there are >> 1 functions that can support the graph
+
+$g$ is a valid sub gradient if 
+$$
+x \in \mathbb{R}^n \\
+g \in \mathbb{R}^n \\
+f(y) \ge f(x) + g^T(y - x)
+$$
+
+$$
+x -> x^T S x \\
+G = x x^T \\
+\tr(x^T S x) = \tr(S x x^T)
+$$
+
+\section{Lecture 3---9/4/2014}
+
+\subsection{Homework hints}
+
+\begin{itemize}
+\item Sum of k largest eigenvalues of a matrix $\rightarrow$ not obvious to prove that it is convex
+\begin{itemize}
+\item Know that the largest eigenvalue is convex
+\item If you have a matrix S, you can add a positive semidefinite matrix, which gives another symmetric matrix; how do the eigenvalues change $\rightarrow$ they increase
+\item Theorem $\rightarrow$ minimax representation of eigenvalues
+\end{itemize}
+\end{itemize}
+
+\subsection{Optimization problem}
+
+Let $f_i: \mathbb{R}^n \rightarrow \mathbb{R} (0 \le u \le m)$, generic nonlinear program is:
+
+$$
+\min f_0(x)
+s.t. f_i(x) \le 0, 1 \le i \le m
+x \in \{\dom f_0 \cap \dots \cap \dom f_m \}
+$$
+
+Drop condition on domains for brevity.
+
+\begin{itemize}
+\item If $f_i$ are differentiable $\rightarrow$ smooth optimization
+\end{itemize}
+
+Convex optimization is specifically:
+
+$$
+\min f_0(x)
+$$
+$$
+s.t. f_i(x) \le 0, 1 \le i \le m
+$$
+$$
+Ax = b
+$$
+
+Observe:
+
+\begin{itemize}
+\item All $f_i$ are convex
+\item Direction of inequality $f_i(x) \le 0$ is critical
+\item Only allow affine equality $\rightarrow$ affine functions are both convex and concave
+\end{itemize}
+
+We denote the feasible set $\mathcal{X}$:
+
+$$
+\mathcal{X} = {x \in \mathbb{R}^n | f_i(x) \le 0, 1 \le i \le m, Ax = b}
+$$
+
+The optimal value $p^*$ is defined by:
+
+$$
+p^* := \inf { f_0(x) | x \in \mathcal{X} }
+$$
+
+IFF $\mathcal{X} = \nullset$, problem is infeasible, $p^* = +\infty$
+If $p^* = -\infty$, we call problem \emph{unbounded below}
+
+\subsection{Optimality}
+
+A point $x^* \in \mathcal{X}$ is \emph{locally optimal} if $f(x^*) \ge f(x) \forall x$ in a neighborhood of
+$x^*$. $x^*$ is \emph{globally optimal} if $f(x^*) \ge f(x) \forall x \in \mathcal{X}$.
+
+Only allow a single constraint; can turn multiple constraints, e.g.:
+
+$$
+f_1(x) \le 0
+$$
+$$
+f_2(x) \le 0
+$$
+
+Into a single constraint via:
+
+$$
+\max_x f_1(x), f_2(x) \le 0
+$$
+
+We are at a stable point if $\del f(x) = 0$. If we are convex, $x$ is a global minimum. If we are convex
+and at a non differentiable point, we are at a minimum if 0 is a valid subgradient (e.g., $0 \in \delta
+f(x)$).
+
+Subgradient:
+
+$g \in \mathbb{R}^n$ is a sub gradient of $f() \at x$ if $\forall y, f(y) \ge f(x) + g^T(y - x)$.
+
+\subsection{Monotonic Transformation}
+
+Say $\phi_0, \mathbb{R} \rightarrow \mathbb{R}$ is monotonically increasing, $\phi_i$ satisfies
+$\phi_i(u) \le 0, \iff u \le 0$, can transform to convex via composition.
+
+E.g., $f(x_1, x_2, x_3) = x^{1.5}_1 x_2^{-2} x_3^{3}$ is non-convex. However, $\log f(x_1, x_2, x_3)$ is
+convex ($f(x_1, x_2, x_3) \rightarrow 1.5 y_1 - 2 y_2 + 3 y_3, x_i = log y_i$).
+
+\subsection{Slack variables}
+
+Turn inequalities into equalities $\rightarrow Ax \ge b \rightarrow Ax + s = b, s \ge 0$.
+Useful if you can use variables to reduce the dimension of the problem.
+
+\end{document}

@@ -1,0 +1,87 @@
+\documentclass[10pt]{article}
+\topmargin=0.0in %length of margin at the top of the page (1 inch added by default)
+\oddsidemargin=0.0in %length of margin on sides for odd pages
+\evensidemargin=0in %length of margin on sides for even pages
+\textwidth=6.5in %How wide you want your text to be
+\marginparwidth=0.5in
+\headheight=0pt %1in margins at top and bottom (1 inch is added to this value by default)
+\headsep=0pt %Increase to increase white space in between headers and the top of the page
+\textheight=9.1in %How tall the text body is allowed to be on each page
+
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{listings}
+
+\begin{document}
+
+\date{}
+\title{CS286: Database Systems}
+
+\maketitle
+
+\section{Lecture 3---9/4/2014}
+
+\subsection{R*}
+
+\begin{itemize}
+\item Assumptions:
+\begin{itemize}
+\item There are administrative causes behind distributed data
+\item Network: unreliable transport, in-order, packets are intact
+\item Independent node failure
+\item Slow-ish network
+\end{itemize}
+\item Research goals:
+\begin{itemize}
+\item ``Site autonomy'': No centralized state or control
+\begin{itemize}
+\item Data you touch should determine the sites you talk to
+\item ``Distributed system is a system that fails because a machine you've never heard of fails''
+\item Load sharing and decentralization
+\item Less communication
+\item Harder to coordinate data consistency
+\item More network connections beyond hub and spoke
+\item Metadata management is harder
+\end{itemize}
+\item Location transparency $\rightarrow$ emulate a centralized DB
+\item Don't assume much about the network or OS
+\end{itemize}
+\item Highlights:
+\begin{itemize}
+\item Query optimizer cost modeling
+\item Data layouts $\rightarrow$ horizontal partitioning
+\item Replication
+\item Distribution
+\item Query compilation---unclear as to balance between compilation overhead and work saving
+\item Spent a lot of time talking about 2PC $\rightarrow$ presumed commit
+\end{itemize}
+\end{itemize}
+
+\subsection{Gamma}
+
+\begin{itemize}
+\item Assumptions:
+\begin{itemize}
+\item Fast interconnect---hypercube, more network bandwidth than aggregate disk bandwidth
+\item Shared nothing---no disk or memory sharing
+\end{itemize}
+\item Research goals:
+\begin{itemize}
+\item Scale
+\end{itemize}
+\item Highlights:
+\begin{itemize}
+\item Parallel hybrid-hash join
+\item Chained declustering
+\end{itemize}
+\item Assess:
+\begin{itemize}
+\item Linear speedup + scale-up
+\item Superlinear speedup due to minimized seek count at scale
+\end{itemize}
+\end{itemize}
+
+\end{document}
