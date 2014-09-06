@@ -130,31 +130,65 @@ machines~\cite{blelloch90thesis, blelloch90compiling} and flattening for multipl
 multiple-data~(MIMD) machines~\cite{bergstrom13}. Additionally, dynamic work-stealing approaches
 have been implemented~\cite{bergstrom10}.
 
-In this paper, we introduce a distributed programming framework for NDP algorithms. Our implementation
-is built on top of Apache Spark. We track the structure of the nested arrays at runtime and choose between
-two strategies~(\emph{uniform} and \emph{segmented}) for partitioning data across machines based on
-the estimated cost of each strategy. In the segmented partitioning strategy, all values in a single nested
-segment are co-located on a single compute node, and most computation can proceed without
-communication. The uniform strategy provides perfect load balance across all nodes, but many operations
-will need to communicate to execute. To choose between these strategies at runtime, we provide a cost
-model that evaluates the performance tradeoff of communication overhead versus node-to-node
-imbalance. Since the partitioning strategy is chosen at runtime, we can leverage knowledge of the nested
-array structure.
+In this paper, we introduce a distributed programming framework for NDP algorithms. Our
+implementation is built on top of Apache Spark. We track the structure of the nested arrays at runtime
+and choose between two strategies~(\emph{uniform} and \emph{segmented}) for partitioning data
+across machines based on the estimated cost of each strategy. In the segmented partitioning strategy,
+all values in a single nested segment are co-located on a single compute node, and most computation
+can proceed without communication. The uniform strategy provides perfect load balance across all
+nodes, but many operations will need to communicate to execute. To choose between these strategies
+at runtime, we provide a cost model that evaluates the performance tradeoff of communication overhead 
+versus node-to-node imbalance. Since the partitioning strategy is chosen at runtime, we can leverage
+knowledge of the nested array structure.
 
 \section{Background}
 \label{sec:background}
 
-\subsection{Nested Array Programming Models}
-\label{sec:nested-array-programming-models}
+\subsection{Data-Parallel Programming Models}
+\label{sec:data-parallel-programming-models}
 
-\subsection{Data Parallel Distributed Computing Models}
-\label{sec:data-parallel-distributed-computing-models}
 
-\section{Characterizing and Modeling Imbalance in Nested Arrays}
-\label{sec:imbalance}
+
+\subsection{Data-Parallel Distributed Computing}
+\label{sec:data-parallel-distributed-computing}
+
+This work builds upon the infrastructure provided by the Apache Spark distributed data-parallel
+computing framework~\cite{spark, zaharia10}. Spark was designed for ``cloud computing'' platforms,
+where machines may be unreliable, and where network performance may preclude the use of traditional
+distributed message passing systems such as the Message Passing Interface~(MPI). Unlike Apache
+Hadoop, where data is shuffled to/from disk between all processing stages~\cite{hadoop, shvachko10},
+Spark has an in-memory processing model. The in-memory processing model leads to
+large~($100\times$) performance for iterative jobs implemented using Spark instead of
+Hadoop~\cite{zaharia10}.
+
+Spark's programming model is implemented on top of the \emph{resilient distributed dataset}~(RDD)
+abstraction~\cite{zaharia12}. The RDD abstraction presents a view of an array which is chopped into
+\emph{partitions} that are distributed over the computers within the Spark cluster. Programs enqueue
+data-parallel transformations on the Spark master, which are then interpreted into a directed-acyclic
+graph~(DAG) for execution; this approach is similar to the DAG scheduling approach pioneered in
+Dryad~\cite{isard07}. Spark executes the DAG whenever a disk shuffle is required, or if a newly
+enqueued operation would create a cycle in the DAG~(i.e., an iterative computation is scheduled).
+
+To execute a stage, the Spark master serializes the user defined function~(UDF) which is being applied,
+transmits this function to all worker nodes, and then applies the computation. While the general
+application programming interface~(API) that Spark provides is data-parallel across all elements,
+the API transformations are implemented by applying the transformation iteratively across all elements
+of a partition---Spark also exposes this parallel-by-partition interface via the \texttt{mapPartitions} call.
+If data must be moved between partitions after an execution stage, a disk shuffle will occur. Disk
+shuffles are analogous to an execution stage with interleaved computation and all-to-all communication
+followed by a barrier before the next stage. This process is similar to how the results of \texttt{map}
+phases are moved to \texttt{reducers} in both MapReduce and Hadoop~\cite{dean04}---the main
+distinction is that Spark allows successive \texttt{map} phases, and that shuffles do not occur after all
+stages.
 
 \section{Implementation}
 \label{sec:implementation}
+
+\subsection{Characterizing and Modeling Imbalance}
+\label{sec:imbalance}
+
+\subsection{Partitioning Strategies}
+\label{sec:partitioning-strategies}
 
 \section{Performance}
 \label{sec:performance}
