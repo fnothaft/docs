@@ -40,8 +40,8 @@
 \usepackage{amsthm}
 \usepackage{listings} 
 
-\theoremstyle{plain}
-
+\theoremstyle{definition}
+\newtheorem{defn}{Definition}
 
 \lstdefinelanguage{scala}{morekeywords={class,object,trait,extends,with,new,if,while,for,def,val,var,this},
 otherkeywords={->,=>},
@@ -141,12 +141,24 @@ at runtime, we provide a cost model that evaluates the performance tradeoff of c
 versus node-to-node imbalance. Since the partitioning strategy is chosen at runtime, we can leverage
 knowledge of the nested array structure.
 
+This work introduces the following contributions:
+
+\begin{enumerate}
+\item We introduce a dynamically scheduled distributed method for implementing NDP algorithms that is
+amenable to ``cloud computing'' platforms.
+\item We demonstrate that the current best-known \texttt{scan} algorithm has $O(\frac{n \log p}{p})$
+performance on bulk-synchronous systems, and provide a ``block-parallel'' relaxation of the \texttt{scan}
+operator that has $O(\frac{n}{p})$ performance.
+\item We demonstrate a model-based approach for balancing partition load in distributed systems.
+\end{enumerate}
+
 \section{Background}
 \label{sec:background}
 
 \subsection{Data-Parallel Programming Models}
 \label{sec:data-parallel-programming-models}
 
+In data-parallel frameworks, all of the elements of a dataset are processed individually in parallel. These
 
 
 \subsection{Data-Parallel Distributed Computing}
@@ -177,9 +189,8 @@ of a partition---Spark also exposes this parallel-by-partition interface via the
 If data must be moved between partitions after an execution stage, a disk shuffle will occur. Disk
 shuffles are analogous to an execution stage with interleaved computation and all-to-all communication
 followed by a barrier before the next stage. This process is similar to how the results of \texttt{map}
-phases are moved to \texttt{reducers} in both MapReduce and Hadoop~\cite{dean04}---the main
-distinction is that Spark allows successive \texttt{map} phases, and that shuffles do not occur after all
-stages.
+phases are moved to reducers in both MapReduce and Hadoop~\cite{dean04}---the main distinction is
+that Spark allows successive \texttt{map} phases, and that shuffles do not occur after all stages.
 
 \section{Implementation}
 \label{sec:implementation}
@@ -189,6 +200,131 @@ stages.
 
 \subsection{Partitioning Strategies}
 \label{sec:partitioning-strategies}
+
+\subsection{Block-Parallel Scans}
+\label{sec:block-parallel-scans}
+
+The \texttt{scan}\footnote{The \texttt{scan} operator is also known as the \emph{all-prefix
+sum}~\cite{blelloch93}.} operator is challenging to implement in parallel, as the scan operation on array
+element $a_n$ depends on the values of all elements $a_0 \ldots a_{n - 1}$. For clarity, we
+reproduce the definition of a \texttt{scan} given by Blelloch~\cite{blelloch93} here:
+
+\begin{defn}
+\label{defn:scan}
+The \texttt{scan} operator takes an associative operator $\oplus$, and an ordered set of $n$ elements:
+$$
+[a_0, a_1, \ldots, a_{n - 1}]
+$$
+and returns the ordered set:
+$$
+[a_0, (a_0 \oplus a_1), \ldots, (a_0 \oplus a_1 \oplus \ldots \oplus a_{n - 1})]
+$$
+\end{defn}
+
+Blelloch proposed a parallel algorithm for computing vector scans~\cite{blelloch93}; this algorithm has
+recently been implemented for graphics processing units~(GPUs,~\cite{harris07}). This algorithm is
+composed of two basic steps:
+
+\begin{enumerate}
+\item First, perform an ``up sweep'' by performing a parallel tree-reduction across the vector.
+\item ``Down sweep'' by shifting in the identity value and rotating the tree elements.
+\end{enumerate}
+
+A detailed description of this algorithm, as well as a proof of correctness is presented by both
+Blelloch~\cite{blelloch93} and Harris~\cite{harris07}. This algorithm completes in $O(\frac{n}{p} +
+\log p)$ time when evaluating a vector of $n$ elements on $p$ processors. For $n \gg p$, the
+runtime is approximated as $O(\frac{n}{p})$. Despite the efficient runtime, the \emph{up sweep,
+down sweep} algorithm has several drawbacks:
+
+\begin{itemize}
+\item For a vector of type $T$, the $\oplus$ operator is restricted to $T, T \mapsto T$. This is an
+unnecessary restriction if we loosen definition~\ref{defn:scan} to include an additional input variable
+$b_0$, which is the additive identity value. If $b_0$ has type $U$, this allows $\oplus$ to become $U, T
+\mapsto U$. We include this in our updated definition~\ref{defn:block-parallel-scan}.
+\item The \emph{up sweep, down sweep} algorithm only has $O(\frac{n}{p})$ runtime for parallel
+random access memory~(PRAM) compute models. As described
+in~\S\ref{sec:data-parallel-distributed-computing}, MapReduce computing systems provide a block
+synchronous model. For this model, the runtime degrades to $O(\frac{n \log p}{p})$, as we have
+$\frac{n}{p}$ runtime for each of the $\log p$ stages in both the \emph{up sweep} and \emph{down
+sweep} stages.
+\end{itemize}
+
+To address the issues we have just presented, we introduce a block-parallel scan:
+
+\begin{defn}
+\label{defn:block-parallel-scan}
+The block-parallel \texttt{scan} operator takes an associative \emph{scan} operator $\oplus$ ($U, T
+\mapsto U$), and an associative \emph{update} operator $\otimes$ ($U, U \mapsto U$), an identity
+value $b_0$, and an ordered set of $n$ elements:
+
+$$
+A = [a_0, a_1, \ldots, a_{n - 1}]
+$$
+
+The ordered set A is partitioned into $p$ ordered partitions:
+
+\begin{equation*}
+\begin{split}
+P^0 &= [a_0, a_1, \ldots, a_{\frac{n}{p} - 1}] \\
+P^1 &= [a_{\frac{n}{p}}, a_{\frac{n}{p} + 1}, \ldots, a_{2\frac{n}{p} - 1}] \\
+&\ldots \\
+P^{p - 1} &= [a_{(p - 1)\frac{n}{p}}, a_{(p - 1)\frac{n}{p} + 1}, \ldots, a_{n - 1}] \\
+A &= P^0 \cup P^1 \cup \ldots \cup P^{p - 1}
+\end{split}
+\end{equation*}
+
+For notational convenience, we assume that $n \bmod p = 0$.
+
+For all $P^k, k \in \{0, \ldots, p - 1\}$, we compute intermediate \emph{block pre-scans} $S^k$ where:
+
+\begin{equation*}
+\begin{split}
+S^k_0 &= b_0 \\
+S^k_i &= S^k_{i - 1} \oplus P^k_{i - 1}, \forall i \in {1, \ldots, p}
+\end{split}
+\end{equation*}
+
+Note that all sets $S_k$ have size $p + 1$, not $p$.
+
+For all $S^k, k \in \{0, \ldots, p - 1\}$, we then collect the $S^k_p$ terms into set $C$, where $C_k =
+S^k_p$. We then perform the \emph{update} phase across all $S^k$:
+
+\begin{equation*}
+\begin{split}
+u^k &= \begin{cases}
+    b_0& \text{if } k = 0\\
+    C_0 \otimes \ldots \otimes C_{k - 1}, & \text{otherwise}
+\end{cases} \\
+U^k_i &= u_k \otimes S^k_i, \forall i \in \{1, \ldots, p\}
+\end{split}
+\end{equation*}
+
+We return the ordered set:
+\begin{equation*}
+\begin{split}
+S &=U_0 \cup U_1 \cup \ldots \cup U_{p - 1} \\
+S &= [b_0 \oplus a_0, \ldots, b_0 \oplus a_0 \oplus \ldots \oplus a_{\frac{n}{p} - 1}, \ldots, \\
+ &(b_0 \oplus
+a_0 \oplus \ldots \oplus a_{\frac{n}{p} - 1}) \otimes (b_0 \oplus a_{\frac{n}{p}} \oplus \ldots \oplus
+a_{2\frac{n}{p} - 1}) \otimes \ldots \\
+& \otimes (b_0 \oplus a_{(p - 1)\frac{n}{p}} \oplus \ldots \oplus a_{n - 1})]
+\end{split}
+\end{equation*}
+\end{defn}
+
+It is not possible to generally prove that the \texttt{scan} operator is equal to the block-parallel
+\texttt{scan} operator for all general $\oplus$ operators. However, it is straightforward to prove
+equivalence for some common operators. For example, given $T = U =$ integer, and $\oplus = +
+= \otimes$, it follows that $b_0 = 0$. In this case, all of the $b_0$ terms drop out, and $\oplus =
+\otimes$, therefore the block-parallel \texttt{scan} operation matches the \texttt{scan} operation.
+
+Both the per-block \emph{pre-scan} and the \emph{update} operations from
+definition~\ref{defn:block-parallel-scan} have runtime $O(\frac{n}{p})$. On the computing platforms we
+are targeting, the cost of collecting a small amount of data from each partition is negligible. Therefore,
+the block-parallel \texttt{scan} has runtime $O(\frac{n}{p})$. We are able to use the block-parallel
+\texttt{scan} algorithm to perform efficient parallel \texttt{scan}s across all datasets, and to accelerate
+segmented scans when using the \texttt{uniform} partitioning strategy introduced
+in~\S\ref{sec:partitioning-strategies}.
 
 \section{Performance}
 \label{sec:performance}
