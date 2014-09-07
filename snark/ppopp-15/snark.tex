@@ -155,11 +155,64 @@ operator that has $O(\frac{n}{p})$ performance.
 \section{Background}
 \label{sec:background}
 
+Understanding the system we describe in the rest of the paper requires an understanding of the NDP
+processing model, as well as the design of current MapReduce-style distributed computing frameworks.
+In this section, we compare and contrast the FDP and NDP programming models, and discuss the
+system design of the Spark MapReduce framework. While the problem of implementing scalable
+distributed FDP frameworks is well studied~\cite{dean04, zaharia10}, this paper builds upon those
+systems to focus on the implementation of scalable distributed NDP platforms.
+
 \subsection{Data-Parallel Programming Models}
 \label{sec:data-parallel-programming-models}
 
-In data-parallel frameworks, all of the elements of a dataset are processed individually in parallel. These
+In data-parallel frameworks, processing proceeds in parallel across all of the elements in a dataset. We
+can further subdivide data-parallel programming models into flat and nested data parallelism:
 
+\paragraph{Flat data-parallelism:}
+
+In a FDP system, the parallel collection contains single elements which are then processed in parallel.
+On a collection containing elements of type $T$, a few basic operations include:
+
+\begin{itemize}
+\item \texttt{map}, which applies a function $F: T \mapsto U$ to all elements of the collection, and
+returns a new collection containing elements of type $U$
+\item \texttt{reduce}, which successively applies a function $F: T, T \mapsto T$ to pairs of elements from
+the collection until all elements have been reduced down into a single scalar of type $T$
+\end{itemize}
+
+FDP may also be known as \emph{regular} data parallelism, as the data parallel computation proceeds
+over the single items in the dataset~(all parallel computation occurs on single elements, i.e.,
+``collections'' of size 1). Because there are no dependencies between elements in the dataset, FDP can
+implemented efficiently on a broad range of computing platforms, including SIMD and MIMD
+architectures, graphics processing units~(GPUs)~\cite{nvidia08}, and distributed systems~\cite{dean04}.
+
+\paragraph{Nested data-parallelism:}
+
+An NDP system extends the collection structure of an FDP system. Instead of a flat collection, the
+collection is divided into \emph{segments} or \emph{nests}, which are sub-groupings of elements.
+Operations may then execute across the whole collection, or across the segments inside of the
+collection. A full introduction to NDP can be found in the text by Blelloch~\cite{blelloch90thesis}. Blelloch
+justifies the utility of the NDP model by noting that NDP reduces the asymptotic runtime of some graph
+and linear algebra algorithms by a factor of $\log n$. A good demonstration of the utility of the nested
+vector model comes from implementing a matrix-vector multiply. Here, we assume that we have a matrix
+$A$ which has been packed into a nested vector by splitting each row $i$ into it's own segment, and a
+dense vector $v$. We can implement the matrix-vector multiply by:
+
+\begin{lstlisting}
+def matrix-vector-multiply(A: SegmentedArray[Int],
+					v: Array[Int]
+  ): Array[Int] = {
+  A.map-with-index((point: Int, idx: Int) => {
+    point * v(idx)
+  }).segmented-reduce(_ + _)
+}
+\end{lstlisting}
+
+Here, we use the \texttt{map-with-index} function to multiply each point in the matrix by the
+corresponding point in the vector. This can execute in parallel per element. The
+\texttt{segmented-reduce} function then sums up all of the elements from each row. The na\"{i}ve
+implementation of a \texttt{segmented-reduce} is parallel per segment, but an optimized implementation
+is parallel per element in the whole collection.
 
 \subsection{Data-Parallel Distributed Computing}
 \label{sec:data-parallel-distributed-computing}
@@ -221,7 +274,7 @@ We face the following tradeoffs when picking a strategy for partitioning a datas
 \item \emph{How well will load be balanced?} The \texttt{uniform} strategy is highly desirable
 because we are able to perfectly allocate the keys to partitions, and load is balanced. However, in
 practice, load balance can be improved by oversubscribing partitions to processing elements~(see
-\emph{Tuning Guide},~\cite{spark}; typically, an oversubscription factor of 3 is used). If there is
+\emph{Tuning Guide} in~\cite{spark}; typically, an oversubscription factor of 3 is used). If there is
 oversubscription, we may be able to co-schedule small and large partitions on the same processing
 element. While we may have imbalance between each partition, we may be able to achieve balance
 between processing elements.
@@ -281,8 +334,7 @@ $$
 \end{defn}
 
 Blelloch proposed a parallel algorithm for computing vector scans~\cite{blelloch93}; this algorithm has
-recently been implemented for graphics processing units~(GPUs,~\cite{harris07}). This algorithm is
-composed of two basic steps:
+recently been implemented for GPUs~\cite{harris07}. This algorithm is composed of two basic steps:
 
 \begin{enumerate}
 \item First, perform an ``up sweep'' by performing a parallel tree-reduction across the vector.
