@@ -78,13 +78,16 @@ morestring=[b]"}
 
 
 \title{Partition Balancing in Distributed Nested Data-Parallel Systems}
-\authorinfo{Frank~Austin~Nothaft}
-{Department of Electrical Engineering and Computer Science, University of California, Berkeley}
-{fnothaft@eecs.berkeley.edu}
+\authorinfo{ }
+{ }
+{ }
+%\authorinfo{Frank~Austin~Nothaft}
+%{Department of Electrical Engineering and Computer Science, University of California, Berkeley}
+%{fnothaft@eecs.berkeley.edu}
 
-\authorinfo{Michael Linderman}
-{Carl Icahn School of Medicine at Mount Sinai}
-{michael.linderman@mssm.edu}
+%\authorinfo{Michael Linderman}
+%{Carl Icahn School of Medicine at Mount Sinai}
+%{michael.linderman@mssm.edu}
 
 \maketitle
 
@@ -248,8 +251,169 @@ that Spark allows successive \texttt{map} phases, and that shuffles do not occur
 \section{Implementation}
 \label{sec:implementation}
 
-\subsection{Characterizing and Modeling Imbalance}
+We have implemented an NDP model on top of the FDP computing model of the Apache Spark system.
+Our implementation is approximately 3k lines of Scala~\cite{odersky04} code, and adds the following
+NDP operations to Spark's FDP operations:
+
+\begin{itemize}
+\item Block-parallel \texttt{scan}: We provide an $O(\frac{n}{p})$ operation which is a slight relaxation
+of the \texttt{scan} primitive~\cite{blelloch93}. We discuss the full details of this primitive
+in~\S\ref{sec:block-parallel-scans}.
+\item \texttt{combine}, \texttt{shuffle}, and \texttt{transpose}: These operations allow for the creation of
+novel nested structures from a current nested collection. \texttt{combine} allows for an $n$-to-1
+remapping of values to new index positions, while shuffle allows for a 1-to-1 reordering of indices. The
+\texttt{transpose} operator is important for linear algebra.
+\item Efficient indexed \texttt{get}: Spark does not currently support indices. We add indices to track the
+nested collection structure. By adding indices, we are able to provide $O(1)$ lookup by only performing
+the lookup on the single partition known to contain the value.
+\item Segmented operations:
+\begin{itemize}
+\item \texttt{segmented-scan}: The \texttt{segmented-scan} operator applies a \texttt{scan} across all
+segments. In our API, we provide the correctness guarantees of a block parallel \texttt{scan}. For the
+\texttt{segmented} partitioning strategy introduced in~\S\ref{sec:partitioning-strategies}, we tighten this
+guarantee to match the canonical \texttt{scan} operator.
+\item \texttt{segmented-reduce}: We provide $O(\frac{n}{p})$ \texttt{segmented-\linebreak reduce}. This
+operation calculates a scalar value per segment by applying a reduction operator associatively across
+the segment.
+\end{itemize}
+\item Multi-collection operations:
+\begin{itemize}
+\item \texttt{p}-operations: \texttt{p}-operations denote a class of operations that apply an operator
+\texttt{p}airwise to values from two collections that exist at the same index. For two numerical nested
+collections, the \texttt{p-+} operator would be used to implement matrix addition.
+\item \texttt{merge}: The \texttt{merge} operator allows for the creation of a nested dataset from one or
+more flat datasets, and is instrumental in building up nested collections.
+\end{itemize}
+\end{itemize}
+
+Our API provides the abstraction of a \texttt{NestedRDD}, which is an RDD~(see Zaharia et
+al~\cite{zaharia12} or~\S\ref{sec:data-parallel-distributed-computing}) where each value is keyed by
+its position in the nested collection. As mentioned above, the \texttt{NestedRDD} also maintains an
+index which tracks the size of all the segments in the RDD. Although a na\"{i}ve implementation of the 
+\texttt{NestedRDD} can be implemented using RDDs and the Scala collection classes, this
+implementation is inefficient:
+
+\begin{itemize}
+\item As Scala is built upon the Java Virtual Machine~(JVM), the use of collections would increase
+the number of objects created, and would thusly increase garbage collection~(GC) overhead.
+\item Scala's collection classes provide a wide variety of data-parallel methods but are known for having
+generally poor performance when compared to their Java equivalents.
+\item The use of collection classes on top of RDDs provides insufficient control over the placement and
+partitioning of data.
+\end{itemize}
+
+To improve upon the na\"{i}ve implementation, we introduce two different methods for dynamically
+dividing datasets across machines in a Spark cluster. We choose between these two partitioning
+strategies on the basis of a simple model for calculating imbalance. We introduce the model we use for
+deciding between the two partitioning strategies in~\S\ref{sec:imbalance}; this model uses the current
+structure of the segments in the array to select a partitioning strategy. The partitioning strategies
+themselves are explained in~\S\ref{sec:partitioning-strategies}. In addition to the optimized
+implementations, we do make the na\"{i}ve \texttt{NestedRDD} implementation available to enable
+correctness checking of the more efficient partitioning methods.
+
+Since the structure of the segments is necessary for choosing a partitioning strategy, we must track the
+structure at alloverset times. We define nested collections as being either sparse or dense:
+
+\begin{itemize}
+\item In a \emph{dense} nested collection, for all segments $S^k$, with segment size $s_k$, there exists
+a value $S^k_i \forall i \in \{0, \ldots, s_k - 1\}$.
+\item In a \emph{sparse} nested collection, we may have gaps. Therefore, it is possible for us to have a
+value $S^k_i$ where $i \ge s_k$, and it is also possible for $\{S^k_{\hat{i}}\} = \emptyset$ for a given
+$\hat{i} < \max_{i \in \{S^k_i\} \ne \emptyset} i$.
+\end{itemize}
+
+When a nested collection is dense, we must recompute the segment structure after \texttt{combine} and
+\texttt{merge} operations. While \texttt{transpose} causes the segment structure to change, we can
+calculate the new structure from the previous known segment structure. For sparse nested collections,
+the segment structure must also be computed after a \texttt{p}-operation, and we cannot use the prior
+segment structure to calculate the new structure after a \texttt{transpose} operation. We can fully
+recompute the segment structure with the following algorithm:
+
+\begin{lstlisting}
+def recompute-segment-structure(newRdd: NestedRDD[T]
+  ): (SegmentStructure, Boolean) = {
+  // get the index for each element
+  // returns rdd with tuple of (segment number, 
+  //                               index in segment)
+  val idxRdd: RDD[(Int, Int)] = 
+    newRdd.map(v => v.getIndex)
+  
+  // get the number of keys per segment
+  val nestSizes: Map[Int, Int] = idxRdd.map(kv => kv._1)
+    .count()
+    
+  // what is the highest index in each segment?
+  val maxIndex: Map[Int, Int] = 
+    idxRdd.reduceByKey(_ max _)
+  
+  // return the number of keys in each nest and whether
+  // the collection is dense
+  (SegmentStructure(nestSizes),
+    nestSizes.join(maxIndex)
+      .forall(kv => kv._1 - 1 == kv._2))
+}
+\end{lstlisting}
+
+Recomputing the segment structure is facilitated by storing the index with every value, and by forbidding
+duplicate indices in the collection.
+
+Our implementation has no impact on the fault tolerance built into the Spark framework. Spark provides
+fault tolerance by tracking the \emph{lineage} of all partitions in the system~\cite{zaharia12}. If a
+partition is lost, Spark repeats the computation needed to reproduce the partition from the last
+checkpointed state. As our API is implemented on top of Spark's partitioning system, users of our
+system benefit from Spark's built-in fault tolerance mechanisms.
+
+\subsection{Modeling Imbalance}
 \label{sec:imbalance}
+
+Extensive work has been done to characterize and model the performance of parallel systems from both
+theoretical~\cite{blelloch90thesis} and practical~\cite{herodotou11, zaharia08} angles. In practice, we
+are able to use a simpler model for modeling imbalance. Specifically, we can conceptualize a simple
+model as follows:
+
+\begin{itemize}
+\item Our cluster is constructed out of $n$ processing elements $e_i, i \in \{0, \ldots, n - 1\}$, and our
+dataset is partitioned into $n$ partitions $P^i, i \in \{0, \ldots, n - 1\}$, with size $s_i$.
+\item We perform $c$ processing stages. We assume that each stage performs an equal amount of
+computation.
+\item During each processing stage, each processing element $e_i$ computes on the data in partition
+$P^i$ in $s_i$ time, and then performs a barrier. Therefore, we allocate time $\max_i s_i$ to each
+processing stage.
+\item Between each processing stage, we pay a barrier/communication latency of $t_b$. This parameter
+will vary system to system, and depends on the communication network performance. For simplicity, we
+normalize this parameter to the cost of performing a processing stage.
+\end{itemize}
+
+With this model, the computational cost of a job is:
+
+$$
+C = c \max_i s_i + (c - 1) t_b
+$$
+
+As we will describe in the following section on partitioning strategies~(\S\ref{sec:partitioning-strategies}),
+we seek to decide between two strategies: \texttt{uniform}, which minimizes imbalance, and
+\texttt{segmented}, which minimizes computation. In the \texttt{segmented} setup, the maximum
+partition size is the size of the longest segment~($s_l$), while the \texttt{uniform} setup equally balances
+$v$ values across $p$ partitions such that $s_i = \frac{n}{p}, \forall i \in \{0, \ldots, p - 1\}$. The
+\texttt{uniform} approach will perform up to two stages of computation, while the \texttt{segmented}
+approach will never perform more than one stage. Thus:
+
+\begin{equation*}
+\begin{split}
+T_u &\overset{?}{=} T_s \\
+s_l &\overset{?}{=} 2 \frac{n}{p} + t_b \\
+\frac{s_l p}{2 n} &\overset{?}{=} t_b
+\end{split}
+\end{equation*}
+
+We chose the \texttt{segmented} strategy whenever the imbalance caused by the largest partition is
+smaller than the overhead of executing two stages with a barrier.
+
+In practice, because the amount of data we are shuffling is small, the cost of $s_t \sim 2 \frac{n}{p} \gg
+t_b$, so $t_b$ can be dropped. Additionally, the equation above will not exactly predict imbalance; if
+all executors are $c$-core machines, executor $e_i$ will process $c o$ partitions, where $o$ is an
+oversubscription factor~(typically 3, discussed in~\S\ref{sec:partitioning-strategies}. The combination of
+oversubscription and bucketing cores into executors will typically load balance.
 
 \subsection{Partitioning Strategies}
 \label{sec:partitioning-strategies}
@@ -281,7 +445,7 @@ between processing elements.
 \item \emph{How much overhead does the strategy incur?} While the \linebreak \texttt{segmented}
 strategy may have increased imbalance, it has low overhead because we can guarantee that all
 segment-based operations complete without requiring communication between partitions. This is
-desirable because the block synchronous model common to MapReduce frameworks implies that all
+desirable because the bulk synchronous model common to MapReduce frameworks implies that all
 communication requires a barrier.
 \end{itemize}
 
@@ -350,8 +514,11 @@ down sweep} algorithm has several drawbacks:
 \begin{itemize}
 \item For a vector of type $T$, the $\oplus$ operator is restricted to $T, T \mapsto T$. This is an
 unnecessary restriction if we loosen definition~\ref{defn:scan} to include an additional input variable
-$b_0$, which is the additive identity value. If $b_0$ has type $U$, this allows $\oplus$ to become $U, T
-\mapsto U$. We include this in our updated definition~\ref{defn:block-parallel-scan}.
+$b_0$, which is the identity value. If $b_0$ has type $U$, this allows $\oplus$ to become $U, T \mapsto
+U$. We include this in our updated definition~\ref{defn:block-parallel-scan}.\footnote{Note that an
+identity value is required for the \texttt{scan} operations implemented by both Blelloch~\cite{blelloch93}
+and Harris~\cite{harris07}. We are simply adding the identity value to the formal definition of a
+\texttt{scan} .}
 \item The \emph{up sweep, down sweep} algorithm only has $O(\frac{n}{p})$ runtime when executing
 on systems with a parallel random access memory~(PRAM) compute model. As described
 in~\S\ref{sec:data-parallel-distributed-computing}, MapReduce computing systems provide a block
@@ -426,8 +593,8 @@ a_{2\frac{n}{p} - 1}) \otimes \ldots \\
 It is not possible to generally prove that the \texttt{scan} operator is equal to the block-parallel
 \texttt{scan} operator for all general $\oplus$ operators. However, it is straightforward to prove
 equivalence for some common operators. For example, given $T = U =$ integer, and $\oplus = +
-= \otimes$, it follows that $b_0 = 0$. In this case, all of the $b_0$ terms drop out, and $\oplus =
-\otimes$, therefore the block-parallel \texttt{scan} operation matches the \texttt{scan} operation.
+= \otimes$, it follows that $b_0 = 0$. In this case, all of the $b_0$ terms drop out. Since $\oplus =
+\otimes$, the block-parallel \texttt{scan} operation is demonstrated to match the \texttt{scan} operation.
 
 Both the per-block \emph{pre-scan} and the \emph{update} operations from
 definition~\ref{defn:block-parallel-scan} have runtime $O(\frac{n}{p})$. On the computing platforms we
@@ -442,6 +609,19 @@ in~\S\ref{sec:partitioning-strategies}.
 
 \section{Discussion}
 \label{sec:discussion}
+
+\subsection{Relaxed Consistency Models For Scans}
+\label{sec:relaxed-scans}
+
+\subsection{Future Work}
+\label{sec:future-work}
+
+\subsection{Availability}
+\label{sec:availability}
+
+Our implementation is released as open-source software under the Apache 2 license, and is available
+through the Apache Maven Central repository~\cite{maven}. A link to the implementation is available in
+the non-anonymized supplementary material submitted with the paper.
 
 \section{Conclusion}
 \label{sec:conclusion}
