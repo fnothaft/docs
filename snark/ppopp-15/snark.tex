@@ -610,18 +610,77 @@ in~\S\ref{sec:partitioning-strategies}.
 \section{Discussion}
 \label{sec:discussion}
 
-\subsection{Relaxed Consistency Models For Scans}
+In this paper, we have advocated for a more efficient \texttt{scan} implementation, and introduced
+a dynamic system for picking partitioning strategies. In this section, we explain our reasoning for not
+including a traditional \texttt{scan} implementation, explain our vision for future extensions of this work,
+and provide readers with a link to our implementation.
+
+\subsection{Relaxed Accuracy Models For Scans}
 \label{sec:relaxed-scans}
+
+In~\S\ref{sec:block-parallel-scans}, we introduced the block-parallel~\texttt{scan}, which is a relaxed
+implementation of the \texttt{scan} described by Blelloch~\cite{blelloch93} that has improved
+performance when executing on a bulk-synchronous MapReduce platform. We have decided not to
+include the less-performant \texttt{scan} implementation for the following reasons:
+
+\begin{itemize}
+\item The parallel \emph{sweep up, sweep down} algorithm proposed by Blelloch can only work for
+transformations with fixed type (i.e., $\oplus: T, T \mapsto T$), which is more restrictive than a
+sequential \texttt{scan} implementation.
+\item While it is not possible to generally prove equivalence between the block-parallel \texttt{scan} and
+the traditional \texttt{scan}, we believe that the two approaches are sufficiently similar for most
+purposes, and we note that the two implementations can be proven equivalent for several common
+cases~(e.g., \texttt{+-scan} and \texttt{*-scan}).
+\end{itemize}
+
+With the degraded performance ($O(\frac{n}{p})$ to $O(\frac{n \log p}{n})$ of the \texttt{scan}
+implementation on bulk-synchronous architectures, \texttt{scan}s across the full dataset would not be
+highly useful due to poor performance with the growth of $\log p$. Applying the traditional \texttt{scan}
+implementation to \texttt{segmented-scan}s may still remain desirable, as the $\log p$ growth is
+mitigated by $p$ being the maximum number of partitions that a single segment is split across.
+However, if a traditional \texttt{segmented-scan} is necessary, users can force the partitioning-strategy
+in use to the \texttt{segmented} strategy---this point is addressed in~\S\ref{sec:partitioning-strategies}.
 
 \subsection{Future Work}
 \label{sec:future-work}
+
+A major avenue for future work surrounds improving the balancing decision framework described
+in~\S\ref{sec:imbalance} and~\S\ref{sec:partitioning-strategies}. There are two prominent areas where
+the implementation of this model could be improved:
+
+\begin{itemize}
+\item \emph{The current model does not include setup costs:} To switch between the \texttt{uniform} and
+\texttt{segmented} partitioning strategies, a cluster-wide shuffle must occur. Currently, we do not model
+this cost.
+\item \emph{The current model does not look at the computation DAG:} Spark creates a DAG for all
+scheduled computation. We do not use this DAG during strategy selection, but it could be used for
+determining how long setup costs would be amortized over, as well as identifying whether the full
+stage penalty should be applied to the \texttt{uniform} strategy.
+\end{itemize}
+
+We see the greatest benefit as coming from the use of the DAG during the partition selection phase.
+This is partially because viewing the DAG would allow us to determine the true impact of setup costs~(if
+we perform a shuffle, but then leave data in place for a long time, the cost of the shuffle is decreased),
+but is mostly because the DAG would allow us to minimize the penalty afforded to \texttt{uniform}ly
+partitioned datasets. In~\S\ref{sec:imbalance}, we note that the runtime of \texttt{uniform}ly partitioned
+stages is $2\frac{n}{p} + t_b$; this is true for \texttt{segmented-scan}s. Other operators have predicted
+runtime of $\frac{n}{p}$. If we encounter a workload that doesn't contain many \texttt{scan}s, the cost of
+computing on \texttt{uniform}ly partitioned data will drop towards $\frac{n}{p}$, which implies that our
+cost model is inaccurate for workloads with few scans.
+
+We have avoided this implementation at the current time, because it is not straightforward to implement
+on top of the Spark API. A dynamic partitioning strategy selecting algorithm that operated on the Spark
+DAG would need to have the capability to modify the Spark DAG by inserting stages whenever it
+determined that we needed to switch partitioning methods and shuffle the dataset. Our current
+implementation avoids this by implementing our API at a much higher level on top of the Spark API.
 
 \subsection{Availability}
 \label{sec:availability}
 
 Our implementation is released as open-source software under the Apache 2 license, and is available
-through the Apache Maven Central repository~\cite{maven}. A link to the implementation is available in
-the non-anonymized supplementary material submitted with the paper.
+through the Apache Maven Central repository~\cite{maven}. A link to the implementation in our
+publicly open source-control system is provided in the non-anonymized supplementary material
+submitted with the paper.
 
 \section{Conclusion}
 \label{sec:conclusion}
