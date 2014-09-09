@@ -84,4 +84,47 @@
 \end{itemize}
 \end{itemize}
 
+\section{Lecture 4---9/9/2014}
+
+\begin{itemize}
+\item ACID
+\begin{itemize}
+\item Consistency is not what we typically think
+\item Distributed systems: data has a consistent value across sites
+\item Databases: data meets contract when transaction completes
+\end{itemize}
+\item Serializability mathematically gives atomicity and isolation
+\item Logging gives atomicity and durability
+\item Ordering:
+\begin{itemize}
+\item Determines outcome (unless operations are not associative and commutative)
+\item Some things are commutable/associable
+\item Ordering must be equivalent to some serializable order
+\item Implicitly, this provides an API---people don't \emph{need} to reason about concurrency
+\end{itemize}
+\item What is storage?
+\begin{itemize}
+\item \emph{Spacial-temporal rendezvous makes everything work!!!!}
+\end{itemize}
+\item Want to avoid/undo conflicts in space and time
+\begin{itemize}
+\item \emph{Space:} Shared names
+\item \emph{Time:} Ordering
+\end{itemize}
+\item 2PL: Provides a conflict serialized schedule
+\begin{itemize}
+\item Ordered by race for locks
+\item Ordered by the end of the first phase (``lock point'')
+\end{itemize}
+\item Multi-version timestamp ordering
+\begin{itemize}
+\item Every transaction gets a timestamp---this is the only synchronization point
+\item For every object:
+\begin{itemize}
+\item Writes generate a new version for an object
+\item Reads annotate the version for the object
+\end{itemize}
+\end{itemize}
+\end{itemize}
+
 \end{document}
