@@ -194,4 +194,107 @@ convex ($f(x_1, x_2, x_3) \rightarrow 1.5 y_1 - 2 y_2 + 3 y_3, x_i = log y_i$).
 Turn inequalities into equalities $\rightarrow Ax \ge b \rightarrow Ax + s = b, s \ge 0$.
 Useful if you can use variables to reduce the dimension of the problem.
 
+\section{Lecture 4---9/9/2014}
+
+\paragraph{Quiz content:} Quizzes will not be as hard as homework, but expect very strong
+linear algebra background. E.g., use SVD to solve a matrix optimization problem, solve QP
+unconstrained.
+
+\subsection{Linear Programming}
+
+\begin{equation*}
+\begin{split}
+\min c^T x \\
+s.t. b - Ax \in T \mathbb{R}^n_+
+\end{split}
+\end{equation*}
+
+Algorithm for solving LP in polynomial time ($O(n^3)$) found in 1970's.
+
+Can generalize to:
+
+$$
+b - Ax \in K
+$$
+
+For $K$ being a non-linear convex cone.
+
+LP can be used to optimize non-linear objective functions, e.g.:
+
+\begin{equation*}
+\begin{split}
+\min || Ax - b||_1, x \in \mathbb{R}^n \\
+\min \sum_i |a_i^Tx - b_i|, x \in \mathbb{R}^n \\
+\min \sum_i t_i, |a_i^Tx - b_i| \le t_i \\
+\min 1^Tt, -t_i \le a_i^Tx - b_i \le t_i 
+\end{split}
+\end{equation*}
+
+Augmenting number of variables can help solve problems, as we can ``refactor'' problems into
+LP. LP can be used to minimize any polyhedral function; polyhedral being max of sum of affine.
+
+\subsection{Quadratic Programming}
+
+Like linear programming, but with a quadratic term. E.g.,
+
+$$
+\min \frac{1}{2} x^T A x + b^T x + c, s.t. Gx \le h
+$$
+
+Can apply to nonnegative least squares~(NNLS), regularized least-squares~(RLS).
+
+Transform Lasso to QP:
+
+$$
+\min \frac{1}{2} || Ax - b ||^2_2 + \lambda ||x||_1
+$$
+
+Translate variables:
+
+$$
+\min_z z^T Q x + q^Tz, Gz \le d
+$$
+
+$A$ is positive semidefinite.
+
+If $\lambda = 0$,
+
+$$
+Q = \frac{1}{2} A^TA
+$$
+$$
+q = A^Tb
+$$
+
+If $\lambda \ne 0$,
+
+$$
+\min_{z, t} z^T Q x + q^Tz + \sum_i t_i, Gz \le d
+$$
+$$
+-x_i \le t_i \le x_i
+$$
+
+QP is a slight generalization of LP.
+
+\subsection{Second Order Cone Program}
+
+A variation of LP, with much more expressive power:
+
+$$
+\min f^Tx
+$$
+$$
+s.t., ||A_i x + b_i||_2 \le c_i^T x + d_i, i \in 1, \ldots, m
+$$
+
+\subsection{Semidefinite Problem}
+
+$$
+\min_{x \in \mathbb{R}^n} c^T x
+$$
+$$
+s.t. A(x) = A_0 + x_1 A_1 + \ldots + x_n A_n \succeq 0
+$$
+
 \end{document}
