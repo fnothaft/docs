@@ -127,4 +127,53 @@
 \end{itemize}
 \end{itemize}
 
+\section{Lecture 5---9/11/2014}
+
+\begin{itemize}
+\item Good graphs:
+\begin{itemize}
+\item Crossover points
+\item Non-monotonicity
+\item Good breadth of X
+\item Smooth $\rightarrow$ variance was accounted for
+\end{itemize}
+\item Infinite resources:
+\begin{itemize}
+\item Why run infinite resources? Many people assumed infinite resources in their papers.
+\item OCC wins because it allows higher parallelism, at the cost of restarting transactions
+\item Blocking (2PL) performs well at start, low at the end. Why?
+\begin{itemize}
+\item Deadlock starts to cause performance to fail
+\item Lock contention starts to cause transactions to get in each other's way
+\item Locking is a feedback loop---it lengthens transaction time
+\end{itemize}
+\end{itemize}
+\item Takeaways:
+\begin{itemize}
+\item MPL is a control variable---choose your infrastructure for your system
+\end{itemize}
+\item When do we have ``infinite'' resources?
+\begin{itemize}
+\item When we have user interaction (Computer $\gg$ human)
+\item Vastly overprovisioned compute
+\item Work is not going on inside the serving infrastructure (e.g., work is done by clients)
+\end{itemize}
+\end{itemize}
+
+\subsection{What happens when you go distributed?}
+
+\begin{itemize}
+\item Why go distributed?
+\begin{itemize}
+\item Capacity (storage and throughput)
+\item Low latency (tolerance)
+\item Fault tolerance (durability vs. availability)
+\end{itemize}
+\item Techniques
+\begin{itemize}
+\item Sharding---split dataset across many nodes
+\item Replication
+\end{itemize}
+\end{itemize}
+
 \end{document}
