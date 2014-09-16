@@ -176,4 +176,33 @@
 \end{itemize}
 \end{itemize}
 
+\section{Lecture 6---9/16/2014}
+
+\begin{itemize}
+\item You need replication $\rightarrow$ resilience to failure
+\item Tradeoff between replication and performance
+\item NoSQL:
+\begin{itemize}
+\item Typically, a key-value store (data/programming model)
+\item Typically distributed and sharded/partitioned
+\item Usually weaker consistency model
+\item No transactions/weak isolation model
+\item ``Not MySQL'' $\rightarrow$ lots of work at AOL/etc. with MySQL on \texttt{memcached}
+\item Typically OSS, not enterprise
+\item ``Scalable'', especially incremental scale $\rightarrow$ improves organization/administration/ops
+\item ``Evaporation'' of the DBA
+\end{itemize}
+\item Motivations:
+\begin{itemize}
+\item Bayou: I want to operate when disconnected
+\item Dynamo: Nodes gonna fail
+\end{itemize}
+\item CAP theorem: if partitions occur, then we can either have consistency or availability
+\begin{itemize}
+\item Availability: As long as a client can access a server, I can access data (concurrent operations
+don't need to communicate)
+\item Consistency: ``linearizable registers'' $\rightarrow$ if I make a write, you can read my write
+\end{itemize}
+\end{itemize}
+
 \end{document}
