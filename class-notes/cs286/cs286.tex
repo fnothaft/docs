@@ -205,4 +205,40 @@ don't need to communicate)
 \end{itemize}
 \end{itemize}
 
+\section{Lecture 7---9/18/2014}
+
+\begin{itemize}
+\item In traditional database, have disk page with tuples stored at continuous offsets.
+\begin{itemize}
+\item Pointers (``slots'') are at end of page and point back to tuples.
+\item Can then compress and compact by looking at slot pointers.
+\item Fixed length fields stored in tuples
+\item Tuples contain pointers to variable length fields
+\end{itemize}
+\item What changed between 1980 and 2010?
+\begin{itemize}
+\item CPUs 10,000$\times$ faster
+\item Disk BW grew 100$\times$
+\item Disk seek time improved 10$\times$
+\end{itemize}
+\item Specifically, gulf between disk performance and processor performance grew
+\item Research methodology: if area is fairly static, change parameters and see what you can do
+\item MonetDB
+\begin{itemize}
+\item Vector/block processing:
+\end{itemize}
+\item Traditional iterator processing model:
+\begin{itemize}
+\item Build a tree of operators that run on top of iterators
+\item Algorithms have init method (set up state), get next (give me a tuple), and close operators
+\item ``Pull'' model $\rightarrow$ data and control flow are coupled
+\end{itemize}
+\item ``Late materialization:'' query optimizer should defer reading columns until as late as it can
+\item ``Invisible joins:'' joins that batch reordering
+\begin{itemize}
+\item Semijoin: Filter R for all items that have a match in S
+\end{itemize}
+\item Database cracking: opportunistically reorder blocks in order to improve performance
+\end{itemize}
+
 \end{document}
