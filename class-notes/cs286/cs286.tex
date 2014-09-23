@@ -241,4 +241,56 @@ don't need to communicate)
 \item Database cracking: opportunistically reorder blocks in order to improve performance
 \end{itemize}
 
+\section{Lecture 8---9/23/2014}
+
+\begin{itemize}
+\item Pre-relational data models:
+\begin{itemize}
+\item Network: objects + pointers
+\item Hierarchical: nested sets
+\end{itemize}
+\item Then, \emph{the Relational Revolution}
+\item But, persistent questioning:
+\begin{itemize}
+\item In the 80's, nested relational
+\item Object-Oriented Database $\rightarrow$ 80's/90's
+\item And then... XML
+\end{itemize}
+\item Why flatten into relations:
+\begin{itemize}
+\item Space efficient
+\item Update/delete/inserts require work/care
+\item Simple model and language
+\item Data independence: physical and logical independence
+\end{itemize}
+\item When is the relational model a pain?
+\begin{itemize}
+\item Joins are expensive
+\item Must know schema ahead of time
+\item Read-only workloads are expensive
+\item Programming language state
+\end{itemize}
+\item Engineering versus ``Found Structure'' $\rightarrow$ \emph{bricolage}
+\begin{itemize}
+\item Engineering $\rightarrow$ collaboration and communication
+\item Found structure $\rightarrow$ exploratory data analytics
+\end{itemize}
+\item XML database history:
+\begin{itemize}
+\item WWW + search ate DB lunch
+\item Let's query the internets!
+\item DB $\times$ WWW $\times$ markup language people = pandemonium
+\item 4 data models, 3 query languages, mostly overlap\dots
+\end{itemize}
+\item DB vendors kept up with the pace of research
+\item How to encode XML:
+\begin{itemize}
+\item Native
+\item Shred to relationable tables
+\item Relational encoding of trees
+\item Path/value encoding
+\item Hybrids
+\end{itemize}
+\end{itemize}
+
 \end{document}
