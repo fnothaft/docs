@@ -14,6 +14,7 @@
 \usepackage{amsthm}
 \usepackage{amssymb}
 \usepackage{listings}
+\usepackage{enumitem}
 
 \begin{document}
 
@@ -291,6 +292,51 @@ don't need to communicate)
 \item Path/value encoding
 \item Hybrids
 \end{itemize}
+\end{itemize}
+
+\section{Lecture 9---9/25/2014}
+
+\begin{itemize}
+\item Few ways to provide/describe isolation; e.g., for a KV store:
+\begin{itemize}
+\item 2PL $\rightarrow$ mechanism
+\item Avoid anomalies (no lost update, no dirty/fuzzy read) $\rightarrow$ anomaly prevention
+\item Draw conflicts into graph (graph should have no cycle) $\rightarrow$ graph formalism
+\item Every history is view equivalent to a serial history $\rightarrow$ equivalence formalism
+\item If every program preserves an invariant, then every execution will preserve the invariant $\rightarrow$
+integrity
+\end{itemize}
+\item Full isolation is expensive; let's go for weaker models
+\item These descriptions don't imply equivalence:
+\begin{itemize}
+\item Can provide SG without cycle with OCC, OCC $\ne$ 2PL
+\item Snapshot isolation $\rightarrow$ no anomalies, but does not preserve invariants
+\end{itemize}
+\item Strong vs. weak isolation: weaker implies more anomalies allowed, or more executions allowed
+\item Conditions of \emph{reality}:
+\begin{itemize}
+\item Phantom: occurs when your program has a complex predicate, and when table modifications are
+allowed (modifications can change predicate selections)
+\begin{itemize}
+\item Can solve with predicate locks (but no one does that)
+\item Can solve with locks on indices, next key locks, etc\dots
+\end{itemize}
+\item \emph{Repeatable read}: in SQL, an isolation level where you can have phantoms, but everything
+else is OK (IBM defines as full isolation, hence confusion\dots)
+\item \emph{Fuzzy read}: short read locks, I read a single item multiple times and can see different
+values
+\item Statement-level atomicity: hold short read locks for the whole time I'm evaluating a statement
+\item \texttt{select \dots \ for update}: hint that I'll grab locks later
+\end{itemize}
+\item Isolation levels:
+\begin{enumerate}[start = 0]
+\item Short duration write locks
+\item Commit duration write locks
+\item Commit duration write locks, short read locks
+\item Full serializability
+\end{enumerate}
+\item Snapshot isolation: a good demonstration that you can beat anomalies (no lost update, no dirty
+read, no fuzzy read, no phantoms), but not provide serializability
 \end{itemize}
 
 \end{document}
