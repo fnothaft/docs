@@ -339,4 +339,28 @@ values
 read, no fuzzy read, no phantoms), but not provide serializability
 \end{itemize}
 
+\section{Lecture 10---9/30/2014}
+
+\begin{itemize}
+\item Implementation:
+\begin{itemize}
+\item Concurrency control: 1 transaction at a time
+\item All transactions are stored procedures; not interactive
+\item Partition your workload (?)
+\item Hot replicas: in relational world, replication is a backup strategy, not a runtime strategy
+\item Weak consistency ``\emph{may}'' be interesting
+\end{itemize}
+\end{itemize}
+
+\subsection{Hekaton}
+
+\begin{itemize}
+\item Built from ground-up to \emph{fit} into SQL Server:
+\begin{itemize}
+\item Limits design space
+\item Must coexist with old systems (e.g., here, must have commit time in old system)
+\end{itemize}
+\item Much else is in other papers
+\end{itemize}
+
 \end{document}
