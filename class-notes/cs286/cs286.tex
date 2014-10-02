@@ -363,4 +363,45 @@ read, no fuzzy read, no phantoms), but not provide serializability
 \item Much else is in other papers
 \end{itemize}
 
+\section{Lecture 11---10/2/2014}
+
+\begin{itemize}
+\item This guy fellow thinks that people aren't thinking enough about parametrized queries
+\begin{itemize}
+\item OLTP is pre-canned; OLAP isn't exactly
+\item E.g., web forms
+\end{itemize}
+\item Query optimization, a primer:
+\begin{itemize}
+\item So, we want to select some keys from a table
+\item There are many ways to execute most queries
+\begin{itemize}
+\item Joins are associative and commutative, so can be reordered
+\item Many different algorithms for joins
+\end{itemize}
+\item If we have value distribution statistics, we can estimate the cost of a query plan
+\item Problem is NP-hard, exponential in the number of tables
+\item Getting a plan wrong can cause orders of magnitude performance differences
+\begin{itemize}
+\item But, there are often many OK plans
+\end{itemize}
+\end{itemize}
+\end{itemize}
+
+\subsection{Adaptive Query Processing}
+
+\begin{itemize}
+\item Eddies:
+\begin{itemize}
+\item \textsc{Now}-sort
+\item Led to Inktomi
+\item Led to River: adaptive parallel streaming/shuffle
+\item Control: approximate query processing
+\item Can structure work in many ways:
+\begin{itemize}
+\item Want to optimize for the expected amount of work
+\end{itemize}
+\end{itemize}
+\end{itemize}
+
 \end{document}
