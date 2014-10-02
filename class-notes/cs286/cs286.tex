@@ -404,4 +404,29 @@ read, no fuzzy read, no phantoms), but not provide serializability
 \end{itemize}
 \end{itemize}
 
+\subsection{Robust Query Processing}
+
+\begin{itemize}
+\item How can we make an optimizer more robust?
+\begin{itemize}
+\item Add a feedback loop and adapt
+\item Make query plan ``pretty good'' even if your estimates are bad---you don't want the \emph{best}
+plan, you want a good plan that has a very low chance of morphing into an \emph{bad} plan
+\end{itemize}
+\item Why?
+\begin{itemize}
+\item Bound your worst-case performance (don't break)
+\item If you are robust to a metric, then you can use a cheap approach for collecting that metric
+\item Predictable across versions
+\end{itemize}
+\item Approaches:
+\begin{itemize}
+\item L.C.: You materialized a full intermediate result
+\item L.C. Eager M.: You add a materialization and look at the full intermediate approach
+\item E.C.W.C.: Watch a pipe and remember the record IDs, do an anti-join
+\item E.C.W.B.: Keep a buffer, so not as big as a materialization
+\end{itemize}
+\item Need dynamic programming algo to search the space
+\end{itemize}
+
 \end{document}
