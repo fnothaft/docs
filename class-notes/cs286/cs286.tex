@@ -429,4 +429,45 @@ plan, you want a good plan that has a very low chance of morphing into an \emph{
 \item Need dynamic programming algo to search the space
 \end{itemize}
 
+\section{Lecture 12---10/7/2014}
+
+\begin{itemize}
+\item Query optimization:
+\begin{itemize}
+\item We want to find the plan space
+\item Estimate the cost!
+\item And search (prune) that space
+\end{itemize}
+\item Should separate a plan space into a logical and physical space
+\begin{itemize}
+\item Logical space: logical operations
+\item Physical space: access operations and disk layout (implementation)
+\end{itemize}
+\item If you put a rule, you can make things blow up badly
+\item What happens if an optimizer doesn't exist? You need to take the optimizer that existed
+before, and modify it for your new optimized implementation.
+\item Cost estimation:
+\begin{itemize}
+\item Want to put together summary statistics
+\item Specifically, we probably want to generate selectivity estimation for joins
+\item Cardinality estimation for group-by's
+\item Summary statistics are computed from the data, selectivity/cardinality estimation from summary
+statistics
+\item Cost estimation $=$ statistics
+\end{itemize}
+\item Logical plan space: SQL, XQuery, Pig, Datalog
+\item Parallelism:
+\begin{itemize}
+\item How do I do a parallel database? How do I do joins/etc?
+\item How do I allocate resources?
+\end{itemize}
+\item Physical strategies need to have a logical mapping
+\item Can define rules mapping logical to logical, physical to logical
+\item Search strategies:
+\begin{itemize}
+\item Bottom-up: data oriented, forward chaining
+\item Top-down: goal oriented, backward chaining
+\end{itemize}
+\end{itemize}
+
 \end{document}
