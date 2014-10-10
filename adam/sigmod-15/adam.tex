@@ -213,6 +213,15 @@ Discussion of Figure~\ref{fig:stack-model}.
 \label{fig:stack-model}
 \end{figure}
 
+Specifically, we need to:
+
+\begin{enumerate}
+\item Compare across ``big data'' (i.e., COTS) and HPC settings
+\item Show how current systems fit into the stack model, and how our proposed stack is different
+\item Elucidate why it is more efficient to build systems that are decomposed as per our stack above
+(reference networking stack and protocol interchange)
+\end{enumerate}
+
 \subsection{Execution Platforms}
 \label{sec:execution-platforms}
 
@@ -228,12 +237,13 @@ stack, while being frank about weaknesses.
 \label{sec:genomics-pipeline}
 
 Compare/contrast to current pipelines; talk about what the stages do in reasonable but not
-excessive detail. Make reference to WHAM~\cite{li11} to show that SIGMOD cares.
+excessive detail. Make reference to WHAM~\cite{li11} to show that this is an application domain that
+SIGMOD has determined to be important.
 
 \subsection{Coordinate System Joins}
 \label{sec:coordinate-system-joins}
 
-This will be a compare/contrast discussion of the multiple join algorithms we've created.
+This will be a compare/contrast discussion of the multiple join algorithms we've created. TBD.
 
 \subsection{Loading Remote Data}
 \label{sec:loading-remote-data}
@@ -245,6 +255,7 @@ This will be a compare/contrast discussion of the multiple join algorithms we've
 \item Not all data is hot
 \end{enumerate}
 \item May push data off local disks into block store
+\item Manually re-staging data has high latency cost $\rightarrow$ impacts throughput
 \item What do we need to do to accommodate this?
 \begin{enumerate}
 \item Efficient indexing
@@ -262,6 +273,14 @@ This section will address:
 \item Performance of ADAM on real datasets
 \item Compression achieved by Parquet
 \item Examples extending the proposed stack to Astronomy
+\end{itemize}
+
+Experiments to run:
+
+\begin{itemize}
+\item General demonstration of scaling for genomics pipeline; updated experiments from TR
+\item Experiments on coordinate system joins; broadcast vs. partition join strategies
+\item Experiments showing benefit from performing remote data access without staging
 \end{itemize}
 
 \section{Discussion}
