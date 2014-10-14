@@ -368,9 +368,6 @@ base to any of the other four bases.
 \section{Results}
 \label{sec:results}
 
-\subsection{Error Correction Accuracy}
-\label{sec:accuracy}
-
 \subsection{Assembly Accuracy}
 \label{sec:assembly}
 
@@ -380,16 +377,22 @@ base to any of the other four bases.
 \subsection{Performance and Scaling}
 \label{sec:performance}
 
-\subsection{Reproducibility}
-\label{sec:reproducibility}
-
-Our tests were run on the Amazon Elastic Compute~(EC2) cloud. The scripts used to run our performance
-and accuracy tests are publicly accessible via version control on GitHub in the
-\texttt{bdg-recipes}\footnote{\url{https://www.github.com/bigdatagenomics/bdg-recipes}} repository, and
-are tagged with the \texttt{adam-ec-recomb-15} tag.
-
 \section{Conclusion}
 \label{sec:conclusion}
+
+\subsection{Availability and Reproducibility}
+\label{sec:availability}
+
+This read error correction software is made available as part of the \texttt{ADAM} libraries and
+command line interface~(CLI)~\cite{massie13}, which are open source under the Apache 2 license.
+Our source code is available on GitHub\footnote{\url{https://www.github.com/bigdatagenomics/adam}}.
+Additionally, we distribute our libraries through the Apache Maven dependency system's central
+repository, with group ID \texttt{org.bdgenomics.adam} and artifact ID \texttt{adam-core}.
+
+Our tests were run on the Amazon Elastic Compute~(EC2) cloud. The scripts used to run our
+performance and accuracy tests are publicly accessible via version control on GitHub in the
+\texttt{bdg-recipes}\footnote{\url{https://www.github.com/bigdatagenomics/bdg-recipes}} repository, and
+are tagged with the \texttt{adam-ec-recomb-15} tag.
 
 \bibliographystyle{splncs03}
 \bibliography{read-error-correction}
