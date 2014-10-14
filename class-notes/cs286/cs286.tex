@@ -493,7 +493,86 @@ $\rightarrow$ now
 \item Revenue model changed: money is not made on software sales, rather, it is made on advertising
 \item Also, RE: revenue: switched from \emph{sales} to \emph{subscription} $\rightarrow$ shift from
 CapEx to OpEx
+\item Aside: internet company developers (not enterprise developers) are driving design
+\item Custom SW is not sufficiently valuable relative to other things, so give it away:
+\begin{enumerate}
+\item Network is value, not SW
+\item Ops side arises: even if you \emph{had} FB's software, could you run Facebook?
+\item Open source software attracts top talent
+\item $E[engineer] = 2$ years: if everyone is going to leave in two years, don't have proprietary software
+\item ``OOO and software reuse is dead''
+\end{enumerate}
+\item As a result, \emph{buy vs. build} decision is completely different
 \end{itemize}
+\item Huge implications on the DB community:
+\begin{itemize}
+\item \emph{Oracle as a punching bag} $\rightarrow$ ``All the bad things about Oracle must have arrived
+out of bad DB research.''
+\begin{itemize}
+\item MySQL was also a dichotomous punching bag
+\item Where was Postgres? Cool software, but performance is worse than MySQL.
+\end{itemize}
+\item We've changed the optimization function: programmer productivity is \#1 priority
+\begin{itemize}
+\item Initially, we must harness parallelism for developers!
+\begin{itemize}
+\item First, Google MapReduce
+\item And, Hadoop @ Yahoo
+\item Also, Scope at MSFT
+\end{itemize}
+\end{itemize}
+\item Since 2004:
+\begin{enumerate}
+\item Parallel DBs were overpriced and slow
+\item A lot of the MR workloads were SQL-ish:
+\begin{itemize}
+\item Hive
+\item Pig
+\end{itemize}
+\item Clear OSS opportunity:
+\begin{itemize}
+\item Cloudera
+\item Hortonworks
+\item MapR
+\item \dots
+\end{itemize}
+\item Google sponsors \emph{significant} education push around MapReduce
+\item Hybrid workflows rise up
+\end{enumerate}
+\end{itemize}
+\end{itemize}
+
+\subsection{Questions}
+
+\begin{enumerate}
+\item Who should use the Hadoop ecosystem?
+\begin{itemize}
+\item HDFS: Is a pretty useful storage system.
+\item Everything else:
+\begin{itemize}
+\item If you want to program MapReduce (e.g., custom UDFs), MR is a better platform...
+\item What do you do once you get a result? With DBs, you can materialize it. With MR, you have many
+ways to go from there. E.g., \emph{opportunistic vs. agile} pipelines. Assumes sophisticated developers
+are using the system.
+\item How much data should you have? If you've got a program that'll scale across multiple machines,
+that's a good fit for Hadoop.
+\item If you're using Hadoop, your jobs should probably be long running, and not terribly time critical.
+\item Machine learning at scale?
+\item How does Spark come in? Logical vs. physical fault tolerance is a nice thing to fall back on.
+\end{itemize}
+\end{itemize}
+\item What should they pay?
+\end{enumerate}
+
+\subsection{DryadLINQ and .NET}
+
+\begin{itemize}
+\item LINQ is cool.
+\item Unfortunately, it is in .NET\dots
+\item What \emph{is} LINQ? $\rightarrow$ a functional DSL for collections
+\item What \emph{in} .NET are they interested in? $\rightarrow$ Probably libraries for math/collections.
+\item Debugging: provide a single node implementation that can be run locally.
+\item Also have PLINQ $\rightarrow$ parallel LINQ on a single system; so node + processor parallelism
 \end{itemize}
 
 \end{document}
