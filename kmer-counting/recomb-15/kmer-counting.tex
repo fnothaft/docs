@@ -1,0 +1,400 @@
+% This is LLNCS.DEM the demonstration file of
+% the LaTeX macro package from Springer-Verlag
+% for Lecture Notes in Computer Science,
+% version 2.4 for LaTeX2e as of 16. April 2010
+%
+\documentclass{llncs}
+%
+\usepackage{makeidx}  % allows for indexgeneration
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+\lstdefinelanguage{scala}{morekeywords={class,object,trait,extends,with,new,if,while,for,def,val,var,this},
+otherkeywords={->,=>},
+sensitive=true,
+morecomment=[l]{//},
+morecomment=[s]{/*}{*/},
+morestring=[b]"}
+% Default settings for code listings
+\lstset{frame=tb,language=scala,aboveskip=3mm,belowskip=3mm,showstringspaces=false,columns=flexible,basicstyle={\small\ttfamily}}
+%
+\begin{document}
+%
+\frontmatter          % for the preliminaries
+%
+\pagestyle{headings}  % switches on printing of running heads
+\addtocmark{Probabilistic Read Error Correction}
+\mainmatter              % start of the contributions
+%
+\title{A Probabilistic Model for Distributed \\ Read Error Correction}
+%
+\titlerunning{Probabilistic Read Error Correction}  % abbreviated title (for running head)
+%                                     also used for the TOC unless
+%                                     \toctitle is used
+%
+\author{Frank~Austin~Nothaft, Anthony~D.~Joseph, \and David~A.~Patterson}
+%
+\authorrunning{Nothaft et al.} % abbreviated author list (for running head)
+%
+\institute{Department of Electrical Engineering and Computer Sciences\\
+University of California, Berkeley \\ 
+Berkeley, CA 94720, USA \\
+\email{\{fnothaft, adj, pattrsn\}@berkeley.edu}}
+
+\maketitle              % typeset the title of the contribution
+
+\begin{abstract}
+Read error correction is a key step in many genome assembly protocols, but is computationally
+expensive. Recent papers have proposed several strategies for approximating steps in the error
+correction process. In this paper, we derive a rigorous generative model for identifying and correcting
+errors in short reads. We implement our algorithm using the Apache Spark distributed computing
+platform. Our implementation demonstrates a performant and exact approach to read error correction
+that can scale efficiently to mammalian genomes.
+
+\keywords{genome assembly, read error correction, distributed computing}
+\end{abstract}
+
+\section{Introduction}
+\label{sec:introduction}
+
+Read error correction is a key step in most genome assembly protocols, but is computationally
+expensive~\cite{kelley10}. Recent work has explored mechanisms for performing error correction with
+probabilistic data structures which consume less memory~\cite{song14,shi10,liu13,heo14}. However,
+we assert that these techniques are unnecessary with the rise of distributed, in-memory computing
+frameworks that scale easily on commodity hardware~\cite{zaharia10}.
+
+In this paper, we present a distributed algorithm for performing read error correction, which is built using
+the ADAM libraries for distributed genomics~\cite{massie13}. Our algorithm trains a model for read
+errors using the abundance spectrum of quality score weighted $k$-mers (known as
+$q$-mers~\cite{kelley10}). Given these probabilities, we estimate transition probabilities across classes
+which contain correlated errors. Finally, per read, we perform error correction via a coordinate ascent
+process. As our algorithms are implemented on top of the Apache Spark in-memory MapReduce
+system~\cite{zaharia10}, we are able to achieve both scale up and scale out performance. Our
+software is open source under the Apache 2 license.
+
+We make the following contributions:
+
+\begin{enumerate}
+\item We implement a MapReduce based, in-memory $k$/$q$-mer counting engine.
+\item We demonstrate a probabilistically rigorous, generative model for read error correction.
+\item Our model is implemented in a scalable fashion on an efficient, MapReduce engine.
+\end{enumerate}
+
+\section{Background and Related Work}
+\label{sec:background}
+
+\section{Implementation}
+\label{sec:implementation}
+
+\subsection{Distributed $k$-mer Counting}
+\label{sec:distributed-kmer-counting}
+
+On top of a MapReduce platform, $k$-mer counting reduces down to the classical ``word count'' problem.
+Our $k$-mer counting implementation uses the following simple code:
+
+\begin{lstlisting}
+def adamCountKmers(kmerLength: Int): RDD[(String, Long)] = {
+  rdd.flatMap(r => {
+    // cut each read into k-mers, and attach a count of 1L                                                                                                                                                  
+    r.getSequence
+	.toString
+	.sliding(kmerLength)
+	.map(k => (k, 1L))
+  }).reduceByKey((k1: Long, k2: Long) => k1 + k2)
+}
+\end{lstlisting}
+
+This MapReduce job is implemented on top of the Apache Spark platform, which provides the resilient
+distributed dataset~(RDD) abstraction~\cite{zaharia12}. This abstraction presents a view of an array which
+is distributed as partitions across machines. In the code above, we first perform a \texttt{flatMap}
+transformation which cuts reads into $k$-mers of multiplicity 1. These intermediate $k$-mers are then
+persisted in memory as an intermediate result. We then perform a \texttt{reduceByKey}, where the
+$k$-mer string is used as the key. This stage opportunistically performs the reduction on local keys, before 
+globally ``shuffling'' data between machines.
+
+As noted in the rest of the paper, we use ``$q$-mers'', which were introduced by Kelley et
+al~\cite{kelley10}. $q$-mers represent quality score weighted $k$-mers. Thus, while the multiplicity of a
+$k$-mer seen in a read is 1, the multiplicity of a $q$-mer is bounded between $[0,1]$. The implementation
+of our $q$-mer counter is a slight modification of our $k$-mer count implementation. Conceptually, the
+$q$-mer counting process provides expectations for the \emph{true} counts of all $k$-mers, which makes
+it highly useful for detecting erroneous $k$-mers.
+
+\subsection{Erroneous $k$-mer Detection}
+\label{sec:detection}
+
+Given the $q$-mer spectrum, we apply an unsupervised clustering model to learn the
+classifications of $q$-mers. For a sample with ploidy of $m$, we model $q$-mers as being drawn from
+a selection of $m + 1$ Gamma distributions. $m - 1$ of these distributions model ``true'' $q$-mers
+which are drawn from heterozygous sites, one distribution models ``true'' $q$-mers drawn from
+homozygous sites, and one distribution models erroneous $q$-mers. While prior work by Kelley et
+al.~\cite{kelley10} has used the Normal distribution to model the counts of ``true'' $q$-mers, it is
+preferable to use the Gamma distribution, whose support is limited to $[0, \infty)$.
+
+We describe the process we use for counting $q$-mers in~\S\ref{sec:distributed-kmer-counting}. Once
+we have counted $q$-mers, we then fit our mixture model using the expectation-\linebreak
+maximization~(EM) algorithm introduced by Almhana et al.~\cite{almhana06} We considered the
+optimized algorithm for fitting mixtures of Gammas that was proposed by Schwander and
+Nielsen~\cite{schwander13}, but chose the Almhana EM algorithm because the Schwander $k$-MLE
+algorithm is slower for mixtures that contain fewer than eight components. We describe the
+implementation of this algorithm in~\S\ref{sec:distributed-em}.
+
+Once the mixture model has been fit, each $k$-mer can be assigned an error probability. This
+probability is given in equation~\eqref{eq:p-err}, and is defined by the softmax likelihood that a $k$-mer
+is drawn from the error distribution, given the $q$ weight of the $k$-mer.
+
+\begin{equation}
+\label{eq:p-err}
+P(k \text{ is erroneous}) = \frac{\mathcal{L}(s = 0 | k)}{\sum_{i = 0}^{m + 1} \mathcal{L}(s = i | k)}
+\end{equation}
+
+Once the error probabilities have been calculated for all $k$-mers, we then filter the set of $k$-mers
+to obtain the set of trusted $k$-mers. We apply the following filters, and place all $k$-mers that satisfy
+these filters into a trie:
+
+\begin{enumerate}
+\item The $k$-mer is kept if it's error probability is below a user provided error threshold, and
+\item The $k$-mer does not contain any IUPAC disambiguation codes.
+\end{enumerate}
+
+\subsection{Distributed EM Algorithms}
+\label{sec:distributed-em}
+
+The Spark MapReduce platform was designed to enhance the performance of iterative MapReduce
+algorithms, which are commonplace in machine learning and related disciplines~\cite{zaharia10}. Spark
+achieves this by providing the ability to hold datasets in memory between iterations. This improves
+performance when compared to Hadoop, where intermediate results must be spilled to disk after every
+map phase. Through the effective use of caching, we are able to implement high performance,
+distributed EM on top of Spark, without the use of any approximations.
+
+As mentioned in~\S\ref{sec:detection}, we use the EM algorithm for mixtures of Gamma distributions
+which was introduced by Almhana et al~\cite{almhana06}. To fit a mixture of $i \in [0, \dots, n - 1]$
+Gamma distributions with shape $\alpha_i$ and rate~(inverse of scale) $\beta_i$ to $n$ points, we
+perform the following M updates during step $t$:
+
+\begin{equation}
+\label{eq:gamma-em-pi}
+\pi_i^{(t + 1)} = \frac{1}{n} \sum_{j = 1}^n p(i | x_j, \Theta^{(t)})
+\end{equation}
+\begin{equation}
+\label{eq:gamma-em-beta}
+\beta_i^{(t + 1)} = \frac{\alpha_i^{(t)} \sum_{j = 1}^n p(i | x_j, \Theta^{(t)})}{\sum_{j = 1}^n x_j p(i | x_j,
+\Theta^{(t)})}
+\end{equation}
+\begin{equation}
+\label{eq:gamma-em-alpha}
+\alpha_i^{(t + 1)} = \alpha_k^{(i - 1)} + \frac{1}{t} G_{\alpha_i}(X, \Theta^{(t)})
+\end{equation}
+
+The $G_{\alpha_i}(X, \Theta^{(t)})$ expression is defined as follows:
+
+\begin{equation}
+\label{eq:gamma-em-g}
+G_{\alpha_i}(X, \Theta^{(t)}) = \frac{1}{n} \sum_{j = 1}^n [\log(x_j) - \log(\beta_i^{(t)}) -
+\psi(\alpha_i^{(t)})] p(i | x_j, \Theta^{(t)})
+\end{equation}
+
+We initialize our distributions before running EM by running $k$-means, using the MLLib/MLI
+implementation of $k$-means~\cite{sparks13}. We associate each point to the cluster centroid it is
+closest to, and compute the mean~($\mu$) and standard deviation~($\sigma$) of the points associated with each
+centroid. Given the $\mu$ and $\sigma$ per centroid, we initialize a Gamma distribution by solving
+$\alpha = \frac{\mu}{\sigma}$ and $\beta = \frac{\alpha}{\mu}$. In pseudocode, our distributed
+implementation of EM is as follows:
+
+\begin{algorithm}
+\caption{Run Distributed EM}
+\label{alg:distributed-em}
+\begin{algorithmic}
+\STATE $data \leftarrow$ input dataset
+\STATE $\Theta \leftarrow$ initial distribution parameters in mixture
+\STATE $\pi \leftarrow$ initial distribution weights
+\REQUIRE $data$ is cached
+\STATE $iteration \leftarrow 1$
+\REPEAT
+\STATE $pointProbabilities \leftarrow data$.map($x_j \Rightarrow p(i | x_j, \Theta, \pi) \forall i$)
+\STATE $pointProbabilities$.cache()
+\STATE $nonNormalizedWeights \leftarrow pointProbabilities$.aggregate($(a, b) \Rightarrow a + b$)
+\STATE $weightsAndPoints \leftarrow pointProbabilities$.zip($data$)
+\STATE $pointProbabilities$.uncache()
+\STATE $weightsAndPoints$.cache()
+\STATE $betaDenominator \leftarrow weightsAndPoints$.map($(\tau_j, x_j) \Rightarrow x_j \tau_j$)\\
+\hspace{\algorithmicindent}.aggregate($(a, b) \Rightarrow a + b$)
+\STATE $G \leftarrow weightsAndPoints$.map($(\tau_j, x_j) \Rightarrow \tau_j^T [\log(x_j) - \log(\beta_i) - \psi(\alpha_i), \forall i]$)\\
+\hspace{\algorithmicindent}.aggregate($(a, b) \Rightarrow a + b$)
+\STATE $weightsAndPoints$.uncache()
+\STATE $\pi \leftarrow$ softmax($nonNormalizedWeights$)
+\FORALL{$(\alpha, \beta) \in \Theta, g \in G, b \in betaDenominator$}
+\STATE $\beta \leftarrow \frac{\alpha nonNormalizedWeight}{b}$
+\STATE $\alpha \leftarrow \alpha + \frac{g}{iteration}$
+\ENDFOR
+\STATE $iteration \leftarrow iteration + 1$
+\UNTIL{converged}
+\RETURN $\Theta$
+\end{algorithmic}
+\end{algorithm}
+
+During this algorithm, we calculate the expected complete log \linebreak likelihood~(ECLL) of the
+mixture. We run this algorithm until either a maximum iteration limit has been reached, or until we are
+no longer making ``significant'' improvements in the ECLL. We provide the user with the ability to set
+the early termination cut-off threshold for ECLL improvement.
+
+\subsection{Base Transition Probability}
+\label{sec:transition-probability}
+
+Due to well-known biases in the sequencing process, the four nucleotides have different probabilities
+of being sequenced incorrectly. Errors are known to be correlated within specific nucleotides, the
+position of the base in the read, and empirical quality score values. These three \emph{covariates} are
+used in the GATK's base quality score recalibration~(BQSR) process which measures the ``true'' error
+probability that corresponds to a base quality score~\cite{depristo11}.
+
+While base quality scores are a useful prior for the GATK's main goal~(specifically, variant calling),
+their binary error/success nature is not as useful of a prior for read error correction. Instead, since we
+are trying to predict whether a true base $b$ was incorrectly sequenced as $b'$, where $b, b' \in
+\{ \text{A}, \text{C}, \text{G}, \text{T} \}$\footnote{In practice, the observed base, $b'$, may be
+represented by any of the IUPAC base disambiguation codes. While we handle these cases in our
+implementation, we do not include them here for notational simplicity. The corrected base, $b$, is
+constrained to not be a disambiguation code.}, we desire our prior to be the transition probabilities from
+$b' \rightarrow b$. These transition probabilities can be represented by categorical random variables
+with four categories. We want to estimate these distributions per error covariate, where the error
+covariate is defined by the sequenced base, the empirical base quality score, and the position of the
+base in the read.
+
+The transition probability for error covariate $C_{b', i, q}$ can be estimated via maximum likelihood.
+Specifically, for each base $b'$ sequenced with quality $q$ at position $i$ in the read, we can define
+the likelihood that this base was actually $b$ by looking at the error probabilities of all $k$-mers that
+cover this base.
+
+\begin{equation}
+\label{eq:base-likelihood}
+\mathcal{L}(b) = \frac{\prod_{j = 1}^{k} p(b | b', i, q) P(\text{kmer}_j^{b, i} \text{ is true})}{\sum_{\hat{b} =
+\{A, C, G, T\}} \prod_{j = 1}^{k} p(\hat{b} | b', i, q) P(\text{kmer}_j^{\hat{b}, i} \text{ is true})}
+\end{equation}
+
+In equation~\eqref{eq:base-likelihood}, we use $\text{kmer}_j^{b, i}$ as a function that appropriately
+substitutes base $b$ into the $j$th $k$-mer that covers the base at position $i$. Also, note in practice
+that bases at the start and end of the read will not be covered by $k$ $k$-mers; for example, the first
+base of each read is covered by a single $k$-mer. The $P(k\text{-mer is true})$ probabilities
+are evaluated using the trie collected by the erroneous $k$-mer detection process described
+in~\S\ref{sec:detection}. We note that invalid $k$-mers are not present in that tree; when we search for
+a $k$-mer that is not resident in the trie, we substitute the user provided probability cutoff as an upper
+bound on the truth probability of that $k$-mer.
+
+To achieve a most accurate estimate for the transition probabilities of error covariate $C_{b', i, q}
+\rightarrow p(b | b', i, q)$, we would ideally run an EM algorithm over all bases in $C_{b', i, q}$.
+However, this is not  tractable as within a read we cannot separately evaluate the transitions for bases
+$i - 1$, $i$, and $i + 1$. To run such an EM algorithm, we would need to evaluate all transitions for all
+bases in all reads, which would be computationally intractable; we discuss this in more detail
+in~\S\ref{sec:read-refinement}. Instead, we estimate the transition probabilities by treating the
+probability estimates of all bases in $C_{b', i, q}$ as the expected outcomes from multinomial trials, and 
+apply an MLE estimator. This is equivalent to running a single expectation phase of the canonical EM
+algorithm for a mixture of categorical random variables.
+
+\subsection{Read Refinement}
+\label{sec:read-refinement}
+
+From~\S\ref{sec:transition-probability}, we have derived the likelihood equations for base
+calls~(equation~\eqref{eq:base-likelihood}), and an algorithm for finding the priors for bases in a given
+error covariate $C_{b', i, b}$. Given the base likelihood equation and the prior probabilities, we would
+like to make corrections to low quality base calls such that we maximize the probability of each read.
+We define the probability of each read as:
+
+\begin{equation}
+\label{eq:read-probability}
+P(\mathbf{r} | \mathbf{r}') = \prod_{i = 1}^l \mathcal{L}(b = r_i)
+\end{equation}
+
+Where $\mathcal{L}(b)$ is defined in~\eqref{eq:base-likelihood}. If we consider $\mathbf{r}$ and
+$\mathbf{r}'$ to be vectors such that each base of the read exists in it's own coordinate plane, error
+correction can be performed via coordinate ascent in the read space. We define the following recursive
+algorithm to perform coordinate ascent, where we attempt to correct the read, and only accept this
+correction if it improves the probability that the current read sequence is correct:
+
+\begin{algorithm}
+\caption{Error Correction via Coordinate Ascent}
+\label{alg:ex-coordinate-ascent}
+\begin{algorithmic}
+\STATE $read \leftarrow$ current read sequence
+\STATE $p_{read} \leftarrow$ current read probability
+\STATE $\tau \leftarrow$ current priors
+\STATE $candidates \leftarrow$ sorted list of bases which are candidates for correction
+\IF{$candidates$ is empty}
+\RETURN $(read, \tau)$
+\ELSE
+\STATE $candidate \leftarrow candidates$.first
+\STATE $newRead \leftarrow$ correctRead($read, candidate$)
+\FORALL{$i \in read$}
+\IF{$k$-mers from $i$ overlap $candidate$}
+\STATE $\tau'_i \leftarrow p(b | read_i) \tau_i^b, \forall b \in \{A, C, G, T\}$
+\ELSE
+\STATE $\tau'_i \leftarrow \tau_i$
+\ENDIF
+\STATE $p'_{read} \leftarrow$ probability($\tau'$)
+\IF{$p'_{read} < p_{read}$}
+\RETURN recurse($read, p_{read}, \tau, candidates$.dropFirst)
+\ELSE
+\RETURN recurse($newRead, p'_{read}, \tau',$ computeNewCandidates($newRead, \tau'$))
+\ENDIF
+\ENDFOR
+\ENDIF
+\end{algorithmic}
+\end{algorithm}
+
+For the first iteration of the algorithm, we use the base transition probabilities
+from~\S\ref{sec:transition-probability} as prior probabilities when computing base likelihoods. After the
+first iteration, we use the likelihoods from the last accepted step as the priors for the next step. At each
+step, we define a base as a candidate for correction if the probability that the base is the ``true'' base at
+that site in the read is below a user defined probability~(default is Phred 10 $\rightarrow p(b) < 0.9$),
+and if we have not tried this correction \emph{since} the last accepted correction.\footnote{To prevent
+oscillating corrections, we also do not allow bases that have been previously edited to be considered as
+candidates.} As such, we only need to calculate the correction candidates on the initial iteration, and
+after every accepted iteration.
+
+Once the correction algorithm has completed, we perform a final two steps:
+
+\begin{enumerate}
+\item We convert the final base probabilities from the coordinate ascent algorithm into Phred-scaled
+base quality scores, and
+\item We trim low quality bases off of the start and end of the read, where ``low quality'' is defined by a
+user provided threshold~(default is Phred 10).
+\end{enumerate}
+
+We only attempt to correct a single base per iteration. As mentioned
+in~\S\ref{sec:transition-probability}, it is intractable to exhaustively search for correction candidates.
+This is because a sequence of length $l$ has $3 {l \choose e}$ correction candidates if we allow up to
+$e$ errors to be corrected in a single step. The constant factor of 3 arises because we can correct each 
+base to any of the other four bases.
+
+\section{Results}
+\label{sec:results}
+
+\subsection{Assembly Accuracy}
+\label{sec:assembly}
+
+\subsection{Variant Calling Accuracy}
+\label{sec:variant-calling}
+
+\subsection{Performance and Scaling}
+\label{sec:performance}
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+\subsection{Availability and Reproducibility}
+\label{sec:availability}
+
+This read error correction software is made available as part of the \texttt{ADAM} libraries and
+command line interface~(CLI)~\cite{massie13}, which are open source under the Apache 2 license.
+Our source code is available on GitHub\footnote{\url{https://www.github.com/bigdatagenomics/adam}}.
+Additionally, we distribute our libraries through the Apache Maven dependency system's central
+repository, with group ID \texttt{org.bdgenomics.adam} and artifact ID \texttt{adam-core}.
+
+Our tests were run on the Amazon Elastic Compute~(EC2) cloud. The scripts used to run our
+performance and accuracy tests are publicly accessible via version control on GitHub in the
+\texttt{bdg-recipes}\footnote{\url{https://www.github.com/bigdatagenomics/bdg-recipes}} repository, and
+are tagged with the \texttt{adam-ec-recomb-15} tag.
+
+\bibliographystyle{splncs03}
+\bibliography{kmer-counting}
+
+\end{document}
