@@ -575,4 +575,73 @@ that's a good fit for Hadoop.
 \item Also have PLINQ $\rightarrow$ parallel LINQ on a single system; so node + processor parallelism
 \end{itemize}
 
+\section{Lecture 15---10/21/2014}
+
+\begin{itemize}
+\item Streaming queries was a giant fad:
+\begin{itemize}
+\item Language semantics issues are a big problem:
+\begin{itemize}
+\item Need a language that is rich enough that you can use, but
+\item Easy enough that you can program
+\item Declarative (calculus) vs. algebra languages
+\item Complex event processing
+\end{itemize}
+\item Whole bucket of systems work:
+\begin{itemize}
+\item Minimize memory footprint
+\item Scaling vs. number/complexity of queries
+\item Adaptivity and load shedding
+\item \emph{Surprisingly little} work on parallelism and fault tolerance
+\item Distributed/service oriented fault tolerance
+\end{itemize}
+\item Theory:
+\begin{itemize}
+\item Using synopses/sketches
+\item E.g., what happens if you can only look at a record once?
+\end{itemize}
+\item Practice:
+\begin{itemize}
+\item Streams are not ordered!
+\item Therefore, need to \emph{reorder} streams.
+\item People like to revoke data.
+\item Few streams exist by themselves; we want to join against stored data.
+\item Small \$\$\$\$, at least, so far.
+\end{itemize}
+\end{itemize}
+\item Happened around the same time that XML was a huge fad
+\item Industry stuff:
+\begin{itemize}
+\item Wall Street time series stuff (\texttt{Kx} for HFT)
+\item Enterprise publish/subscribe services
+\item Message queues: store and forward networks for transactional endpoints
+\end{itemize}
+\item Why don't transactions make sense? Concurrent, read heavy workloads.
+\item Research projects:
+\begin{itemize}
+\item TelegraphCQ @ Berkeley
+\item Aurora/Borealis @ MIT/Brandeis/Brown $\rightarrow$ started as dataflow language
+\item STREAM @ Stanford
+\end{itemize}
+\item Language:
+\begin{itemize}
+\item Have both data and ordering $\rightarrow$ more than a relation
+\item Have many-to-many mapping between records and time
+\end{itemize}
+\item Operators:
+\begin{itemize}
+\item Simple monotonic relational operators are fairly easy:
+\begin{itemize}
+\item Selection
+\item Projection
+\item Join
+\end{itemize}
+\item Nonmonotonic is harder:
+\begin{itemize}
+\item Temporal windows $\rightarrow$ specifically, when is the window done?
+\item Aggregate
+\end{itemize}
+\end{itemize}
+\end{itemize}
+
 \end{document}
