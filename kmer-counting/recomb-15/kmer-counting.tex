@@ -25,12 +25,12 @@ morestring=[b]"}
 \frontmatter          % for the preliminaries
 %
 \pagestyle{headings}  % switches on printing of running heads
-\addtocmark{Probabilistic Read Error Correction}
+\addtocmark{Distributed, In-Memory $k$-mer Counting}
 \mainmatter              % start of the contributions
 %
-\title{A Probabilistic Model for Distributed \\ Read Error Correction}
+\title{Distributed, In-Memory $k$-mer Counting}
 %
-\titlerunning{Probabilistic Read Error Correction}  % abbreviated title (for running head)
+\titlerunning{Distributed, In-Memory $k$-mer Counting}  % abbreviated title (for running head)
 %                                     also used for the TOC unless
 %                                     \toctitle is used
 %
@@ -46,6 +46,9 @@ Berkeley, CA 94720, USA \\
 \maketitle              % typeset the title of the contribution
 
 \begin{abstract}
+Calculating the relative abundances of $k$-mers is a key task in many alignment-free genomics
+pipelines. However, $k$-mer counting is slow for 
+
 Read error correction is a key step in many genome assembly protocols, but is computationally
 expensive. Recent papers have proposed several strategies for approximating steps in the error
 correction process. In this paper, we derive a rigorous generative model for identifying and correcting
@@ -53,7 +56,7 @@ errors in short reads. We implement our algorithm using the Apache Spark distrib
 platform. Our implementation demonstrates a performant and exact approach to read error correction
 that can scale efficiently to mammalian genomes.
 
-\keywords{genome assembly, read error correction, distributed computing}
+\keywords{$k$-mer, distributed computing, map-reduce}
 \end{abstract}
 
 \section{Introduction}

@@ -83,22 +83,22 @@
 \maketitle
 
 \begin{abstract}
-Revolutions in data-acquisition are drastically changing how science conducts experiments. For
-example, the advent of ``next-generation'' sequencing technologies has led to a 10,000$\times$
-decrease, which has led to exponential growth in the total volume of genome sequence data and
-improvements in our understanding of genetics. This broader trend has lead to the rise of ``data
-science'' and \emph{data-driven discovery}, and many of these analysis problems are amenable to
-extant analytics systems.
+Revolutions in data acquisition are drastically changing how science conducts experiments. For
+example, ``next-\linebreak generation'' sequencing technologies have decreased the cost of sequencing
+a genome by 10,000$\times$, which has driven exponential growth in the total volume of genome
+sequence data available. However, many traditional ``scientific computing'' systems are a poor fit for
+these analyses, as they either provide poor programming abstractions, or require too much effort to
+program. As a result, there has been an inefficient duplication of work in the scientific community.
 
 In this paper, we introduce a set of principles for decomposing scientific analysis systems so that they
-can be implemented efficiently on top of existing systems. We motivate these principles with an
-example genomics pipeline which leverages open-source MapReduce and columnar storage
-techniques to achieve a $>50\times$ speedup over traditional genomics systems. We also include
-a discussion of further optimizations we made to improve data management system performance.
+can be implemented efficiently on top of existing systems, while providing productive programming
+interfaces. We motivate these principles with an example genomics pipeline which leverages
+open-source MapReduce and columnar storage techniques to achieve a $>50\times$ speedup over
+traditional genomics systems, at half the cost.
 \end{abstract}
 
 % A category with the (minimum) three required fields
-\category{L.4.1}{Applied Computing}{Life and medical sciences}[Computational biology] 
+\category{L.4.1}{Applied Computing}{Life and medical sciences}[Computational biology]
 \category{H.1.3.2}{Information Systems}{Data management systems}[Database management
 system engines, parallel and distributed DBMSs]
 \category{E.3.2}{Software and its Engineering}{Software creation and management}[Software
@@ -120,18 +120,40 @@ Development Process Management]
 MRI systems)
 \item Also driven by rise of statistical systems which are easy to use for non-experts~(e.g.,
 Scikit-learn~\cite{pedregosa11}, MLI~\cite{sparks13})
+\item Few queries in modern data science resemble traditional scientific computing patterns; not as
+communication heavy, but very UDF heavy
 \end{enumerate}
 \item Computing is becoming a dominant cost for science
-\item We need efficient ways to construct these data processing systems
+\begin{enumerate}
+\item Both in terms of literal costs $\rightarrow$ paying for compute, storage, machines~\cite{stein10,
+schadt10}
+\item And in terms of NRE effort~\cite{wilson14}
+\end{enumerate}
+\item The design of these scientific processing systems must confront the sources of inefficiency:
 \begin{enumerate}
 \item Efficiency is both computational cost and development cost
-\item An efficient system should be fast
-\item An efficient system should be able to support a full range of analyses
-\item An efficient system shouldn't reinvent the wheel
+\item An efficient system should be fast \emph{enough}
+\item An efficient system should be able to support the common queries we need
+\item An efficient system should minimize the number of wheels that are reinvented
+\item An efficient system should have a simple programming interface and layered design~\cite{bafna13}
 \end{enumerate}
 \item Network stack achieves a similar goal:
 \begin{enumerate}
 \item Can swap out layers to tailor implementation
+\item Abstract lower levels of the stack to provide a simple programming interface
+\end{enumerate}
+\item Also, current computer systems fail to address important characteristics of scientific workloads:
+\begin{enumerate}
+\item \emph{Huge} data sizes, e.g., TB for neuroscience~\cite{cunningham14, freeman14}, PB for
+genomics; may be too large to stage locally, or have small ``hot'' set
+\item Different join patterns; need to join objects in a coordinate system
+\item Spatial/temporal analysis: esp. for neuroscience, and other ``signal processing'' sciences
+$\rightarrow$ similar to stream processing, but subtly different; may need ``window sweeping'' function
+\item Programming models! Need to enable:
+\begin{itemize}
+\item Scientists to write UDFs $\rightarrow$ SQL is a bad interface
+\item Scientists to do \emph{interactive data analysis}
+\end{itemize}
 \end{enumerate}
 \item Contributions of this work:
 \begin{itemize}
@@ -152,21 +174,33 @@ scientific systems.
 \item MapReduce-based workflows
 \begin{enumerate}
 \item In CS, development of MapReduce $\rightarrow$ Hadoop $\rightarrow$ Spark
-\item Equivalent systems in bioinformatics $\rightarrow$ GATK \cite{mckenna10}
-\item Hadoop-based genomics tools \cite{schatz09, langmead09}
+\item Equivalent systems in bioinformatics $\rightarrow$ GATK~\cite{mckenna10}
+\item Hadoop-based genomics tools~\cite{schatz09, langmead09}
 \item Use of Spark for neuroscience
 \end{enumerate}
 \item Database driven systems
 \begin{enumerate}
-\item SciDB \cite{brown10}
-\item GQL \cite{kozanitis14, bafna13}
+\item SciDB~\cite{brown10}
+\item GQL~\cite{kozanitis14, bafna13}
 \end{enumerate}
 \item Storage layers
 \begin{enumerate}
-\item CRAM \cite{fritz11}
-\item YT \cite{turk11}
+\item CRAM~\cite{fritz11}
+\item YT~\cite{turk11}
 \end{enumerate}
 \end{enumerate}
+
+Takeaways:
+
+\begin{itemize}
+\item There are significant computer system design problems in science:
+\begin{enumerate}
+\item Compression $\rightarrow$ column stores (CRAM~\cite{fritz11}, YT~\cite{turk11})
+\item Performance/parallelism $\rightarrow$ MapReduce (GATK~\cite{mckenna10})
+\end{enumerate}
+\item Traditional SC/DB systems provide poor abstractions for most scientists
+\item As a result, there are lots of ``roll your own'' systems in science
+\end{itemize}
 
 \section{Principles for Scientific \\ Analysis Systems}
 \label{sec:principles}
@@ -216,10 +250,10 @@ Discussion of Figure~\ref{fig:stack-model}.
 Specifically, we need to:
 
 \begin{enumerate}
-\item Compare across ``big data'' (i.e., COTS) and HPC settings
 \item Show how current systems fit into the stack model, and how our proposed stack is different
 \item Elucidate why it is more efficient to build systems that are decomposed as per our stack above
-(reference networking stack and protocol interchange)
+(reference networking stack and protocol interchange), see Bafna et al~\cite{bafna13}, talk about costs
+of programming without good stack model
 \end{enumerate}
 
 \subsection{Execution Platforms}
@@ -291,8 +325,15 @@ Experiments to run:
 
 Big critique from SciDB camp is that MR is an inappropriate platform for scientific computing due to
 lack of support for linear algebra. We need to counter this point, by allusion to performance on
-algorithms above, and by alluding to specialized libraries for ML \& graph
-processing~\cite{sparks13, xin13}.
+algorithms above, and by alluding to specialized libraries for ML \& graph processing~\cite{sparks13,
+xin13}.
+
+Also, note that we don't argue that MR is the correct platform for particle simulations and other
+traditional MPI workloads. However, MPI is the \emph{wrong} platform for most analyses.
+
+Also, note that most scientific workloads require applying a UDF across a large set of data. This is not
+inefficient to \emph{run} on a database, but it is inefficient to \emph{write}; SQL is a poor language for
+scientific/statistical computing.
 
 \subsection{Cost of Non-Commodity Systems}
 \label{sec:commodity}
