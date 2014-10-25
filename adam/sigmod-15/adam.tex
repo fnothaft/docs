@@ -28,6 +28,18 @@
 
 \documentclass{acm_proc_article-sp}
 
+\usepackage{xcolor}
+\newif\ifdraft
+\drafttrue
+%\draftfalse                                                                                                                                     
+\ifdraft
+\newcommand{\zhaonote}[1]{{\textcolor{cyan}{ ***Zhao: #1 }}}
+\newcommand{\note}[1]{ {\textcolor{red}{\bf #1 }}}
+\else
+\newcommand{\zhaonote}[1]{}
+\newcommand{\note}[1]{}
+\fi
+
 \begin{document}
 
 \title{Design Principles for Modular and Scalable \linebreak Scientific Analysis Systems}
@@ -110,7 +122,7 @@ Development Process Management]
 
 \section{Introduction}
 \label{sec:introduction}
-
+\zhaonote{test note}
 \cite{massie13}
 
 \begin{enumerate}
