@@ -28,6 +28,8 @@
 
 \documentclass{acm_proc_article-sp}
 
+\usepackage{url}
+
 \begin{document}
 
 \title{Design Principles for Modular and Scalable \linebreak Scientific Analysis Systems}
@@ -84,11 +86,11 @@
 
 \begin{abstract}
 Revolutions in data acquisition are drastically changing how science conducts experiments. For
-example, ``next-\linebreak generation'' sequencing technologies have decreased the cost of sequencing
-a genome by 10,000$\times$, which has driven exponential growth in the total volume of genome
-sequence data available. However, many traditional ``scientific computing'' systems are a poor fit for
-these analyses, as they either provide poor programming abstractions, or require too much effort to
-program. As a result, there has been an inefficient duplication of work in the scientific community.
+example, ``next-\linebreak generation'' sequencing technologies has driven exponential growth in
+the volume of genomic data, and similar trends impact many fields which rely on imaging, such as
+astronomy and neuroscience. However, many traditional ``scientific computing'' systems are a poor fit
+for these analyses, as they either provide poor programming abstractions, or require too much effort
+to program.
 
 In this paper, we introduce a set of principles for decomposing scientific analysis systems so that they
 can be implemented efficiently on top of existing systems, while providing productive programming
@@ -111,58 +113,39 @@ Development Process Management]
 \section{Introduction}
 \label{sec:introduction}
 
-\cite{massie13}
+With major improvements in scientific data acquisition techniques, data storage and processing have
+become major problems for scientists~\cite{schadt10, cunningham14}. In fields like
+neuroscience~\cite{freeman14} and genomics~\cite{stein10}, scientists routinely perform experiments
+that use terabytes~(TB) to petabytes~(PB) of data. While traditional scientific computing platforms are
+optimized for fast linear algebra, many emerging domains make heavy use of statistical learning
+techniques coupled with user defined operations on top of semistructured data. This move towards
+statistical techniques has been driven by the increase in the amount of data available to scientists, as
+well as the rise of statistical systems which are accessible to non-experts, such as
+\texttt{Scikit-learn}~\cite{pedregosa11} and \texttt{MLI}~\cite{sparks13}.
 
-\begin{enumerate}
-\item Data science is a growing trend in both academia and industry
-\begin{enumerate}
-\item Driven by dramatic improvements in acquisition systems~(e.g., sequencing, mass spectrometry,
-MRI systems)
-\item Also driven by rise of statistical systems which are easy to use for non-experts~(e.g.,
-Scikit-learn~\cite{pedregosa11}, MLI~\cite{sparks13})
-\item Few queries in modern data science resemble traditional scientific computing patterns; not as
-communication heavy, but very UDF heavy
-\end{enumerate}
-\item Computing is becoming a dominant cost for science
-\begin{enumerate}
-\item Both in terms of literal costs $\rightarrow$ paying for compute, storage, machines~\cite{stein10,
-schadt10}
-\item And in terms of NRE effort~\cite{wilson14}
-\end{enumerate}
-\item The design of these scientific processing systems must confront the sources of inefficiency:
-\begin{enumerate}
-\item Efficiency is both computational cost and development cost
-\item An efficient system should be fast \emph{enough}
-\item An efficient system should be able to support the common queries we need
-\item An efficient system should minimize the number of wheels that are reinvented
-\item An efficient system should have a simple programming interface and layered design~\cite{bafna13}
-\end{enumerate}
-\item Network stack achieves a similar goal:
-\begin{enumerate}
-\item Can swap out layers to tailor implementation
-\item Abstract lower levels of the stack to provide a simple programming interface
-\end{enumerate}
-\item Also, current computer systems fail to address important characteristics of scientific workloads:
-\begin{enumerate}
-\item \emph{Huge} data sizes, e.g., TB for neuroscience~\cite{cunningham14, freeman14}, PB for
-genomics; may be too large to stage locally, or have small ``hot'' set
-\item Different join patterns; need to join objects in a coordinate system
-\item Spatial/temporal analysis: esp. for neuroscience, and other ``signal processing'' sciences
-$\rightarrow$ similar to stream processing, but subtly different; may need ``window sweeping'' function
-\item Programming models! Need to enable:
-\begin{itemize}
-\item Scientists to write UDFs $\rightarrow$ SQL is a bad interface
-\item Scientists to do \emph{interactive data analysis}
-\end{itemize}
-\end{enumerate}
-\item Contributions of this work:
-\begin{itemize}
-\item Provide principles for the design of scientific analysis systems
-\item Implemented fast genomic system
-\item Implemented coordinate plane joins
-\item Efficient lookup from block stores
-\end{itemize}
-\end{enumerate}
+While the increase in the amount of scientific data available is a boon for scientists, it puts significant
+stress on existing tool chains. Using the current ``best practice'' genomics
+software,\footnote{BWA~\cite{li10} and the Genome Analysis Toolkit~\cite{mckenna10, depristo11}.}
+it takes approximately 120 hours to process a single, high-quality human genome using a single,
+beefy node~\cite{talwalkar14}. Similarly, these large datasets are costly to store. To address these
+challenges, scientists have applied computer systems techniques such as
+MapReduce~\cite{mckenna10} and columnar storage~\cite{fritz11} to custom scientific
+compute/storage systems.
+
+In this paper, we argue that a system composed of the correct mix of computing systems can provide
+better performance and scalability than custom systems, while enhancing the abstractions exposed to
+scientists. By building a system using Apache Avro, Parquet, and Spark~\cite{avro, parquet, zaharia10},
+we were able to achieve a 50$\times$ increase in throughput over the current ``best practice'' pipeline.
+In the process of creating this system, we developed a ``narrow waisted'' layering model for building
+similar scientific analysis systems. This narrow waisted model is inspired by the OSI model for
+networked systems~\cite{zimmermann80}. We demonstrate the generality of this model by using it to
+implement a system for processing astronomy images.
+
+In addition to the architecture and systems we will introduce in this paper, scientific systems require
+specialized join and access patterns. Specifically, joins may need to be performed in a coordinate
+space, and the total size of a dataset may be too large to be kept on local disk. In this paper, we also
+introduce algorithms for performing coordinate space joins, and discuss mechanisms for improving the
+efficiency of loading datasets from remote block stores.
 
 \section{Background}
 \label{sec:background}
