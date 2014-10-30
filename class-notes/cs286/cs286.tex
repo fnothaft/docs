@@ -644,4 +644,64 @@ that's a good fit for Hadoop.
 \end{itemize}
 \end{itemize}
 
+\section{Lecture 16---10/23/2014}
+
+\begin{itemize}
+\item Resilience:
+\begin{itemize}
+\item Flux uses replication
+\item Spark Streaming uses lineage
+\item Stream dataflows across multiple machines
+\end{itemize}
+\end{itemize}
+
+\subsection{Flux}
+
+\begin{itemize}
+\item Problem: parallel, fault-tolerant, continuous queries ($\rightarrow$ data flow) with non-blocking
+operators
+\item Intuition: use replication (process pairs) and take-over on failure
+\item How does it work?
+\begin{enumerate}
+\item Tuple comes in, and is streamed across two machines
+\item Have replicated producer/consumer pairs, which run the exact same operations on the exact
+same tuple streams
+\item A consumer acks back to the \emph{other} producer
+\end{enumerate}
+\item What happens if a failure occurs?
+\begin{enumerate}
+\item The part of the system that \emph{isn't} failing stops getting acks
+\item So, coordinator spin up a new machine
+\item Coordinator tells \emph{every} node that node \texttt{n} is down
+\item State movement:
+\begin{enumerate}
+\item I pause by \emph{quiescing} the user
+\item I ``clone'' the ``brain'' by replicating the state
+\end{enumerate}
+\item Replay tuples through new machine
+\end{enumerate}
+\item Exchange operator can be parallelized
+\item Invariants:
+\begin{enumerate}
+\item Don't lose a tuple
+\item Don't duplicate a tuple
+\end{enumerate}
+\end{itemize}
+
+\subsection{Spark Streaming}
+
+\begin{itemize}
+\item How do I Spark?
+\begin{enumerate}
+\item Input stage takes tuples, and lumps them into batches
+\item Per batch, I create an RDD as part of my \emph{D-Stream}
+\item I chain operators on top of these RDDs, which give me new RDDs. My operators are:
+\begin{itemize}
+\item Stateless
+\item Deterministic
+\item Short
+\end{itemize}
+\end{enumerate}
+\end{itemize}
+
 \end{document}
