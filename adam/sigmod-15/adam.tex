@@ -451,6 +451,25 @@ stage are data parallel.
 
 \subsection{Astronomy Image Processing}
 \label{sec:astronomy-image-processing}
+The Montage~\cite{montage} application is a typical astronomy image processing pipeline that builds mosaics from small image 
+tiles obtained from telescopes with the requirement of preserving the energy quantity and position for each pixel between the 
+input and output images. The pipeline has multiple stages that can be grouped into the following phases.
+
+\paragraph{Tile Reprojection}
+The raw input images are reprojected with the defined scale as required in the final mosaic. 
+
+\paragraph{Background Modeling}
+This phase smoothes out the background levels between each pair of overlapped images and fits a plane to each of them. The phase can be further divided into steps of overlap calculation, difference image creation, and plane-fitting coefficient calculation.
+
+\paragraph{Background Matching}
+The background matching phase applies background removal to the reprojected images with the best solution derived from previous phase to smooth out the overlap regions.
+
+\paragraph{Tile Mosaicing}
+The tile masoning phase coadds all corrected images (after applying background matching to the reprojected images) into a aggregated mosaic file. This phase also involves a metadata processing stage before the mosaicing.
+
+The tile reproduction, background modeling, and background matching phases are embarrassingly parallel, with each task (both computation and I/O) running independent from other tasks in the same phase. The tile mosaicing phase aligns the tiles of the matrix and applies a function (the function can be average, median, or count) to the overlapped pixels. All functions can be applied to the overlapped pixels in an embarrassingly parallel manner, while the I/O are done through a single process.
+
+We care specifically about the tile mosaicing phase as the current implementation requires a preceding stage to summarize the metadata of all corrected images to produce a metadata table containing the tile positioning information. This particular stage has to read all input files into memory, but only accesses a small portion of the file. Also the current implementation parallelize the computation with each matrix row as the element, which results in inefficient input images replication when executed in a distributed environment. We address the first by explicitly declaring the image data schema and storing the images in a column store, so that all input images can be loaded to memory just once with all subsequent computation in memory. The metadata processing can access data that is continuous on a disk, while the rest of the I/O can be done in parallel.
 
 \section{Data Access Optimizations for \\ Scientific Processing}
 \label{sec:optimizations-scientific-processing}
@@ -587,6 +606,8 @@ duplicate marking.
 
 \subsection{Astronomy Workloads}
 \label{sec:astro-workloads}
+We use the 2MASS data and the Montage test case of 3x3 degree mosaicing with Galaxy m101 as the center. 
+The tile mosaicing phase has 1.5GB input data and produces a 2.7GB aggregated output file.
 
 \subsection{Column Store Performance}
 \label{sec:column-store-perf}
