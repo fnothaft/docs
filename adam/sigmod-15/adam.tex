@@ -263,7 +263,14 @@ and is designed to process datasets larger than 4 TB, and leverages significant 
 MLI/MLLib libraries~\cite{sparks13}.
 
 Recent work by Diao et al~\cite{diao15} has looked at optimizations to MapReduce systems for
-processing genomic data.
+processing genomic data. They borrow strategies from the query optimization literature to reorder
+computation to minimize data shuffling. While this approach does improve shuffle traffic, several
+preprocessing stages cannot be transposed. For instance, reversing the order of indel realignment and
+base quality score recalibration~(see~\S\ref{sec:genomics-pipeline}) will change the inferred quality
+score distribution. Additionally, we believe that the shuffle traffic that Diao et al observe is an artifact
+caused by the abstraction inversion discussed in~\S\ref{sec:introduction}. As we demonstrate
+in~\S\ref{sec:genomics-pipeline}, these penalties can be eliminated by restructuring the pre-processing
+algorithms.
 
 One interesting trend of note is the development of databases specifically for scientific applications.
 The exemplar is SciDB, which provides an array based storage model as well as efficient linear algebra
@@ -279,11 +286,15 @@ One notable area where database techniques have been leveraged by scientists is 
 layer. Due to the storage costs of large genomic datasets, scientists have introduced the CRAM format
 which uses columnar storage techniques and special compression algorithms to achieve a 30\%
 reduction in size over the original BAM format~\cite{fritz11}. While CRAM achieves good compression,
-it imposes restriction on the ordering and structure of the data, and does not provide efficient support
-for predicates or projection.
+it imposes restriction on the ordering and structure of the data, and does not provide support for
+predicates or projection. We perform a more comprehensive comparison against CRAM
+in~\S\ref{sec:column-store-perf}.
 
 \section{Principles for Scientific \\ Analysis Systems}
 \label{sec:principles}
+
+Although there has been significant prior work on scientific computing, most of this work has been
+focused on linear algebra and other matrix/network structured problems. 
 
 \subsection{Workloads}
 \label{sec:workloads}
@@ -686,6 +697,9 @@ other language environments, like Python or R. Other scientific systems like Sci
 support native Python and R bindings. Likewise, we provide distributed processing using Python
 through PySpark.
 \end{enumerate}
+
+\subsection{Non-Data Parallel Scientific Computing}
+\label{sec:ndp-sci}
 
 \section{Conclusion}
 \label{sec:conclusion}
