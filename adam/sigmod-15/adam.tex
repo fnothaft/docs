@@ -607,7 +607,13 @@ duplicate marking.
 \subsection{Astronomy Workloads}
 \label{sec:astro-workloads}
 We use the 2MASS data and the Montage test case of 3x3 degree mosaicing with Galaxy m101 as the center. 
-The tile mosaicing phase has 1.5GB input data and produces a 2.7GB aggregated output file.
+The tile mosaicing phase has 1.5~GB input data and produces a 1.2~GB aggregated output file. 
+We compare the SparkmAdd performance against the MPI based parallel implementation in Montage v3.3 (referred as MPImAdd in the following text).
+The performance is measured on 1, 4, and 16 Amazon {\tt m2.4xlarge} instances respectively.
+We use OrangeFS v2.8.8, a successor of PVFS~\cite{PVFS}, as the shared file system across the instances to support MPImAdd.
+All eight cores on each instance are used for both SparkmAdd and MPImAdd.
+
+As shown in Figure, the SparkmAdd runs 1.3x, 2.8x, 3.3x faster than MPImAdd on 1, 4, and 16 instances with a data compression rate of 2.8x for input and 1.4x for output. The performance improvement is contributed by multiple factors: less I/O amount, less I/O contention, and better data locality. We manage to combine the metadata processing stage with mAdd together, since we explicitly define the data schema in SparkmAdd, so that the same set of inputs can just be read once. We also configure Parquet to compress the input and output data, so the actual I/O amount is reduced. Parquet writes output files into HDFS in a contention free manner whereas MPI coordinates all processes to write to a single file in the shared file system. The Spark framework lets the computation benefit from data locality, while MPI distributes the computation across the available resources without concerning data placement.
 
 \subsection{Column Store Performance}
 \label{sec:column-store-perf}
