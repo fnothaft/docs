@@ -602,30 +602,90 @@ We care specifically about the tile mosaicing phase as the current implementatio
 \subsection{Coordinate System Joins}
 \label{sec:coordinate-system-joins}
 
-\textbf{FIXME: This is incomplete. Timothy to write.}
+Genome informatics encompasses a wide array of experimental techniques and platforms, but almost all of these methods share one characteristic in common: they produce datapoints which are tied to locations in the genome through the use of genomic coordinates. The actual genome inside each cell is a mammoth molecule, a collection of DNA polymers coated with (and wrapped around) proteins and packed into the nucleus in a complex 3-dimensional shape. Bioinformaticians avoid this complexity by representing all 3.2 billion bases of the human genome as a single long string (of A's, T', G's, and C's); the ``tying'' of a datapoint or observation to the genome is represented by associating the data with a 1-dimensional point or interval. The reference genome defines a 1-dimensional coordinate space against which all genomic phenomena are marked and measured.
 
-This will be a compare/contrast discussion of the multiple join algorithms we've created. TBD.
+A platform for scientific data processing in genomics needs to understand these 1-dimensional ocordinate systems because these become the basis on which data processing is parallelized. 
+For example, when calling variants from sequencing data, the sequence data which is localized to a single genomic region (or ``locus'') can be processed independently from the data localized to a different region, as long as the regions are far enough apart.
+
+Not only parallelization, but many of the core algorithms and methods for data aggregation in genomics are phrased in terms of geometric primitives on 1-D intervals and points: distance, overlap, and containment.  
+An algorithm for calculating quality control metrics may try to calculate ``coverage,'' a count of how many reads overlap each base in the genome.  
+A method for filtering and annotating potential variants might assess the validity of a variant by the quality and mapping characteristics of all reads which overlap the putative variant.
+
+In order to support these algorithms, we have implemented a ``region'' or ``spatial'' join  method, whose outline in code is given below.  
+The region join operation takes as input two sets (RDDs) of ReferenceRegions, the data structure in ADAM that represents intervals along the 1-D genomics coordinate space.  
+It produces, as ouptut, the set of all ReferecneRegion pairs (one from each of the two input sets) such that the two regions overlap each other in terms of genomics spatial cordinates. 
+
+\begin{lstlisting}
+def partitionAndJoin[T, U](sc: SparkContext,
+					 baseRDD: RDD[T],
+					 joinedRDD: RDD[U])(implicit tMapping: ReferenceMapping[T],
+					uMapping: ReferenceMapping[U],
+					tManifest: ClassTag[T],
+					uManifest: ClassTag[U]): RDD[(T, U)] = {
+
+    val collectedLeft: Seq[(String, Iterable[ReferenceRegion])] =
+      baseRDD
+        .map(t => (tMapping.getReferenceName(t), 
+			tMapping.getReferenceRegion(t))) 
+        .groupBy(_._1) 
+        .map(t => (t._1, t._2.map(_._2))) 
+        .collect() 
+        .toSeq 
+
+    val multiNonOverlapping = 
+	new MultiContigNonoverlappingRegions(collectedLeft)
+
+    val regions = sc.broadcast(multiNonOverlapping)
+
+    val smallerKeyed: RDD[(ReferenceRegion, T)] =
+      baseRDD.keyBy(t => regions.value.regionsFor(t).head)
+
+    val largerKeyed: RDD[(ReferenceRegion, U)] =
+      joinedRDD.filter(regions.value.filter(_))
+        .flatMap(t => regions.value.regionsFor(t)
+			.map((r: ReferenceRegion) => (r, t)))
+
+    val joined: RDD[(ReferenceRegion, (T, U))] =
+      smallerKeyed.join(largerKeyed)
+
+    val filtered: RDD[(ReferenceRegion, (T, U))] = 
+	joined.filter({
+	  case (rr: ReferenceRegion, (t: T, u: U)) =>
+		tMapping.getReferenceRegion(t)
+			.overlaps(uMapping.getReferenceRegion(u))
+	})
+
+    filtered.map(rrtu => rrtu._2)
+  }
+\end{lstlisting}
+
 
 \subsection{Loading Remote Data}
 \label{sec:loading-remote-data}
 
-\textbf{FIXME: This is incomplete. Timothy to write.}
+Another challenge faced by the ADAM system is where to store the initial data files and how to load them efficiently.  
+Today, Spark is usually run in conjunction with the HDFS portion of the Hadoop stack -- HDFS provides data locality, access to local disk on each node of the Spark cluster, and robustness to node failure.  
+However, HDFS imposes significant constraints on running a Spark system in virtualized or commodity computing (e.g. ``cloud'') environments.  It is easy to scale an HDFS-based system up to larger numbers of nodes, but harder to remove nodes when the capacity is no longer needed.  
 
-\begin{enumerate}
-\item Data may not be kept locally
-\begin{enumerate}
-\item Too much data to keep locally
-\item Not all data is hot
-\end{enumerate}
-\item May push data off local disks into block store
-\item Manually re-staging data has high latency cost $\rightarrow$ impacts throughput
-\item What do we need to do to accommodate this?
-\begin{enumerate}
-\item Efficient indexing
-\item Remote push-down predicate
-\end{enumerate}
-\item Discuss S3/Parquet interaction
-\end{enumerate}
+If we are willing to forgo the advantages of local disk and data locality provided by HDFS, however, we may be able to relax some of these other restrictions and build a Spark-based cluster whose size is more easily adjusted to the changing demands of the computation.  By storing our data in higher-latency, durable, cheaper block storage (e.g. S3) we can also exploit the varying requirements of data availability -- not all datasets need to be kept ``hot'' in HDFS at all times, but can be accessed in a piecemeal or parallelized manner through S3 interfaces.
+
+Spark provides a particularly convenient abstraction for writing these new data access methods.  By implementing our own data-loading RDD, we are able to allow a Spark cluster to access Parquet files stored in S3 in parallel (each partition in the RDD reflects a row group in the corresponding Parquet file). For Parquet files containing records that reflect known genomics datatypes (that are mapped to genomic locations, for example) we generate simple index files for each Parquet file.  Each index file lists the complete set of row groups for the Parquet file, as well which genomic regions contain data points within each row group.  Our parallelized data loader reads this index file and restricts the partitions in the data loading RDD it creates to only those Parquet row groups which possibly contain data relevant to the user's query.
+
+%\begin{enumerate}
+%\item Data may not be kept locally
+%\begin{enumerate}
+%\item Too much data to keep locally
+%\item Not all data is hot
+%\end{enumerate}
+%\item May push data off local disks into block store
+%\item Manually re-staging data has high latency cost $\rightarrow$ impacts throughput
+%\item What do we need to do to accommodate this?
+%\begin{enumerate}
+%\item Efficient indexing
+%\item Remote push-down predicate
+%\end{enumerate}
+%\item Discuss S3/Parquet interaction
+%\end{enumerate}
 
 \section{Performance}
 \label{sec:performance}
