@@ -132,13 +132,13 @@ Development Process Management]
 
 Major improvements in scientific data acquisition techniques have increased scientific data storage and
 processing \linebreak needs~\cite{schadt10, cunningham14}. In fields like
-neuroscience~\cite{freeman14} and \linebreak genomics~\cite{stein10}, scientists routinely perform
-experiments that use terabytes~(TB) to petabytes~(PB) of data. While traditional scientific computing
-platforms are optimized for fast linear algebra, many emerging domains make heavy use of statistical
-learning techniques and user defined \linebreak functions~(UDFs) on top of semistructured data. This
-move towards statistical techniques has been driven by the increase in the amount of data available to
-scientists, as well as the rise of statistical systems which are accessible to non-experts, such as
-\texttt{Scikit-learn}~\cite{pedregosa11} and \texttt{MLI}~\cite{sparks13}.
+neuroscience~\cite{freeman14} and \linebreak genomics~\cite{stein10}, particle physics, and astronomy
+scientists routinely perform experiments that use terabytes~(TB) to \linebreak petabytes~(PB) of data.
+While traditional scientific computing platforms are optimized for fast linear algebra, many emerging
+domains make heavy use of statistical learning techniques and user defined functions~(UDFs) on top of
+semistructured data. This move towards statistical techniques has been driven by the increase in the
+amount of data available to scientists, as well as the rise of statistical systems which are accessible to
+non-experts, such as \texttt{Scikit-learn}~\cite{pedregosa11} and \texttt{MLI}~\cite{sparks13}.
 
 While the increase in the amount of scientific data available is a boon for scientists, it puts significant
 stress on existing software. Using the current ``best practice'' genomic variant calling
@@ -155,16 +155,17 @@ to sequence the genomes of 100,000 individuals in the United Kingdom~\cite{uk100
 generate three to four \emph{orders of magnitude} more data than prior projects like the 1000
 Genomes Project~\cite{siva08}. While it is important to still be able to use data stored in legacy formats,
 the massive amount of \emph{new} data provides us with an opportunity to rethink how we compose
-our systems. By choosing the correct mix of computing systems, we can provide better performance and
-scalability than custom systems, while enhancing the abstractions exposed to scientists.
+our systems. By choosing the correct commodity computing systems, we can provide better performance
+and scalability than custom systems while enhancing the abstractions exposed to scientists.
 
 In this paper, we demonstrate a system built using Apache Avro, Parquet, and Spark~\cite{avro, parquet,
 zaharia10}, that achieves a 50$\times$ increase in throughput over the current best practice pipeline
-for processing genomic data. In the process of creating this system, we developed a ``narrow waisted''
-layering model for building similar scientific analysis systems. This narrow waisted model is inspired by
-the OSI model for networked systems~\cite{zimmermann80}. We demonstrate the generality of this
-model by using it to implement a system for processing astronomy images, and achieve a $>3\times$
-performance improvement over the state-of-the-art Message Passing Interface~(MPI) based system.
+for processing genomic data, while reducing the analysis cost by 50\%. In the process of creating this
+system, we developed a ``narrow waisted'' layering model for building similar scientific analysis systems.
+This narrow waisted model is inspired by the OSI model for networked systems~\cite{zimmermann80}.
+We demonstrate the generality of this model by using it to implement a system for processing astronomy
+images, and achieve a $>3\times$ performance improvement over a state-of-the-art Message Passing
+Interface~(MPI) based pipeline.
 
 An additional benefit of our stack model is that it addresses a subtle problem in earlier scientific
 processing and storage systems. In these systems, characteristics
@@ -175,6 +176,25 @@ believe that this is an abstraction inversion, which makes it difficult to perfo
 patterns. In~\S\ref{sec:principles}, we elucidate why this is a significant problem, and then
 in~\S\ref{sec:optimizations-scientific-processing}, we then introduce efficient algorithms for supporting
 these computational patterns without forcing constraints on the storage layer.
+
+To summarize, our paper makes the following contributions:
+
+\begin{enumerate}
+\item We characterize the important data and application patterns of emerging scientific domains, and
+review why current scientific software does not fully satisfy these use cases.
+\item We develop a modular, technology independent stack model to guide the design and
+implementation of scientific processing and storage systems. We then demonstrate how this stack model
+resolves both design anti-patterns \emph{and} functional bugs in current systems.
+\item We implement a genomics pipeline which achieves a $50\times$ performance improvement and a
+$2\times$ cost improvement over current ``best practice'' systems, and an astronomy image processing
+pipeline which provides a $3\times$ improvement over the current ``state-of-the-art'' \linebreak MPI
+system.
+\item Finally, we illustrate how to provide coordinate-system guided processing in parallel across
+shared-nothing systems. These traversals are necessary in many scientific applications.
+\end{enumerate}
+
+All of the software~(source code and executables) described in this paper is made available free of
+charge under the permissive Apache 2 license.
 
 \section{Background}
 \label{sec:background}
@@ -220,11 +240,15 @@ methods that they parallelize incur high overhead due to duplicated loading of i
 loading of large indices can be a primary I/O bottleneck) and poor broadcasting of data.
 \end{itemize}
 
-A notable exception is the \texttt{Thunder} system, which was developed for processing neuroscience
-imaging data~\cite{freeman14}. \texttt{Thunder} performs a largely statistical workload, where clustering
-and regression are significant computational tasks. The system is constructed using Spark and Python
-and is designed to process datasets larger than 4 TB, and leverages significant functionality from the
-MLI/MLLib libraries~\cite{sparks13}.
+A notable exception to the above criticisms is the \texttt{Thunder} system, which was developed for
+processing terabytes of neuroscience imaging data~\cite{freeman14}. \texttt{Thunder} performs a largely
+statistical workload, and the significant tasks in terms of execution time are clustering and regression.
+The system is constructed using Spark and Python and is designed to process datasets larger than 4 TB,
+and leverages significant functionality from the MLI/MLLib libraries~\cite{sparks13}. Unlike preexisting
+pipelines, they are able to use Spark's in-memory caching to amortize load time across several pipeline
+stages. Additionally, they use Spark's filtering primitives to allow scientists to cut problems into
+subproblems. This is a common trend across scientific analyses, and is one of the reasons that we
+advocate for the use of a columnar store with efficient predicate pushdown.
 
 Recent work by Diao et al~\cite{diao15} has looked at optimizations to MapReduce systems for
 processing genomic data. They borrow strategies from the query optimization literature to reorder
@@ -278,13 +302,13 @@ systems vary, but can include:
 \begin{itemize}
 \item Time~(e.g., fMRI data, particle simulations)
 \item Chromosomal position~(e.g., genomic read alignments and variants)
-\item Position in space~(imaging data, some sensor datasets)
+\item Position in space~(imaging data, some \linebreak sensor datasets)
 \end{itemize}
 \item For aggregated data, we may want to slice data into many different views. For example, for time
 domain data aggregated from many sensors, scientists may want to perform analyses by slicing across a
 single point in time, or by slicing across a single sensor. In genomics, we frequently aggregate data across
-many people from a given population. Once we've done this first aggregation, we may want to then slice
-the data by subsets of the population, or by regions of the genome~(e.g., specific genes of interest).
+many people from a given population. Once we have done this first aggregation, we may want to then
+slice the data by subsets of the population, or by regions of the genome~(e.g., specific genes of interest).
 \end{enumerate}
 
 There are two important consequences of the characteristics above. First, since data is attached to a
@@ -433,10 +457,10 @@ data materialization layer. We feel that this inverts the semantics that a user 
 and makes the system less general.
 \end{itemize}
 
-Our stack enables us to serve the use cases we've outlined in~\S\ref{sec:workloads}. By using Parquet
-as a storage format, we are able to process the data in many Hadoop-based systems. We implement
-high performance batch and interactive processing with Spark, and can delegate to systems like Impala
-and Spark-SQL for warehousing.
+Our stack enables us to serve the use cases we have outlined in~\S\ref{sec:workloads}. By using
+Parquet as a storage format, we are able to process the data in many Hadoop-based systems. We
+implement high performance batch and interactive processing with Spark, and can delegate to systems
+like Impala and Spark-SQL for warehousing.
 
 \section{Case Studies}
 \label{sec:case-studies}
@@ -452,7 +476,7 @@ has a traditional matrix structure.
 \label{sec:genomics-pipeline}
 
 Contemporary genomics has been revolutionized by ``next generation'' sequencing
-technologies~(NGS), which have driven a precipitous drop in the cost of running genomic
+technologies~(NGS), which have \linebreak driven a precipitous drop in the cost of running genomic
 assays~\cite{nhgri}. Although there are a variety of sequencing technologies in use, the majority of
 sequence data comes from the Illumina sequencing platform, which uses a ``sequencing-by-synthesis''
 technique to generate short read data~\cite{metzker09}. Short read refers to 
@@ -500,7 +524,7 @@ and variant calling performance~\cite{zaharia11, rimmer14}, which makes the pre-
 the performance bottleneck. We have focused on implementing the four most time consuming
 pre-processing stages, as well as \texttt{flagstat}, a command which is used for quality control~(QC). In
 the remainder of this section, we describe the stages that we have implemented, and the techniques
-we've used to improve performance and accuracy. We omit detailed pseudocode here, but make
+we have used to improve performance and accuracy. We omit detailed pseudocode here, but make
 pseudocode available in Appendix~\ref{sec:genomics-pseudocode}.
 
 \paragraph{Sorting}
@@ -1032,12 +1056,12 @@ assembly) that are expressed as traversal over graphs. Recent work by Simpson et
 or Unified Parallel C~(UPC) to roll their own distributed graph traversal. Both systems
 find that synchronization via message passing is a significant cost; specifically, the ABySS assembler
 experiences scaling problems because it thrashes portions of the graph across nodes during traversal.
-By building our system using Spark, we are able to leverage the GraphX processing library~\cite{xin13}.
-We are in the process of developing a genome assembler using this library system, and believe that we
-can achieve improved performance through careful graph partitioning. This involves algorithmic changes
-to the graph creation and traversal phases to bypass ``knotted'' sections of the graph which
-correspond to highly repetitive areas of the genome, which cause the major performance issues in MPI
-based assemblers.
+By building our system using Spark, we are able to leverage the GraphX processing library~\cite{xin13,
+gonzalez14}. We are in the process of developing a genome assembler using this library system, and
+believe that we can achieve improved performance through careful graph partitioning. This involves
+algorithmic changes to the graph creation and traversal phases to bypass ``knotted'' sections of the
+graph which correspond to highly repetitive areas of the genome, which cause the major performance
+issues in MPI based assemblers.
 
 \section{Conclusion}
 \label{sec:conclusion}
@@ -1045,9 +1069,11 @@ based assemblers.
 In this paper, we have advocated for a clean architecture for decomposing components in a scientific
 system, and then demonstrated how to efficiently implement genomic and astronomy processing
 pipelines using the open source Avro, Parquet, and Spark systems~\cite{avro, parquet, zaharia10}.
-We demonstrate $>50\times$ performance improvements over conventional scientific processing
-systems, along with linear strong scaling. Additionally, while an obvious advantage of using commodity
-systems is code reuse, we've gained several valuable features for free:
+We demonstrate $>50\times$ performance improvements over conventional genomics processing
+systems, along with linear strong scaling and a $2\times$ cost improvement. On the astronomy
+workload, we achieve a $3\times$ speedup over the current best MPI-based solution. Additionally, while
+an obvious advantage of using commodity systems is code reuse, we have gained several valuable
+features for free:
 
 \begin{enumerate}
 \item Beyond efficient parallel performance, Parquet is also supported as a data format by several
@@ -1087,7 +1113,7 @@ below.
 \subsection{BQSR}
 \label{sec:bqsr-implementation}
 
-Base Quality Score Recalibration is an important data-normalization step in the variant calling pipeline,
+Base Quality Score Recalibration is an important data normalization step in the variant calling pipeline,
 and is the second costliest step after realignment. BQSR is composed of two stages:
 
 \begin{enumerate}
@@ -1225,7 +1251,8 @@ merge function. We achieve efficient merges with the tail-call recursive \texttt
     // if the two sets overlap, 
     // we must merge their head and tail elements,                                                                                                                                 
     // else we can just blindly append                                                                                                                                                                      
-    if (!TargetOrdering.overlap(first.last, second.head)) {
+    if (!TargetOrdering.overlap(first.last, second.head)
+      ) {
       first.union(second)
     } else {
       // merge the tail of the first set and the head
