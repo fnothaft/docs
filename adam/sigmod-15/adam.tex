@@ -457,7 +457,9 @@ In this paper, we design a system that can achieve all of the above goals. The g
 astronomy pipelines we demonstrate achieve improvements in batch processing performance, and
 allow for interactive/exploratory analysis through both Scala and Python. Through the layering principles
 we lay out in the next section and the performance optimizations we introduce
-in~\S\ref{sec:loading-remote-data}, we make our system useful for warehousing scientific data.\section{Case Studies}
+in~\S\ref{sec:loading-remote-data}, we make our system useful for warehousing scientific data.
+
+\section{Case Studies}
 \label{sec:case-studies}
 
 To validate our architectural choices, we have implemented pipelines for processing short read genomic
@@ -466,6 +468,30 @@ Spark~\cite{zaharia10}, Avro~\cite{avro}, and Parquet~\cite{parquet}. We have ch
 applications as they fit in different areas in the design space. Specifically, the genomics pipeline makes
 heavy use of statistical processing techniques over semistructured data, while the astronomy application
 has a traditional matrix structure.
+
+Corresponding to the stack model that was introduced in Figure~\ref{fig:stack-model}, we use the
+following technologies to decompose our stack:
+
+\begin{itemize}
+\item \textbf{Physical Storage:} We have designed our system to run on top of local or distributed
+drives, as well as block stores.
+\item \textbf{Data Distribution:} Our system is designed to operate on top of the Hadoop Distributed File
+System~(HDFS), or to perform it's own data distribution over HTTP or by reaching out to an Amazon
+S3 bucket. We describe these optimizations in~\S\ref{sec:loading-remote-data}.
+\item \textbf{Materialized Data:} We store data using the open source Parquet columnar store.
+\item \textbf{Schema:} We manage our schemas~(and data serialization) via the Avro serialization
+framework~\cite{avro}. Our schemas are described in Appendix~\ref{sec:schema}.
+\item \textbf{Evidence Access:} We use Spark's Resilient Distributed Dataset~(RDD, \cite{zaharia12})
+abstraction to provide parallel processing over the data. We enhance this with the join patterns we
+describe in~\S\ref{sec:coordinate-system-joins}.
+\item \textbf{Presentation:} In our genomics application, we provide several rich datatypes that implicitly
+wrap our schemas to provide convenience methods for metadata access. This is not as crucial in the
+astronomy application.
+\end{itemize}
+
+In the remainder of this section, we describe the applications that we have implemented on top of this
+stack, as well as further optimizations we have made to improve the horizontal scalability of these
+algorithms.
 
 \subsection{Genomics Pipeline}
 \label{sec:genomics-pipeline}
