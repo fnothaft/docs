@@ -47,7 +47,7 @@ morestring=[b]"}
 
 \begin{document}
 
-\title{Rethinking Scientific Analysis Using \linebreak Modern Scalable Systems}
+\title{Rethinking Data-Intensive Science Using \linebreak Scalable Analytics Systems}
 %
 % You need the command \numberofauthors to handle the 'placement
 % and alignment' of the authors beneath the title.
@@ -106,13 +106,11 @@ cost. Similar trends impact many fields which rely on imaging, such as astronomy
 Early attempts to use MapReduce systems to accelerate the processing of these datasets have been
 limited through the use of legacy data formats that limit horizontal scalability.
 
-Since the amount of scientific data that is being captured is increasing exponentially, we have a good
-opportunity to rethink how we process and store these datasets. In this paper, we introduce a set of
-principles for implementing scientific analyses efficiently using commodity ``big data'' systems. We
-motivate these principles with an example genomics pipeline that leverages open-source MapReduce
-and columnar storage techniques to achieve a $>50\times$ speedup over traditional genomics systems,
-at half the cost. To demonstrate the generality of our architecture, we then achieve a 2.5$\times$
-improvement over the state-of-the-art MPI-based system for an astronomy task.
+In this paper, we demonstrate an example genomics pipeline that leverages open-source MapReduce
+and columnar storage techniques to achieve a $22-130\times$ speedup over traditional genomics
+systems, at half the cost. From building this system, we were able to distill a set of principles for
+implementing scientific analyses efficiently using commodity ``big data'' systems. To demonstrate the
+generality of our architecture, we then achieve a 2.5$\times$ improvement over the state-of-the-art MPI-based system for an astronomy task.
 \end{abstract}
 
 % A category with the (minimum) three required fields
@@ -137,69 +135,83 @@ While traditional scientific computing platforms are optimized for fast linear a
 domains make heavy use of statistical learning techniques and user defined functions~(UDFs) on top of
 semistructured data. This move towards statistical techniques has been driven by the increase in the
 amount of data available to scientists, as well as the rise of statistical systems that are accessible to
-non-experts, such as \texttt{Scikit-learn}~\cite{pedregosa11} and \texttt{MLI}~\cite{sparks13}.
-
-The size of data is outgrowing computer performance. Using the current ``best practice'' genomic variant
-calling pipeline~\cite{auwera13}, it takes approximately 120 hours to process a single, high-quality
-human genome using a single, beefy node~\cite{talwalkar14}. To address these challenges, scientists
-have started to apply computer systems techniques such as MapReduce~\cite{mckenna10, schatz09,
-langmead09} and columnar storage~\cite{fritz11} to custom scientific compute/storage systems. While
-these systems have improved the analysis cost and performance, na\"{i}ve implementations incur
-significant overheads due to constraints of the legacy formats and codebases that they use.
+non-experts, such as \texttt{Scikit-learn}~\cite{pedregosa11} and \texttt{MLI}~\cite{sparks13}. At the
+same time, commercial needs~(driven by a similar but less dramatic increase in available data) have
+led to the development of horizontally-scalable analytics systems like MapReduce~\cite{dean04, dean08}
+and Spark~\cite{zaharia10}.
 
 Since the amount of scientific data being generated is growing so quickly, we cannot afford to be
-saddled by legacy software and formats. New scientific projects such as the 100K for UK, which aims
-to sequence the genomes of 100,000 individuals in the United Kingdom~\cite{uk100k} will
-generate three to four \emph{orders of magnitude} more data than prior projects like the 1000
-Genomes Project~\cite{siva08}. While it is important to still be able to use data stored in legacy formats,
-the massive amount of \emph{new} data provides us with an opportunity to rethink how we compose
-our systems. By choosing the correct commodity computing systems, we can provide better performance
-and scalability than custom systems while enhancing the abstractions exposed to scientists.
+saddled by legacy software and formats which are incompatible with horizontal scalability. New scientific
+projects such as the 100K for UK, which aims to sequence the genomes of 100,000 individuals in the
+United Kingdom~\cite{uk100k} will generate three to four \emph{orders of magnitude} more data than
+prior projects like the 1000 Genomes Project~\cite{siva08}. These projects use the current ``best
+practice'' genomic variant calling pipeline~\cite{auwera13}, which takes approximately 120 hours to
+process a single, high-quality human genome using a single, beefy node~\cite{talwalkar14}. To address
+these challenges, scientists have started to apply computer systems techniques such as
+MapReduce~\cite{mckenna10, schatz09, langmead09} and columnar storage~\cite{fritz11} to custom
+scientific compute/storage systems. While these systems have improved the analysis cost and
+performance, current implementations incur significant overheads imposed by the legacy formats and
+codebases that they are built from.
 
 In this paper, we demonstrate a system built using Apache Avro, Parquet, and Spark~\cite{avro, parquet,
 zaharia10}, that achieves a 50$\times$ increase in throughput over the current best practice pipeline
 for processing genomic data, while reducing the analysis cost by 50\%. In the process of creating this
 system, we developed a ``narrow waisted'' layering model for building similar scientific analysis systems.
-This narrow waisted model is inspired by the OSI model for networked systems~\cite{zimmermann80}.
-We demonstrate the generality of this model by using it to implement a system for processing astronomy
-images, and achieve a $>3\times$ performance improvement over a state-of-the-art Message Passing
-Interface~(MPI) based pipeline.
-
-An additional benefit of our stack model is that it addresses a subtle problem in earlier scientific
-processing and storage systems. In these systems, characteristics
-of the data format on disk would bleed into the computing model. For example, in the current
-Sequence/Binary Alignment and Map~(SAM/BAM~\cite{li09}) formats for storing genomic alignments,
-constraints about record ordering are required in order to enable specific computing patterns. We
-believe that this is an abstraction inversion, which makes it difficult to perform some other access
-patterns. In~\S\ref{sec:principles}, we elucidate why this is a significant problem, and then
-in~\S\ref{sec:optimizations-scientific-processing}, we then introduce efficient algorithms for supporting
-these computational patterns without forcing constraints on the storage layer.
-
-To summarize, our paper makes the following contributions:
+This narrow waisted stack is inspired by the OSI model for networked systems~\cite{zimmermann80}.
+However, in our stack model, the data schema is the narrow waist that separates data processing from
+data storage. Our stack solves the following three problems that are common across current scientific
+analysis systems:
 
 \begin{enumerate}
-\item We characterize the important data and application patterns of emerging scientific domains, and
-review why current scientific software does not fully satisfy these use cases.
-\item We develop a modular, technology independent stack model to guide the design and
-implementation of scientific processing and storage systems. We then demonstrate how this stack model
-resolves both design anti-patterns \emph{and} functional bugs in current systems.
-\item We implement a genomics pipeline that achieves a $50\times$ performance improvement and a
-$2\times$ cost improvement over current ``best practice'' systems, and an astronomy image processing
-pipeline that provides a $3\times$ improvement over the current ``state-of-the-art'' \linebreak MPI
-system.
-\item Finally, we illustrate how to provide coordinate-system guided processing in parallel across
-shared-nothing systems. These traversals are necessary in many scientific applications.
+\item Current scientific systems improve the performance of common patterns by changing the data
+model (often by requiring data to be stored in a coordinate-sorted order).
+\item Legacy data formats were not designed with horizontal scalability in mind.
+\item The system must be able to efficiently access shared metadata, and to slice datasets for running
+targeted analyses.
 \end{enumerate}
 
-All of the software~(source code and executables) described in this paper is made available free of
-charge under the permissive Apache 2 license.
+We solve these problems by:
+
+\begin{enumerate}
+\item We make a schema the ``narrow waist'' of our stack and enforce data independence. We then
+devise algorithms for making common scientific processing patterns~(e.g., coordinate-space joins,
+see~\S\ref{sec:coordinate-system-joins}) fast.
+\item To improve horizontal scalability, we use Parquet, a modern parallel columnar store based off of
+Dremel~\cite{melnik10} to push computation to the data.
+\item We use a denormalized schema to achieve O(1), parallel access to metadata.
+\end{enumerate}
+
+Our solution manifests in the design of the stack model for composing scientific systems which is
+described in Figure~\ref{fig:stack-model}. We demonstrate the generality of this model by using it to
+implement a system for processing astronomy images, which achieves a $>3\times$ performance
+improvement over a state-of-the-art Message Passing Interface~(MPI) based pipeline.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.6\linewidth]{stack-model.pdf}
+\end{center}
+\caption{A Stack Model for Scientific Computing}
+\label{fig:stack-model}
+\end{figure}
+
+While the abstraction inversion used in genomics to accelerate common access patterns is undesirable
+because it violates data independence, in this paper, we also find that it sacrifices performance and
+accuracy. The current Sequence/Binary Alignment and Map~(SAM/BAM~\cite{li09}) formats for storing
+genomic alignments apply constraints about record ordering to enable specific computing patterns. Our
+implementation~(described in~\S\ref{sec:genomics-pipeline}) identifies errors in two current genomics
+processing stages that occur \emph{because} of the sorted access invariant. Our implementations of
+these stages do not make use of sort order, and achieve higher performance \emph{while} eliminating
+these errors.
+
+We have made all of the software~(source code and executables) described in this paper available free
+of charge under the permissive Apache 2 open-source license.
 
 \section{Background}
 \label{sec:background}
 
-As our work exists at the intersection of computational science and data management and processing
-systems, our architectural approach is informed by recent trends in both areas. The design of large
-scale data management has changed dramatically since the landmark papers by Dean and
+Our work exists at the intersection of computational science, data management, and processing
+systems. As such, our architectural approach is informed by recent trends in both areas. The design of
+large scale data management has changed dramatically since the landmark papers by Dean and
 Ghemawat~\cite{dean04, dean08} that described Google's \texttt{MapReduce} system. Over a
 similar timeframe, scientific fields have moved to take advantage of improvements in data acquisition
 technologies. For example, since the Human Genome Project finished in 2001~\cite{lander01}, the price
@@ -222,7 +234,8 @@ reasons:
 \item A strong criticism levied against the map-reduce model is that the API is insufficiently expressive
 for describing complex tasks. As a consequence of this, tools like the GATK~\cite{mckenna10} that
 adopt MapReduce as a programming model force significant restrictions on algorithm implementors. For
-example, a GATK \texttt{walker} is provided with a single view over the data~(a sorted iterator over a
+example, a GATK \texttt{walker}\footnote{The GATK provides \texttt{walker}s as an interface for
+traversing regions of the genome.} is provided with a single view over the data~(a sorted iterator over a
 specified region), and is allowed limited reduce functionality.
 \item A major contribution of systems like MapReduce~\cite{dean08} and Spark~\cite{zaharia10,
 zaharia12} is the ability to reliably distribute parallel tasks across a cluster in an automated fashion. While
@@ -236,13 +249,14 @@ structure of the genome and limit scale-up to a $10\times$ speedup on 23 machine
 23 chromosome pairs in humans, and the largest chromosome is $\frac{1}{10}$ the size of the whole
 genome}
 \item The na\"{i}ve Hadoop-based implementations in Crossbow~\cite{langmead09} and
-Cloudburst~\cite{schatz09} lead to good speedups, but add significant overhead. Several of the
-methods that they parallelize incur high overhead due to duplicated loading of indices (for fast aligners,
-loading of large indices can be a primary I/O bottleneck) and poor broadcasting of data.
+Cloudburst~\cite{schatz09} use scripts to run unmodified legacy tools on top of Hadoop. This does
+achieve speedups, but does not attack any overhead. Several of the methods that they parallelize incur
+high overhead due to duplicated loading of indices (for fast aligners, loading of large indices can be a
+primary I/O bottleneck) and poor broadcasting of data.
 \end{itemize}
 
 Recent work by Diao et al~\cite{diao15} has looked at optimizations to MapReduce systems for
-processing genomic data. They borrow strategies from the query optimization literature to reorder
+processing genomic data. They adapt strategies from the query optimization literature to reorder
 computation to minimize data shuffling. While this approach does improve shuffle traffic, several
 preprocessing stages cannot be transposed. For instance, reversing the order of indel realignment and
 base quality score recalibration~(see~\S\ref{sec:genomics-pipeline}) will change the inferred quality
@@ -250,6 +264,14 @@ score distribution. Additionally, we believe that the shuffle traffic that Diao 
 caused by the abstraction inversion discussed in~\S\ref{sec:introduction}. As we demonstrate
 in~\S\ref{sec:genomics-pipeline}, these penalties can be eliminated by restructuring the pre-processing
 algorithms.
+
+One notable area where modern data management techniques have been leveraged by scientists is in
+the data storage layer. Due to the storage costs of large genomic datasets, scientists have introduced the
+CRAM format that uses columnar storage techniques and special compression algorithms to achieve a
+30\% reduction in size over the original BAM format~\cite{fritz11}. While CRAM achieves good
+compression, it imposes restriction on the ordering and structure of the data, and does not provide
+support for predicates or projection. We perform a more comprehensive comparison against CRAM
+in~\S\ref{sec:column-store-perf}.
 
 One interesting trend of note is the development of databases specifically for scientific applications.
 The exemplar is \linebreak SciDB, which provides an array based storage model as well as efficient
@@ -260,14 +282,6 @@ Language~\cite{kozanitis14} have extended SQL to provide efficient query semanti
 coordinates. While GQL achieves performance improvements of up to 10$\times$ for certain algorithms,
 SQL is not an attractive language for many scientific domains, which make heavy use of user designed
 functions, which may be cumbersome in SQL.
-
-One notable area where database techniques have been leveraged by scientists is in the data storage
-layer. Due to the storage costs of large genomic datasets, scientists have introduced the CRAM format
-that uses columnar storage techniques and special compression algorithms to achieve a 30\%
-reduction in size over the original BAM format~\cite{fritz11}. While CRAM achieves good compression,
-it imposes restriction on the ordering and structure of the data, and does not provide support for
-predicates or projection. We perform a more comprehensive comparison against CRAM
-in~\S\ref{sec:column-store-perf}.
 
 \section{Principles for Scientific \\ Analysis Systems}
 \label{sec:principles}
@@ -281,86 +295,10 @@ these characteristics, we describe a way to decompose data processing and storag
 they can efficiently implement important processing patterns \emph{and} provide the necessary access
 methods for both computational researchers and field scientists.
 
-\subsection{Workloads}
-\label{sec:workloads}
-
-There are several common threads that unify the diverse set of applications that make up scientific
-computing. When looking at the data that is used in different fields, several trends pop out:
-
-\begin{enumerate}
-\item Scientific data tends to be rigorously associated with coordinates in some domain. These coordinate
-systems vary, but can include:
-\begin{itemize}
-\item Time~(e.g., fMRI data, particle simulations)
-\item Chromosomal position~(e.g., genomic read alignments and variants)
-\item Position in space~(imaging data, some \linebreak sensor datasets)
-\end{itemize}
-\item For aggregated data, we may want to slice data into many different views. For example, for time
-domain data aggregated from many sensors, scientists may want to perform analyses by slicing across a
-single point in time, or by slicing across a single sensor. In genomics, we frequently aggregate data across
-many people from a given population. Once we have done this first aggregation, we may want to then
-slice the data by subsets of the population, or by regions of the genome~(e.g., specific genes of interest).
-\end{enumerate}
-
-There are two important consequences of the characteristics above. First, since data is attached to a
-coordinate system, the coordinate system itself may impose logical processing patterns. For example, for
-time domain data, we may frequently need to run functions that pass a sliding window, e.g., for
-convolution. Second, the slicing of aggregated data is frequently used to perform analyses across
-subsets of a larger dataset. This is common if we want to study a specific phenomenon, like the role of a
-gene in a disease~(a common analysis in the TCGA~\cite{weinstein13}), or the measured activity in a
-single lobe of the brain while performing a task. Since the datasets we are processing are very
-large\footnote{For example, the Acute Myeloid Leukemia subset of the TCGA alone is over 4 TB in size.},
-it is often uneconomical to colocate data with processing nodes. 
-
-In this paper, we will tend to focus on compute tasks that are not simulation heavy; most simulation heavy
-tasks are dominated by communication between nodes due to the tight coupling of simulation elements.
-Because of this, they are not a good fit for the shared-nothing architectures common to ``big data''
-systems. In non-simulation fields, the exact processing techniques and algorithms vary considerably, but
-common processing trends do exist:
-
-\begin{enumerate}
-\item There is increasing reliance on statistical methods. The \texttt{Thunder} pipeline makes heavy use
-of the MLI/MLLib statistical libraries~\cite{freeman14, sparks13}, and tools like the GATK perform multiple
-rounds of statistical refinement~\cite{depristo11}.
-\item Data parallelism is very common. This varies across applications; in some applications (like
-genomics), we may leverage the independence of sites across a coordinate system and process
-individual coordinate regions in parallel. For other systems, we may have matrix calculations that can
-be parallelized~\cite{sparks13}, or we may be able to run processing in parallel across samples or traces.
-\end{enumerate}
-
-Additionally, there are several different emerging use cases for scientific data processing and storage
-systems. These different use cases largely correspond to different points in the lifecycle of the data:
-
-\begin{itemize}
-\item \textbf{Batch processing:} After the initial acquisition of raw sensor data~(e.g., raw DNA reads,
-brain electrode traces, telescope images), we use a batch processing pipeline~(e.g., \texttt{Thunder} or
-the GATK) to perform some dimensionality reduction/statistical summarization of the data. This is
-generally used to extract notable features from the data, such as turning raw genomic reads into variant
-alleles, or identifying areas of activity in neuroscience traces. These tasks are unlikely to have any
-interactive component, and are likely to be long running compute jobs.
-\item \textbf{Ad hoc exploration:} Once the batch processing has completed, there is often a need
-for exploratory processing of the results. For example, when studying disease genetics, a geneticist may
-use the variant/genotype statistics to identify genomic sites with statistically significant links to the
-disease phenotype. Data exploration tasks have a significant user facing/interactive nature, and are
-generally performed by scientists who may be programming laypeople.
-\item \textbf{Data warehousing:} In large scientific projects, it is common to make data available to the
-members of the scientific community through some form of warehouse service~(e.g., the Cancer
-Genomics Hub, CGHub, for the TCGA). As is the case for all data warehousing, this implies that queries
-must be made reasonably efficient, even though the data is expected to be cold. To reduce the cost of
-storing data, we may prioritize compression here; this has led to the creation of compressed storage
-formats like CRAM~\cite{fritz11}.
-\end{itemize}
-
-In this paper, we design a system that can achieve all of the above goals. The genomics and
-astronomy pipelines we demonstrate achieve improvements in batch processing performance, and
-allow for interactive/exploratory analysis through both Scala and Python. Through the layering principles
-we lay out in the next section and the performance optimizations we introduce
-in~\S\ref{sec:loading-remote-data}, we make our system useful for warehousing scientific data.
-
 \subsection{Layering}
 \label{sec:layering}
 
-As discussed in the prior section, the processing patterns being applied to scientific data shift widely
+The processing patterns being applied to scientific data shift widely
 as the data itself ages. Because of this, we want to design a scientific data processing system that is
 flexible enough to accommodate our different use cases. At the same time, we want to ensure that the
 components in the system are well isolated so that we avoid bleeding functionality across the stack. If
@@ -381,18 +319,8 @@ or CRAM~\cite{fritz11}, we believe that the use of an explicit schema for data i
 In our stack model shown in Figure~\ref{fig:stack-model}, the schema becomes the ``narrow waist''
 of the stack. Most importantly, placing the schema as the narrow waist enforces a strict separation
 between data storage/access and data processing. Additionally, this enables literate programming
-techniques which can clarify the data model and access patterns.
-
-\begin{figure}[h]
-\begin{center}
-\includegraphics[width=0.6\linewidth]{stack-model.pdf}
-\end{center}
-\caption{A Stack Model for Scientific Computing}
-\label{fig:stack-model}
-\end{figure}
-
-The seven layers of our stack model are decomposed as follows, traditionally numbered from bottom to
-top:
+techniques which can clarify the data model and access patterns. The seven layers of our stack model
+are decomposed as follows, traditionally numbered from bottom to top:
 
 \begin{enumerate}
 \item {\bf Physical Storage:} This layer coordinates data writes to physical media.
@@ -453,7 +381,83 @@ Parquet as a storage format, we are able to process the data in many Hadoop-base
 implement high performance batch and interactive processing with Spark, and can delegate to systems
 like Impala and Spark-SQL for warehousing.
 
-\section{Case Studies}
+\subsection{Workloads}
+\label{sec:workloads}
+
+There are several common threads that unify the diverse set of applications that make up scientific
+computing. When looking at the data that is used in different fields, several trends pop out:
+
+\begin{enumerate}
+\item Scientific data tends to be rigorously associated with coordinates in some domain. These coordinate
+systems vary, but can include:
+\begin{itemize}
+\item Time~(e.g., fMRI data, particle simulations)
+\item Chromosomal position~(e.g., genomic read alignments and variants)
+\item Position in space~(imaging data, some \linebreak sensor datasets)
+\end{itemize}
+\item For aggregated data, we may want to slice data into many different views. For example, for time
+domain data aggregated from many sensors, scientists may want to perform analyses by slicing across a
+single point in time, or by slicing across a single sensor. In genomics, we frequently aggregate data across
+many people from a given population. Once we have done this first aggregation, we may want to then
+slice the data by subsets of the population, or by regions of the genome~(e.g., specific genes of interest).
+\end{enumerate}
+
+There are two important consequences of the characteristics above. First, since data is attached to a
+coordinate system, the coordinate system itself may impose logical processing patterns. For example, for
+time domain data, we may frequently need to run functions that pass a sliding window, e.g., for
+convolution. Second, the slicing of aggregated data is frequently used to perform analyses across
+subsets of a larger dataset. This is common if we want to study a specific phenomenon, like the role of a
+gene in a disease~(a common analysis in the TCGA~\cite{weinstein13}), or the measured activity in a
+single lobe of the brain while performing a task. Since the datasets we are processing are very
+large\footnote{For example, the Acute Myeloid Leukemia subset of the TCGA alone is over 4 TB in size.},
+it is may be uneconomical to colocate data with processing nodes, because of either the number of
+nodes that would need to be provisioned, or the amount of storage that would need to be provisioned
+per node.
+
+In this paper, we will tend to focus on compute tasks that are not simulation heavy; most simulation heavy
+tasks are dominated by communication between nodes due to the tight coupling of simulation elements.
+Because of this, they are not a good fit for the shared-nothing architectures common to ``big data''
+systems. In non-simulation fields, the exact processing techniques and algorithms vary considerably, but
+common processing trends do exist:
+
+\begin{enumerate}
+\item There is increasing reliance on statistical methods. The \texttt{Thunder} pipeline makes heavy use
+of the MLI/MLLib statistical libraries~\cite{freeman14, sparks13}, and tools like the GATK perform multiple
+rounds of statistical refinement~\cite{depristo11}.
+\item Data parallelism is very common. This varies across applications; in some applications (like
+genomics), we may leverage the independence of sites across a coordinate system and process
+individual coordinate regions in parallel. For other systems, we may have matrix calculations that can
+be parallelized~\cite{sparks13}, or we may be able to run processing in parallel across samples or traces.
+\end{enumerate}
+
+Additionally, there are several different emerging use cases for scientific data processing and storage
+systems. These different use cases largely correspond to different points in the lifecycle of the data:
+
+\begin{itemize}
+\item \textbf{Batch processing:} After the initial acquisition of raw sensor data~(e.g., raw DNA reads,
+brain electrode traces, telescope images), we use a batch processing pipeline~(e.g., \texttt{Thunder} or
+the GATK) to perform some dimensionality reduction/statistical summarization of the data. This is
+generally used to extract notable features from the data, such as turning raw genomic reads into variant
+alleles, or identifying areas of activity in neuroscience traces. These tasks are unlikely to have any
+interactive component, and are likely to be long running compute jobs.
+\item \textbf{Ad hoc exploration:} Once the batch processing has completed, there is often a need
+for exploratory processing of the results. For example, when studying disease genetics, a geneticist may
+use the variant/genotype statistics to identify genomic sites with statistically significant links to the
+disease phenotype. Data exploration tasks have a significant user facing/interactive nature, and are
+generally performed by scientists who may be programming laypeople.
+\item \textbf{Data warehousing:} In large scientific projects, it is common to make data available to the
+members of the scientific community through some form of warehouse service~(e.g., the Cancer
+Genomics Hub, CGHub, for the TCGA). As is the case for all data warehousing, this implies that queries
+must be made reasonably efficient, even though the data is expected to be cold. To reduce the cost of
+storing data, we may prioritize compression here; this has led to the creation of compressed storage
+formats like CRAM~\cite{fritz11}.
+\end{itemize}
+
+In this paper, we design a system that can achieve all of the above goals. The genomics and
+astronomy pipelines we demonstrate achieve improvements in batch processing performance, and
+allow for interactive/exploratory analysis through both Scala and Python. Through the layering principles
+we lay out in the next section and the performance optimizations we introduce
+in~\S\ref{sec:loading-remote-data}, we make our system useful for warehousing scientific data.\section{Case Studies}
 \label{sec:case-studies}
 
 To validate our architectural choices, we have implemented pipelines for processing short read genomic
@@ -733,7 +737,13 @@ def partitionAndJoin[T, U](sc: SparkContext,
   }
 \end{lstlisting}
 
-\textbf{FIXME: To find the non-overlapping regions...}
+To find the maximal set of non-overlapping regions, we must find the convex hull of all regions emitted.
+We present a distributed algorithm for finding convex hulls in Appendix~\ref{sec:convex-hull}. The
+distributed convex hull computation problem is important because it is used both for computing regions
+for partitioning during a region join and for performing INDEL realignment. We are currently working to
+improve our algorithm so that we can eliminate a reduce phase. This will allow us to improve
+performance by eliminating a synchronization phase caused by to Spark's Bulk Synchronous
+Parallel~(BSP) execution model.
 
 \subsection{Loading Remote Data}
 \label{sec:loading-remote-data}
@@ -881,12 +891,12 @@ duplicate marking.
 
 We use the 2MASS data and the Montage test case of 3x3 degree mosaicing with Galaxy m101 as the
 center. The tile mosaicing phase has 1.5~GB input data and produces a 1.2~GB aggregated output file.
-We compare the \texttt{Spark-mAdd} performance against the MPI based parallel implementation in
-Montage v3.3 (\texttt{MPI-mAdd}). We performed the test on 1, 4, and 16 Amazon \texttt{cr3.8xlarge}
-instances. We chose these instances because they provided very high performance networking, which is
-necessary for good MPI performance. We use OrangeFS v2.8.8, a successor of PVFS~\cite{PVFS}, as
-the shared file system when running \texttt{MPI-mAdd}. All 32 cores on each instance are used for both
-\texttt{Spark-mAdd} and \texttt{MPI-mAdd}.
+We compare the \texttt{Spark-mAdd} performance against the High Performance Computing~(HPC)
+styled MPI based parallel implementation in Montage v3.3 (\texttt{MPI-mAdd}). We performed the test on
+1, 4, and 16 Amazon \texttt{cr3.8xlarge} instances. We chose these instances because they provided
+HPC-optimized networking, which is necessary for good MPI performance. We use OrangeFS
+v2.8.8, a successor of PVFS~\cite{PVFS}, as the shared file system when running \texttt{MPI-mAdd}. All
+32 cores on each instance are used for both \texttt{Spark-mAdd} and \texttt{MPI-mAdd}.
 
 \begin{figure}[h]
 \begin{center}
@@ -1066,7 +1076,7 @@ issues in MPI based assemblers.
 In this paper, we have advocated for a clean architecture for decomposing components in a scientific
 system, and then demonstrated how to efficiently implement genomic and astronomy processing
 pipelines using the open source Avro, Parquet, and Spark systems~\cite{avro, parquet, zaharia10}.
-We demonstrate $>50\times$ performance improvements over conventional genomics processing
+We demonstrate $22-131\times$ performance improvements over conventional genomics processing
 systems, along with linear strong scaling and a $2\times$ cost improvement. On the astronomy
 workload, we achieve a $3\times$ speedup over the current best MPI-based solution. Additionally, while
 an obvious advantage of using commodity systems is code reuse, we have gained several valuable
@@ -1099,295 +1109,209 @@ data.
 \bibliographystyle{abbrv}
 \bibliography{adam} 
 
-\section{Genomics Pseudocode}
-\label{sec:genomics-pseudocode}
+\section{Schemas}
+\label{sec:schema}
 
-With the exception of the \texttt{Sort} stage, the genomics pre-processing stages seek to collect global
-information that is not available to the sequencer or aligner to correct sequenced or aligned data. We
-include pseudocode for the \texttt{Mark Duplicates}, \texttt{BQSR}, and \texttt{Indel Realignment} stages
-below.
+Here, we present the schemas that we have used for these two systems. We make several
+simplifications to the schemas for clarity; specifically, we have grouped all of our fields into a simpler
+logical schema ordering, and we have also removed the Avro syntactic sugar used to ensure that all
+fields are nullable. These schemas are implemented using Avro~\cite{avro}, and data is stored to disk via
+Parquet~\cite{parquet}. In-memory (de-)serialization is provided via a custom wrapper around Avro's
+serialization framework.
 
-\subsection{BQSR}
-\label{sec:bqsr-implementation}
+\subsection{Genomics Schema}
+\label{sec:genomics-schema}
 
-Base Quality Score Recalibration is an important data normalization step in the variant calling pipeline,
-and is the second costliest step after realignment. BQSR is composed of two stages:
-
-\begin{enumerate}
-\item We perform a parallel aggregate to compute the statistics for all covariate buckets. We put all
-bases into their appropriate covariate and then identify how many bases in each covariate mismatch
-against the reference at their aligned position.
-\item Once the covariate statistics have been computed, we rewrite the base quality scores per base.
-This can be done through a map stage.
-\end{enumerate}
-
-The covariates capture characteristics of the sequenced base that are expected to be correlated with
-error. We support the following covariates:
-
-\begin{itemize}
-\item \texttt{Measured Score}: This is the quality score originally measured by the sequencer.
-\item \texttt{Cycle}: This is the cycle the base was sequenced in. Errors are known to be most common
-at the start and end of reads~\cite{depristo11}.
-\item \texttt{Dinucleotide}: This covariate tracks the value of this base and the nucleotide that immediately
-preceded it. Sequencers struggle with reading certain patterns of bases.
-\end{itemize}
-
-We compute the covariate table with the following code:
+The schema used for storing genomics data is described below:
 
 \begin{lstlisting}
-val dataset: RDD[(CovariateKey, Residue)] = {
-  def shouldIncludeRead(read: DecadentRead) =
-    read.isCanonicalRecord &&
-      read.alignmentQuality.exists(_ > QualityScore.zero)
-      && read.passedQualityChecks
-
-  def shouldIncludeResidue(residue: Residue) =
-    residue.quality > QualityScore.zero &&
-      residue.isRegularBase &&
-      !residue.isInsertion &&
-      !knownSnps.value.isMasked(residue)
-
-  def observe(read: DecadentRead): Seq[(CovariateKey,
-    Residue)] =
-    covariates(read).zip(read.residues).
-      filter { case (key, residue) =>
-        shouldIncludeResidue(residue) }
-
-  input.filter(shouldIncludeRead).flatMap(observe)
+record Contig {
+  string contigName;
+  long contigLength;
+  string contigMD5;
+  string referenceURL;
+  string assembly;
+  string species;
 }
+
+record AlignmentRecord {
+  /** Alignment position and quality */
+  Contig contig;
+  long start;
+  long oldPosition;
+  long end;
+
+  /** read ID, sequence, and quality */
+  string readName;
+  string sequence;
+  string qual;
   
-val observed: ObservationTable = {
-  dataset.
-    map { case (key, residue) => (key,
-      Observation(residue.isSNP)) }.
-    aggregate(ObservationAccumulator(covariates))(_ += _,
-      _ ++= _).result
+  /** alignment details */
+  string cigar;
+  string oldCigar;
+  int mapq;
+  int basesTrimmedFromStart;
+  int basesTrimmedFromEnd;
+  boolean readNegativeStrand;
+  boolean mateNegativeStrand;
+  boolean primaryAlignment;
+  boolean secondaryAlignment;
+  boolean supplementaryAlignment;
+  string mismatchingPositions;
+  string origQual;
+
+  /** Read status flags */
+  boolean readPaired;
+  boolean properPair;
+  boolean readMapped;
+  boolean mateMapped;
+  boolean firstOfPair;
+  boolean secondOfPair;
+  boolean failedVendorQualityChecks;
+  boolean duplicateRead;
+
+  /** optional attributes */
+  string attributes;
+
+  /** record group metadata */
+  string recordGroupName;
+  string recordGroupSequencingCenter;
+  string recordGroupDescription;
+  long recordGroupRunDateEpoch;
+  string recordGroupFlowOrder;
+  string recordGroupKeySequence;
+  string recordGroupLibrary;
+  int recordGroupPredictedMedianInsertSize;
+  string recordGroupPlatform;
+  string recordGroupPlatformUnit;
+  string recordGroupSample;
+
+  /** Mate pair alignment information */
+  long mateAlignmentStart;
+  long mateAlignmentEnd;
+  Contig mateContig;
 }
 \end{lstlisting}
 
-Once the table is recalibrated, we map the following function over the reads to write the recalibrated 
-scores:
+All of the metadata from the sequencing run and prior processing steps are packed into the record
+group metadata fields. The program information describes the processing lineage of the sample and
+is expected to be uniform across all records, thus it compresses extremely well. The record group
+information is not guaranteed to be uniform across all records, but there are a limited number number
+of record groups per sequencing dataset.\footnote{The record group reflects the way the samples were
+sequenced; increasing the parallelism of the sequencing increases the number of record groups.} This
+metadata is string heavy, which makes proper deserialization from disk important. Although the
+information consumes less than 5\% of space on disk, a poor deserializer implementation may replicate
+a string per field per record, which greatly increases the amount of memory allocated and the garbage
+collection~(GC) load.
+
+In our system, we have defined common projections and predicates to operate on these records. For
+example, tools~(like the \texttt{flagstat} command) that perform quality control for sequenced data
+commonly only access the read status flags from the schema. We can reduce the amount of IO we
+perform by projecting only these fields. Additionally, it is common to run predicates on the read position,
+or whether the read is mapped or not. We have several predicates that are optimized for these queries,
+and have devised a system that allows us to apply these predicates to legacy datasets as well; however,
+we only get the \emph{functionality} of the predicate, not the performance improvement.
+
+\subsection{Astronomy Schema}
+\label{sec:astronomy-schema}
+
+We use the following schema for storing astronomy pixel values:
 
 \begin{lstlisting}
-def recalibrate(read: DecadentRead): AlignmentRecord = {
-  val record: AlignmentRecord = read.record
-  AlignmentRecord.newBuilder(record).
-    setQual(QualityScore.toString(computeQual(read))).
-    setOrigQual(record.getQual).
-    build()
-}
-
-def computeQual(read: DecadentRead): Seq[QualityScore] = {
-  val origQuals = read.residues.map(_.quality)
-  val newQuals = table(read)
-  origQuals.zip(newQuals).map {
-    case (origQ, newQ) =>
-      // Keep original quality score if below
-      // recalibration threshold                                                                                                                                       
-      if (origQ >= minAcceptableQuality) newQ else origQ
-  }
+record PixelValue {
+  /** pixel position */
+  int xPos;
+  int yPos;
+  
+  /** pixel value */
+  float value;
+  
+  /** file metadata */
+  int start;
+  int end;
+  int offset;
+  int height;
 }
 \end{lstlisting}
 
-\subsection{Indel Realignment}
-\label{sec:indel-realignment-implementation}
+This schema is derived from the legacy Flexible Image Transport System~(FITS,~\cite{wells81}), which
+defines an interchange format for astronomy images. During the \texttt{mAdd} processing kernel
+described in~\S{sec:astro-workloads}, we access the file metadata from each pixel. In current systems,
+metadata access becomes a significant performance bottleneck as we are performing metadata access
+across thousands of files~\cite{zhang13}.
 
-Indel realignment is a two step process. First we identify regions that have evidence of an insertion or
-deletion. Then we realign reads to candidate haplotypes to minimize the overall weight of mismatches in
-the region. The quality of mismatches near an INDELs serves as a good proxy for the local quality of an
-alignment. This is due to the nature of INDEL alignment errors: when an INDEL is misaligned, this causes 
-a temporary shift in the read sequence against the reference sequence. This shift manifests as a run of
-many bases with mismatches due to their incorrect alignment.
+\section{Convex-Hull Finding}
+\label{sec:convex-hull}
 
-We identify regions for realignment by looking for evidence of an insertion or deletion. If a read contains
-INDEL evidence, we drop a target at the site. We then fold over the targets and merge all targets down
-into a single target set. The core of our target identification algorithm can be found below.
+A frequent pattern in our application is identifying the maximal convex hulls across sets of regions. For
+a set $R$ of regions, we define a maximal convex hull as the largest region $\hat{r}$ that satisfies the
+following properties:
 
-\begin{lstlisting}
-def findTargets(reads: RDD[RichAlignmentRecord],                                                                                                                                                            
-                maxIndelSize: Int = 500,
-                maxTargetSize: Int = 3000): TargetSet = {
+\begin{align}
+\label{eqn:convexity-constraint}
+\hat{r} &= \cup_{r_i \in \hat{R}} r_i \\
+\hat{r} \cap r_i &\ne \emptyset, \forall r_i \in \hat{R} \\
+\hat{R} &\subset R
+\end{align}
 
-  def createTargetSet(target: IndelRealignmentTarget
-    ): TargetSet = {
-    val tmp = new TreeSet()(TargetOrdering)
-    new TargetSet(tmp + target)
-  }
+In our problem, we seek to find all of the maximal convex hulls, given a set of regions. For genomics, the
+convexity constraint described by \eqref{eqn:convexity-constraint} is trivial to check: specifically, the
+genome is assembled out of reference contigs\footnote{\emph{Contig} is short for \emph{contiguous
+sequence}. Reference contigs are normally used to describe the sequence that is unique to each
+chromosome.} that define disparate 1-D coordinate spaces. If two regions exist on different contigs, they
+are known not to overlap. If two regions are on a single contig, we simply check to see if they overlap
+on that contig's 1-D coordinate plane.
 
-  val targets = reads.flatMap(IndelRealignmentTarget(_,
-      maxIndelSize))
-    .filter(t => !t.isEmpty)
+Given this realization, we can define the data-parallel algorithm~\ref{alg:parallel-convex-hull} to find the
+maximal convex hulls that describe a genomic dataset.
 
-  val targetSet: TargetSet = TargetSet(targets
-    .mapPartitions(iter => iter.toArray
-      .sorted(TargetOrdering).toIterator)
-    .map(createTargetSet)
-    .fold(TargetSet())((t1, t2) => joinTargets(t1, t2))
-    .set.filter(_.readRange.length <= maxTargetSize))
+\begin{algorithm}
+\caption{Find Convex Hulls in Parallel}
+\label{alg:parallel-convex-hull}
+\begin{algorithmic}
+\STATE $data \leftarrow$ input dataset
+\STATE $regions \leftarrow data$.map($data \Rightarrow $generateTarget($data$))
+\STATE $regions \leftarrow regions$.sort()
+\STATE $hulls \leftarrow regions$.fold($r_1, r_2 \Rightarrow$ mergeTargetSets($r_1, r_2$))
+\RETURN $\Theta$
+\end{algorithmic}
+\end{algorithm}
 
-  targetSet
-}
-\end{lstlisting}
+The \texttt{generateTarget} function projects each datapoint into a Red-Black tree which contains a
+single region. The performance of the fold depends on the efficiency of the merge function. We achieve
+efficient merges with the tail-call recursive \texttt{mergeTargetSets} function which is described in
+algorithm~\ref{alg:join-targets}.
 
-We store the targets in Red-Black trees. The performance of the fold depends on the efficiency of the
-merge function. We achieve efficient merges with the tail-call recursive \texttt{joinTargets} function:
+\begin{algorithm}
+\caption{Merge Hull Sets}
+\label{alg:join-targets}
+\begin{algorithmic}
+\STATE $first \leftarrow$ first target set to merge
+\STATE $second \leftarrow$ second target set to merge
+\REQUIRE $first$ and $second$ are sorted
+\IF{$first = \emptyset \wedge second = \emptyset$}
+\RETURN $\emptyset$
+\ELSIF{$first = \emptyset$}
+\RETURN $second$
+\ELSIF{$second = \emptyset$}
+\RETURN $first$
+\ELSE
+\IF{last($first$) $\cap$ head($second$) $= \emptyset$}
+\RETURN $first$ + $second$
+\ELSE
+\STATE $mergeItem \leftarrow$ (last($first$) $\cup$ head($second$))
+\STATE $mergeSet \leftarrow$ allButLast($first$) $\cup mergeItem$
+\STATE $trimSecond \leftarrow$ allButFirst($second$)
+\RETURN mergeTargetSets($mergeSet$, $trimSecond$)
+\ENDIF
+\ENDIF
+\end{algorithmic}
+\end{algorithm}
 
-\begin{lstlisting}
-@tailrec protected final def joinTargets(                                                                                                                                                                   
-  first: TreeSet[IndelRealignmentTarget],                                                                                                                                                                   
-  second: TreeSet[IndelRealignmentTarget]):
-    TreeSet[IndelRealignmentTarget] = {
-
-  if (first.isEmpty && second.isEmpty) {
-    TreeSet[IndelRealignmentTarget]()(TargetOrdering)
-  } else if (second.isEmpty) {
-    first
-  } else if (first.isEmpty) {
-    second
-  } else {
-    // if the two sets overlap, 
-    // we must merge their head and tail elements,                                                                                                                                 
-    // else we can just blindly append                                                                                                                                                                      
-    if (!TargetOrdering.overlap(first.last, second.head)
-      ) {
-      first.union(second)
-    } else {
-      // merge the tail of the first set and the head
-      // of the second set and retry the merge                                                                                                                 
-      joinTargets(first - first.last +
-        first.last.merge(second.head),
-        second - second.head)
-    }
-  }
-}
-\end{lstlisting}
-
-We maintain a sorted-order invariant during the fold. This allows us to know a priori that the elements
-in the ``first'' set will always be ordered earlier relative to the elements in the ``second'' set. However,
-there can still be overlap between the two sets, as this ordering does not account for the end positions of
-the targets. If there is overlap between the last target in the ``first'' set and the first target in the ``second''
-set, we merge these two elements, and try to merge the two sets again. This allows us to find a convex
-hull of many regions.
-
-The mapping of reads to realignment targets is done through a tail recursive function that performs
-binary search across the sorted set of realignment targets:
-
-\begin{lstlisting}
-@tailrec final def mapToTarget(read: RichAlignmentRecord,                                                                                                                                                   
-  targets: TreeSet[(IndelRealignmentTarget, Int)]):
-    Int = {                                                                                                                                                         
-  if (targets.size == 1) {
-    if (TargetOrdering.contains(targets.head._1, read)) {
-      // if there is overlap, return the overlapping target                                                                                                                                                 
-      targets.head._2
-    } else {
-      // else, return an empty target (negative index)                                                                                                                                                      
-      // split up by max indel alignment length for skew                                                                                                                                      
-      (-1 - (read.record.getStart / maxTargetLength)).toInt
-    }
-  } else {
-    // split the set and recurse                                                                                                                                                                            
-    val (head, tail) = targets.splitAt(targets.size / 2)
-    val reducedSet = if (TargetOrdering.lt(tail.head._1,
-        read)) {
-      head
-    } else {
-      tail
-    }
-    mapToTarget(read, reducedSet)
-  }
-}
-\end{lstlisting}
-
-This function is applied as a groupBy against all reads. This means that the function is mapped to the
-RDD that contains all reads. A new RDD is generated where all reads that returned the same INDEL
-realignment target are grouped together into a list. We randomize reads that do not map to a target
-across a large number of ``fake'' targets, which are not processed.
-
-Once we have labeled all reads with a possible target, we generate consensus sequences by inserting
-INDEL evidence from the reads into the reference genome. For target $T$, we then pick a consensus
-sequence $C$ that minimizes the target quality ($Q_T$):
-
-\begin{equation}
-Q_T = \sum_{r \in T} \min(\sum_{i = 1}^{L_r} I[r_i = G_i] \epsilon_i, \min_{j \in C} \sum_{i = 1}^{L_r} I[r_i = C_{i + j}] \epsilon_i)
-\end{equation}
-
-$I[r_i = x]$ is an indicator function that is 0 if the $i$th base of the read ($r_i$) matches the reference or
-consensus base $x$. We use $G_i$ to indicate the reference genome base where $r_i$ is original
-aligned, and $C_{i + j}$ to indicate the $(i + j)$th base of the consensus sequence. The $j$ variable
-represents the position of the read alignment versus consensus $C$, and $L_r$ represents the length of
-read $r$.
-
-\subsection{Duplicate Marking}
-\label{sec:duplicate-marking-implementation}
-
-The following code implements duplicate marking.
-
-\begin{lstlisting}
-for (((leftPos, library), readsByLeftPos) <- 
-    rdd.singleReadBuckets()
-       .keyBy(ReferencePositionPair(_))
-       .groupBy(leftPositionAndLibrary);
-
-buckets <- {
-
-leftPos match {
- // These are all unmapped reads. 
- // There is no way to determine if
- // they are duplicates
- case None =>
-    markReads(readsByLeftPos.unzip._2,
-      areDups = false)
- // These reads have their left position mapped
- case Some(leftPosWithOrientation) =>
-   // Group the reads by their right position
-   val readsByRightPos = readsByLeftPos.groupBy(
-     rightPosition)
-   // Find any reads with no right position
-   val fragments = readsByRightPos.get(None)
-   // Check if we have any pairs
-   // (reads with a right position)
-   val hasPairs = readsByRightPos.keys
-     .exists(_.isDefined)
-   if (hasPairs) {
-     // Since we have pairs,
-     // mark all fragments as duplicates
-     val processedFrags = if (fragments.isDefined
-     ) {
-       markReads(fragments.get.unzip._2,
-         areDups = true)
-     } else {
-       Seq.empty
-     }
-     val processedPairs = 
-         for (buckets <- (readsByRightPos - None)
-           .values;
-             processedPair <- 
-                scoreAndMarkReads(buckets.unzip._2)) 
-        yield processedPair
-     processedPairs ++ processedFrags
-   } else if (fragments.isDefined) {
-     // No pairs. Score the fragments.
-     scoreAndMarkReads(fragments.get.unzip._2)
-   } else {
-     Seq.empty
-   }
-};
-read <- buckets.allReads) yield read
-\end{lstlisting}
-
-First, all reads with the same record group name and read name are collected into buckets. These
-buckets contain the read and optional mate or secondary alignments. Each read bucket is then keyed by
-$5'$ position and orientation and grouped together by left (lowest coordinate) position, orientation and
-library name. Then, we process each read bucket with a common left $5'$ position. Unmapped reads are
-never marked as duplicate as their position is not known. Mapped reads with a common left position are
-separated into paired reads and fragments. Fragments, in this context, are reads that have no mate or
-should have a mate but it doesn't exist.
-
-If there are pairs in a group, all fragments are marked duplicates and the paired reads are grouped by
-their right $5'$ position. All paired reads that have a common right and left 5$'$ position are scored and
-all but the highest scoring read is marked a duplicate. If there are no pairs in a group, all fragments are
-scored and all but the highest scoring fragment are marked duplicates.
+For a region join~(see~\S\ref{sec:coordinate-system-joins}), we would use the maximal convex hull
+set to define partitioning for the join. Alternatively, for INDEL
+realignment~(see~\S\ref{sec:local-realignment}), we use this set as an index for mapping reads directly
+to targets.
 
 \balancecolumns
 
