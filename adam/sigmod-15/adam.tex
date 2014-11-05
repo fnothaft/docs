@@ -110,7 +110,7 @@ In this paper, we demonstrate an example genomics pipeline that leverages open-s
 and columnar storage techniques to achieve a $22-130\times$ speedup over traditional genomics
 systems, at half the cost. From building this system, we were able to distill a set of principles for
 implementing scientific analyses efficiently using commodity ``big data'' systems. To demonstrate the
-generality of our architecture, we then achieve a 2.5$\times$ improvement over the state-of-the-art MPI-based system for an astronomy task.
+generality of our architecture, we then achieve an average of $5.8\times$ improvement over the state-of-the-art MPI-based system for an astronomy task at different scales.
 \end{abstract}
 
 % A category with the (minimum) three required fields
@@ -183,8 +183,8 @@ Dremel~\cite{melnik10} to push computation to the data.
 
 Our solution manifests in the design of the stack model for composing scientific systems which is
 described in Figure~\ref{fig:stack-model}. We demonstrate the generality of this model by using it to
-implement a system for processing astronomy images, which achieves a $>3\times$ performance
-improvement over a state-of-the-art Message Passing Interface~(MPI) based pipeline.
+implement a system for processing astronomy images, which achieves an average of $5.8\times$ performance
+improvement over a state-of-the-art Message Passing Interface~(MPI) based pipeline at various scales.
 
 \begin{figure}[h]
 \begin{center}
@@ -893,7 +893,7 @@ We use the 2MASS data and the Montage test case of 3x3 degree mosaicing with Gal
 center. The tile mosaicing phase has 1.5~GB input data and produces a 1.2~GB aggregated output file.
 We compare the \texttt{Spark-mAdd} performance against the High Performance Computing~(HPC)
 styled MPI based parallel implementation in Montage v3.3 (\texttt{MPI-mAdd}). We performed the test on
-1, 4, and 16 Amazon \texttt{cr3.8xlarge} instances. We chose these instances because they provided
+1, 4, and 16 Amazon \texttt{c3.8xlarge} instances. We chose these instances because they provided
 HPC-optimized networking, which is necessary for good MPI performance. We use OrangeFS
 v2.8.8, a successor of PVFS~\cite{PVFS}, as the shared file system when running \texttt{MPI-mAdd}. All
 32 cores on each instance are used for both \texttt{Spark-mAdd} and \texttt{MPI-mAdd}.
@@ -906,7 +906,7 @@ v2.8.8, a successor of PVFS~\cite{PVFS}, as the shared file system when running 
 \label{fig:madd-speedup}
 \end{figure}
 
-As shown in Figure~\ref{fig:madd-speedup}, \texttt{Spark-mAdd} runs 1.3x, 2.8x, 3.3x faster than
+As shown in Figure~\ref{fig:madd-speedup}, \texttt{Spark-mAdd} runs 2.8x, 5.7x, 8.9x faster than
 MPImAdd on 1, 4, and 16 instances with a data compression rate of 2.8x for input and 1.4x for output.
 The performance improvement is contributed by multiple factors: less I/O amount, less I/O contention,
 and better data locality. We manage to combine the metadata processing stage with mAdd together,
@@ -1078,7 +1078,8 @@ system, and then demonstrated how to efficiently implement genomic and astronomy
 pipelines using the open source Avro, Parquet, and Spark systems~\cite{avro, parquet, zaharia10}.
 We demonstrate $22-131\times$ performance improvements over conventional genomics processing
 systems, along with linear strong scaling and a $2\times$ cost improvement. On the astronomy
-workload, we achieve a $3\times$ speedup over the current best MPI-based solution. Additionally, while
+workload, we achieve an average of $5.8\times$ speedup over the current best MPI-based solution at various scales.
+Additionally, while
 an obvious advantage of using commodity systems is code reuse, we have gained several valuable
 features for free:
 
