@@ -100,17 +100,16 @@ morestring=[b]"}
 \maketitle
 
 \begin{abstract}
-Revolutions in data acquisition are drastically changing how science conducts experiments. For
-example, ``next-\linebreak generation'' sequencing technologies have driven exponential growth in
-the volume of genomic data, and similar trends impact many fields which rely on imaging, such as
-astronomy and neuroscience. Although there have been early attempts to use MapReduce systems
-to accelerate the processing of these datasets, they have conceded efficiency in favor of using legacy
-storage formats and software.
+Revolutions in data acquisition are drastically changing how science conducts experiments. ``Next
+generation'' sequencing technologies are allowing scientists to collect exponentially more data at a lower
+cost. Similar trends impact many fields which rely on imaging, such as astronomy and neuroscience.
+Early attempts to use MapReduce systems to accelerate the processing of these datasets have been
+limited through the use of legacy data formats that limit horizontal scalability.
 
 Since the amount of scientific data that is being captured is increasing exponentially, we have a good
 opportunity to rethink how we process and store these datasets. In this paper, we introduce a set of
 principles for implementing scientific analyses efficiently using commodity ``big data'' systems. We
-motivate these principles with an example genomics pipeline which leverages open-source MapReduce
+motivate these principles with an example genomics pipeline that leverages open-source MapReduce
 and columnar storage techniques to achieve a $>50\times$ speedup over traditional genomics systems,
 at half the cost. To demonstrate the generality of our architecture, we then achieve a 2.5$\times$
 improvement over the state-of-the-art MPI-based system for an astronomy task.
@@ -137,14 +136,13 @@ scientists routinely perform experiments that use terabytes~(TB) to \linebreak p
 While traditional scientific computing platforms are optimized for fast linear algebra, many emerging
 domains make heavy use of statistical learning techniques and user defined functions~(UDFs) on top of
 semistructured data. This move towards statistical techniques has been driven by the increase in the
-amount of data available to scientists, as well as the rise of statistical systems which are accessible to
+amount of data available to scientists, as well as the rise of statistical systems that are accessible to
 non-experts, such as \texttt{Scikit-learn}~\cite{pedregosa11} and \texttt{MLI}~\cite{sparks13}.
 
-While the increase in the amount of scientific data available is a boon for scientists, it puts significant
-stress on existing software. Using the current ``best practice'' genomic variant calling
-pipeline~\cite{auwera13}, it takes approximately 120 hours to process a single, high-quality human
-genome using a single, beefy node~\cite{talwalkar14}. To address these challenges, scientists have
-started to apply computer systems techniques such as MapReduce~\cite{mckenna10, schatz09,
+The size of data is outgrowing computer performance. Using the current ``best practice'' genomic variant
+calling pipeline~\cite{auwera13}, it takes approximately 120 hours to process a single, high-quality
+human genome using a single, beefy node~\cite{talwalkar14}. To address these challenges, scientists
+have started to apply computer systems techniques such as MapReduce~\cite{mckenna10, schatz09,
 langmead09} and columnar storage~\cite{fritz11} to custom scientific compute/storage systems. While
 these systems have improved the analysis cost and performance, na\"{i}ve implementations incur
 significant overheads due to constraints of the legacy formats and codebases that they use.
@@ -185,9 +183,9 @@ review why current scientific software does not fully satisfy these use cases.
 \item We develop a modular, technology independent stack model to guide the design and
 implementation of scientific processing and storage systems. We then demonstrate how this stack model
 resolves both design anti-patterns \emph{and} functional bugs in current systems.
-\item We implement a genomics pipeline which achieves a $50\times$ performance improvement and a
+\item We implement a genomics pipeline that achieves a $50\times$ performance improvement and a
 $2\times$ cost improvement over current ``best practice'' systems, and an astronomy image processing
-pipeline which provides a $3\times$ improvement over the current ``state-of-the-art'' \linebreak MPI
+pipeline that provides a $3\times$ improvement over the current ``state-of-the-art'' \linebreak MPI
 system.
 \item Finally, we illustrate how to provide coordinate-system guided processing in parallel across
 shared-nothing systems. These traversals are necessary in many scientific applications.
@@ -202,7 +200,7 @@ charge under the permissive Apache 2 license.
 As our work exists at the intersection of computational science and data management and processing
 systems, our architectural approach is informed by recent trends in both areas. The design of large
 scale data management has changed dramatically since the landmark papers by Dean and
-Ghemawat~\cite{dean04, dean08} which described Google's \texttt{MapReduce} system. Over a
+Ghemawat~\cite{dean04, dean08} that described Google's \texttt{MapReduce} system. Over a
 similar timeframe, scientific fields have moved to take advantage of improvements in data acquisition
 technologies. For example, since the Human Genome Project finished in 2001~\cite{lander01}, the price
 of genomic sequencing has dropped by 10,000$\times$~\cite{nhgri}. This drop in cost has enabled the
@@ -216,39 +214,32 @@ datasets~(e.g., the development of first generation MapReduce systems~\cite{dean
 iterative MapReduce systems like Spark~\cite{zaharia10}, as well as parallel and columnar
 DBMS~\cite{abadi06, lamb12}), the uptake of these systems in the scientific world has been slow.
 Most implementations have either used MapReduce as an inspiration for programming API
-design~\cite{mckenna10}, or have been limited systems which have used MapReduce to na\"{i}vely
+design~\cite{mckenna10}, or have been limited systems that have used MapReduce to na\"{i}vely
 parallelize existing toolkits~\cite{langmead09, schatz09}. These approaches are perilous for several
 reasons:
 
 \begin{itemize}
 \item A strong criticism levied against the map-reduce model is that the API is insufficiently expressive
-for describing complex tasks. As a consequence of this, tools like the GATK~\cite{mckenna10} which
-adopt MapReduce as a programming model~(but \emph{not an execution strategy}) force significant
-restrictions on algorithm implementors. For example, a GATK \texttt{walker} is provided with a single
-view over the data~(a sorted iterator over a specified region), and is allowed limited reduce functionality.
+for describing complex tasks. As a consequence of this, tools like the GATK~\cite{mckenna10} that
+adopt MapReduce as a programming model force significant restrictions on algorithm implementors. For
+example, a GATK \texttt{walker} is provided with a single view over the data~(a sorted iterator over a
+specified region), and is allowed limited reduce functionality.
 \item A major contribution of systems like MapReduce~\cite{dean08} and Spark~\cite{zaharia10,
-zaharia12} is the ability to reliably distribute parallel tasks across a cluster in an automated fashion. In
-practice, to run tools like the GATK across a cluster, organizations have rolled their own systems for
-sharding and persisting intermediate data, and managing failures and retries. This is not only an
-inefficient duplication of work, but it is also a source of inefficiency during execution: the performance of
-iterative stages in the GATK is bottlenecked by I/O performance. Additionally, the sharding techniques
-used are based on prior knowledge of the structure of the genome and limit scale-up to a $10\times$
-speedup on 23 machines.
+zaharia12} is the ability to reliably distribute parallel tasks across a cluster in an automated fashion. While
+the GATK uses MapReduce as a programming abstraction~(i.e., as an interface for writing
+\texttt{walker}s), it does not use MapReduce as an execution strategy. To run tools like the GATK across
+a cluster, organizations use workflow management systems for sharding and persisting intermediate
+data, and managing failures and retries. This is not only an inefficient duplication of work, but it is also a
+source of inefficiency during execution: the performance of iterative stages in the GATK is bottlenecked
+by I/O performance. Additionally, typical sharding techniques used are based on prior knowledge of the
+structure of the genome and limit scale-up to a $10\times$ speedup on 23 machines.\footnote{There are
+23 chromosome pairs in humans, and the largest chromosome is $\frac{1}{10}$ the size of the whole
+genome}
 \item The na\"{i}ve Hadoop-based implementations in Crossbow~\cite{langmead09} and
 Cloudburst~\cite{schatz09} lead to good speedups, but add significant overhead. Several of the
 methods that they parallelize incur high overhead due to duplicated loading of indices (for fast aligners,
 loading of large indices can be a primary I/O bottleneck) and poor broadcasting of data.
 \end{itemize}
-
-A notable exception to the above criticisms is the \texttt{Thunder} system, which was developed for
-processing terabytes of neuroscience imaging data~\cite{freeman14}. \texttt{Thunder} performs a largely
-statistical workload, and the significant tasks in terms of execution time are clustering and regression.
-The system is constructed using Spark and Python and is designed to process datasets larger than 4 TB,
-and leverages significant functionality from the MLI/MLLib libraries~\cite{sparks13}. Unlike preexisting
-pipelines, they are able to use Spark's in-memory caching to amortize load time across several pipeline
-stages. Additionally, they use Spark's filtering primitives to allow scientists to cut problems into
-subproblems. This is a common trend across scientific analyses, and is one of the reasons that we
-advocate for the use of a columnar store with efficient predicate pushdown.
 
 Recent work by Diao et al~\cite{diao15} has looked at optimizations to MapReduce systems for
 processing genomic data. They borrow strategies from the query optimization literature to reorder
@@ -272,7 +263,7 @@ functions, which may be cumbersome in SQL.
 
 One notable area where database techniques have been leveraged by scientists is in the data storage
 layer. Due to the storage costs of large genomic datasets, scientists have introduced the CRAM format
-which uses columnar storage techniques and special compression algorithms to achieve a 30\%
+that uses columnar storage techniques and special compression algorithms to achieve a 30\%
 reduction in size over the original BAM format~\cite{fritz11}. While CRAM achieves good compression,
 it imposes restriction on the ordering and structure of the data, and does not provide support for
 predicates or projection. We perform a more comprehensive comparison against CRAM
@@ -333,7 +324,7 @@ of the MLI/MLLib statistical libraries~\cite{freeman14, sparks13}, and tools lik
 rounds of statistical refinement~\cite{depristo11}.
 \item Data parallelism is very common. This varies across applications; in some applications (like
 genomics), we may leverage the independence of sites across a coordinate system and process
-individual coordinate regions in parallel. For other systems, we may have matrix calculations which can
+individual coordinate regions in parallel. For other systems, we may have matrix calculations that can
 be parallelized~\cite{sparks13}, or we may be able to run processing in parallel across samples or traces.
 \end{enumerate}
 
@@ -360,7 +351,7 @@ storing data, we may prioritize compression here; this has led to the creation o
 formats like CRAM~\cite{fritz11}.
 \end{itemize}
 
-In this paper, we design a system which can achieve all of the above goals. The genomics and
+In this paper, we design a system that can achieve all of the above goals. The genomics and
 astronomy pipelines we demonstrate achieve improvements in batch processing performance, and
 allow for interactive/exploratory analysis through both Scala and Python. Through the layering principles
 we lay out in the next section and the performance optimizations we introduce
@@ -385,7 +376,7 @@ networking stack model can largely be attributed to the ``narrow waist'' of the 
 integration of a new protocol or technology by ensuring that the protocol only needed to implement a
 single interface to be compatible with the rest of the stack.
 
-Unlike conventional scientific systems which leverage custom data formats like BAM/SAM~\cite{li09},
+Unlike conventional scientific systems that leverage custom data formats like BAM/SAM~\cite{li09},
 or CRAM~\cite{fritz11}, we believe that the use of an explicit schema for data interchange is critical.
 In our stack model shown in Figure~\ref{fig:stack-model}, the schema becomes the ``narrow waist''
 of the stack. Most importantly, placing the schema as the narrow waist enforces a strict separation
@@ -409,8 +400,8 @@ top:
 been written to storage media.
 \item {\bf Materialized Data:} This layer encodes the patterns for how data is encoded and stored. This
 layer determines I/O bandwidth and compression.
-\item {\bf Data Schema:} This layer specifies the representation of data, and forms the narrow waist of the
-stack which separates access from execution.
+\item {\bf Data Schema:} This layer specifies the representation of data, and forms the narrow waist of
+the stack that separates access from execution.
 \item {\bf Evidence Access:} This layer provides us with primitives for processing data, and allows us to
 transform data into different views and traversals.
 \item {\bf Presentation:} This layer enhances the data schema with convenience methods for performing
@@ -432,7 +423,7 @@ As we discuss in more detail in~\S\ref{sec:genomics-pipeline}, current scientifi
 functionality between stack layers. An exemplar is the SAM/BAM and CRAM formats, which expect data
 to be sorted by genomic coordinate. This modifies the layout of data on disk~(level 3, Materialized Data),
 which then constrains how applications traverse datasets~(level 5, Evidence Access). Beyond
-constraining applications, this leads to bugs in applications which are difficult to detect.\footnote{The
+constraining applications, this leads to bugs in applications that are difficult to detect.\footnote{The
 current best-practice implementations of the BQSR and Duplicate Marking algorithms both fail in certain
 corner-case alignments. These errors are caused because of the limitation on traversing reads in sorted
 order.} To resolve this, we demonstrate several ways to efficiently implement conventional scientific
@@ -490,7 +481,7 @@ are provided \emph{quality scores}, which represent the likelihood that the base
 was observed.
 
 One of the most common genomic analyses is \emph{variant calling}, which is a statistical process to
-infer the sites at which a single individual varies from the reference genome.\footnote{The
+infer the sites at that a single individual varies from the reference genome.\footnote{The
 reference genome represents the ``average'' genome for a species. The Human Genome
 Project~\cite{lander01} assembled the first human reference genome.} To call variants, we perform the
 following steps:
@@ -498,7 +489,7 @@ following steps:
 \begin{enumerate}
 \item \textbf{Alignment:} For each read, we find the position in the genome that the read is most likely to
 have come from. As an exact search is too expensive, there has been an extensive amount of research
-which has focused on indexing strategies for improving alignment performance~\cite{li10, li11,
+that has focused on indexing strategies for improving alignment performance~\cite{li10, li11,
 zaharia11}. This process is parallel per sequenced read.
 \item \textbf{Pre-processing:} After reads have been aligned to the genome, we perform several
 preprocessing steps to eliminate systemic errors in the reads. This may involve recalibrating the
@@ -506,7 +497,7 @@ observed quality scores for the bases, or locally optimizing the read alignments
 description of several of these algorithms in~\S\ref{sec:genomics-pipeline}; for a more detailed
 discussion, we refer readers to Appendix~\ref{sec:genomics-pseudocode}, DePristo et
 al~\cite{depristo11} and Massie et al~\cite{massie13}.
-\item \textbf{Variant calling:} Variant calling is a statistical process which uses the read alignments
+\item \textbf{Variant calling:} Variant calling is a statistical process that uses the read alignments
 and the observed quality scores to compute whether a given sample \linebreak matches or diverges
 from the reference genome. This process is typically parallel per position or region in the genome.
 \item \textbf{Filtration:} After variants have been called, we want to filter out false positive variant calls.
@@ -522,7 +513,7 @@ Current benchmark suites have measured this pipeline as taking between 90 and 13
 end-to-end~\cite{talwalkar14}. Recent projects have achieved $5-10\times$ improvements in alignment
 and variant calling performance~\cite{zaharia11, rimmer14}, which makes the pre-processing stages
 the performance bottleneck. We have focused on implementing the four most time consuming
-pre-processing stages, as well as \texttt{flagstat}, a command which is used for quality control~(QC). In
+pre-processing stages, as well as \texttt{flagstat}, a command that is used for quality control~(QC). In
 the remainder of this section, we describe the stages that we have implemented, and the techniques
 we have used to improve performance and accuracy. We omit detailed pseudocode here, but make
 pseudocode available in Appendix~\ref{sec:genomics-pseudocode}.
@@ -533,7 +524,7 @@ This phase sorts all reads by the position of the start of their alignment. The 
 algorithm is trivial, as Spark provides a sort primitive~\cite{zaharia10}; we solely need to define an
 ordering for genomic coordinates, which is well defined. In practice, an explicit sort is unnecessary when
 using the rest of our MapReduce-based pipeline. We have included sort to enable the use of legacy
-tools which require sorted input.
+tools that require sorted input.
 
 \paragraph{Duplicate Removal} 
 \label{sec:duplicate-removal}
@@ -546,10 +537,11 @@ scored, and all but the highest quality read are marked as duplicates.
 We have validated our duplicate removal code against Picard~\cite{picard}, which is used by the GATK
 for Marking Duplicates. Our implementation is fully concordant with the Picard/GATK duplicate removal
 engine, with the exception of chimeric read pairs.\footnote{In a chimeric read pair, the two reads in the
-read pairs align to different chromosomes; see Li et al~\cite{li10}.} Specifically, because Picard's
-traversal engine is restricted to processing linearly sorted alignments, Picard mishandles these
-alignments. Since our engine is not constrained by the underlying layout of data on disk, we are able
-to properly handle chimeric read pairs.
+read pairs align to different chromosomes; see Li et al~\cite{li10}. These reads are used to detect
+structural variants, which are important in cancer and some hereditary diseases (e.g., autism).}
+Specifically, because Picard's traversal engine is restricted to processing linearly sorted alignments,
+Picard mishandles these alignments. Since our engine is not constrained by the underlying layout of data
+on disk, we are able to properly handle chimeric read pairs.
 
 \paragraph{Local Realignment} 
 \label{sec:local-realignment}
@@ -564,7 +556,7 @@ fold, we must compute the convex hull of overlapping regions in parallel. We dis
 in~\S\ref{sec:coordinate-system-joins}
 
 After we have generated the targets, we associate reads to an overlapping target (if one exists). After
-associating reads to realignment targets, we run the heuristic realignment algorithm which is described
+associating reads to realignment targets, we run the heuristic realignment algorithm that is described
 in Appendix~\ref{sec:candidate-generation-realignment}.
 
 \paragraph{Base Quality Score Recalibration~(BQSR)} 
@@ -580,19 +572,10 @@ correction to each covariate to recalculate the quality scores of all member bas
 P_{err}^{cov} = \frac{\text{\# errors} \in cov + 1}{\text{\# observations} \in cov + 2}
 \end{equation}
 
-We have validated the concordance of our BQSR implementation against the GATK. The overall
-differences are shown in Figure~\ref{fig:bqsr-concordance}\textbf{ (FIXME: Frank + Jey to update this
-figure)}.  Across both tools, only 5000 of the $\sim$180B bases in the high-coverage NA12878 genome
-dataset differ. After investigating this discrepancy, we have determined that this is due to an error in the
-GATK, where paired-end reads are mishandled if the two reads in the pair overlap.
-
-\begin{figure}[h]
-\begin{center}
-\includegraphics[width=0.9\linewidth]{graphs/bqsr-concordance.png}
-\end{center}
-\caption{BQSR Concordance vs. the GATK}
-\label{fig:bqsr-concordance}
-\end{figure}
+We have validated the concordance of our BQSR implementation against the GATK. Across both tools,
+only 5000 of the $\sim$180B bases in the high-coverage NA12878 genome dataset differ. After
+investigating this discrepancy, we have determined that this is due to an error in the GATK, where
+paired-end reads are mishandled if the two reads in the pair overlap.
 
 For current implementations of these read processing steps, performance is limited by disk
 bandwidth~\cite{diao15}. This bottleneck exists because the operations read in a SAM/BAM file, perform
@@ -618,8 +601,8 @@ stragglers. This occurs due to a large amount of reads that either do not associ
 target, or that are unaligned. We pay special attention to these cases by manually randomizing the
 partitioning for these reads. This resolves load imbalance and mitigates stragglers.
 \item For the Flagstat command, we are able to project a limited subset of fields. Flagstat touches fewer
-than 10 fields, which account for less than 3\% \textbf{(FIXME: Frank! check this number!)} of space on
-disk. We discuss the performance implications of this further in~\S\ref{sec:column-store-perf}.
+than 10 fields, which account for less than 3\% of space on disk. We discuss the performance
+implications of this further in~\S\ref{sec:column-store-perf}.
 \end{enumerate}
 
 These techniques allow us to achieve a $>50\times$ performance improvement over current tools, and
@@ -669,18 +652,18 @@ rest of the I/O can be done in parallel.
 \section{Data Access Optimizations for \\ Scientific Processing}
 \label{sec:optimizations-scientific-processing}
 
-In~\S\ref{sec:workloads}, we discussed several processing patterns which were important for scientific
+In~\S\ref{sec:workloads}, we discussed several processing patterns that were important for scientific
 data processing. In this section, we introduce optimizations for two important use cases. First, we present
-a join pattern which enables processing that traverses a coordinate system. This enables distributed
+a join pattern that enables processing that traverses a coordinate system. This enables distributed
 implementations of important genomics algorithms. Second, we implement an efficient method for
-applying predicates and projections into data which is stored in a remote block store. This allows us to
+applying predicates and projections into data that is stored in a remote block store. This allows us to
 improve the efficiency of accessing remotely staged data.
 
 \subsection{Coordinate System Joins}
 \label{sec:coordinate-system-joins}
 
 Genome informatics encompasses a wide array of experimental techniques and platforms, but almost all
-of these methods share one characteristic in common: they produce datapoints which are tied to
+of these methods share one characteristic in common: they produce datapoints that are tied to
 locations in the genome through the use of genomic coordinates. The actual genome inside each cell is a
 mammoth molecule, a collection of DNA polymers coated with (and wrapped around) proteins and
 packed into the nucleus in a complex 3-dimensional shape. Bioinformaticians avoid this complexity by
@@ -691,7 +674,7 @@ which all genomic phenomena are marked and measured.
 
 A platform for scientific data processing in genomics needs to understand these 1-dimensional coordinate
 systems because these become the basis on which data processing is parallelized. For example, when
-calling variants from sequencing data, the sequence data which is localized to a single genomic region
+calling variants from sequencing data, the sequence data that is localized to a single genomic region
 (or ``locus'') can be processed independently from the data localized to a different region, as long as the
 regions are far enough apart.
 
@@ -700,7 +683,7 @@ are phrased in terms of geometric primitives on 1-D intervals and points: distan
 containment.  An algorithm for calculating quality control metrics may try to calculate ``coverage,'' a count
 of how many reads overlap each base in the genome. A method for filtering and annotating potential
 variants might assess the validity of a variant by the quality and mapping characteristics of all reads
-which overlap the putative variant.
+that overlap the putative variant.
 
 In order to support these algorithms, we have implemented a ``region'' or ``spatial'' join  method, whose
 outline in code is given below. The region join operation takes as input two sets (RDDs) of
@@ -776,13 +759,13 @@ For Parquet files containing records that reflect known genomics datatypes (that
 locations, for example) we generate simple index files for each Parquet file.  Each index file lists the
 complete set of row groups for the Parquet file, as well which genomic regions contain data points within
 each row group.  Our parallelized data loader reads this index file and restricts the partitions in the data
-loading RDD it creates to only those Parquet row groups which possibly contain data relevant to the
+loading RDD it creates to only those Parquet row groups that possibly contain data relevant to the
 user's query.
 
 \section{Performance}
 \label{sec:performance}
 
-In this paper, we have discussed ways to improve the performance of scientific workloads which are
+In this paper, we have discussed ways to improve the performance of scientific workloads that are
 being run on commodity MapReduce systems by rethinking how we decompose and build algorithms.
 In this section, we review the improvements in performance that we are able to unlock. We achieve
 near-linear speedup across 128 nodes for a genomics workload, and achieve a $3\times$ performance
@@ -897,12 +880,13 @@ duplicate marking.
 \label{sec:astro-workloads}
 
 We use the 2MASS data and the Montage test case of 3x3 degree mosaicing with Galaxy m101 as the
-center.  The tile mosaicing phase has 1.5~GB input data and produces a 1.2~GB aggregated output file.
-We compare the SparkmAdd performance against the MPI based parallel implementation in Montage v3.3
-(referred as MPImAdd in the following text). The performance is measured on 1, 4, and 16 Amazon
-\texttt{m2.4xlarge} instances respectively. We use OrangeFS v2.8.8, a successor of PVFS~\cite{PVFS}, as
-the shared file system across the instances to support MPImAdd. All eight cores on each instance are used
-for both SparkmAdd and MPImAdd.
+center. The tile mosaicing phase has 1.5~GB input data and produces a 1.2~GB aggregated output file.
+We compare the \texttt{Spark-mAdd} performance against the MPI based parallel implementation in
+Montage v3.3 (\texttt{MPI-mAdd}). We performed the test on 1, 4, and 16 Amazon \texttt{cr3.8xlarge}
+instances. We chose these instances because they provided very high performance networking, which is
+necessary for good MPI performance. We use OrangeFS v2.8.8, a successor of PVFS~\cite{PVFS}, as
+the shared file system when running \texttt{MPI-mAdd}. All 32 cores on each instance are used for both
+\texttt{Spark-mAdd} and \texttt{MPI-mAdd}.
 
 \begin{figure}[h]
 \begin{center}
@@ -912,15 +896,16 @@ for both SparkmAdd and MPImAdd.
 \label{fig:madd-speedup}
 \end{figure}
 
-As shown in Figure~\ref{fig:madd-speedup}, the SparkmAdd runs 1.3x, 2.8x, 3.3x faster than MPImAdd on
-1, 4, and 16 instances with a data compression rate of 2.8x for input and 1.4x for output. The performance
-improvement is contributed by multiple factors: less I/O amount, less I/O contention, and better data
-locality. We manage to combine the metadata processing stage with mAdd together, since we explicitly
-define the data schema in SparkmAdd, so that the same set of inputs can just be read once. We also
-configure Parquet to compress the input and output data, so the actual I/O amount is reduced. Parquet
-writes output files into HDFS in a contention free manner whereas MPI coordinates all processes to write to
-a single file in the shared file system. The Spark framework lets the computation benefit from data locality,
-while MPI distributes the computation across the available resources without concerning data placement.
+As shown in Figure~\ref{fig:madd-speedup}, \texttt{Spark-mAdd} runs 1.3x, 2.8x, 3.3x faster than
+MPImAdd on 1, 4, and 16 instances with a data compression rate of 2.8x for input and 1.4x for output.
+The performance improvement is contributed by multiple factors: less I/O amount, less I/O contention,
+and better data locality. We manage to combine the metadata processing stage with mAdd together,
+since we explicitly define the data schema in \texttt{Spark-mAdd}, so that the same set of inputs can just
+be read once. We also configure Parquet to compress the input and output data, so the actual I/O
+amount is reduced. Parquet writes output files into HDFS in a contention free manner whereas MPI
+coordinates all processes to write to a single file in the shared file system. The Spark framework lets the
+computation benefit from data locality, while MPI distributes the computation across the available
+resources without concerning data placement.
 
 \subsection{Column Store Performance}
 \label{sec:column-store-perf}
@@ -1040,27 +1025,39 @@ These results are promising, as they indicate that predicate pushdown is faster 
 only case that showed a slowdown (max projection on Locus predicate) is due to an issue in our test setup. We therefore can conclude
 that filtering operations that can be performed statically at file load-in should be performed using predicate pushdown.
 
-\section{Future Work}
-\label{sec:future-work}
+\section{Discussion and Future Work}
+\label{sec:discussion-future-work}
+
+While we are critical of many scientific systems in~\S\ref{sec:background}, the \texttt{Thunder} system,
+which was developed for processing terabytes of neuroscience imaging data~\cite{freeman14} is well
+designed. \texttt{Thunder} performs a largely statistical workload, and the significant tasks in terms of
+execution time are clustering and regression. The system is constructed using Spark and Python and is
+designed to process datasets larger than 4 TB, and leverages significant functionality from the MLI/MLLib
+libraries~\cite{sparks13}. Similar to our system, they are able to use Spark's in-memory caching to
+amortize load time across several pipeline stages. Additionally, they use Spark's filtering primitives to
+allow scientists to cut problems into subproblems. This is a common trend across scientific analyses, and
+is one of the reasons that we advocate for the use of a columnar store with efficient predicate pushdown.
 
 This work leverages columnar storage to improve performance and compression of data on disk,
-with special emphasis on repetitive fields which can be run length encoded~(RLE). While this improves
+with special emphasis on repetitive fields that can be run length encoded~(RLE). While this improves
 disk performance, it has the side effect of making data consume significantly more space in memory
 than on disk. We are currently investigating techniques that leverage the immutability of data in our
-applications to reduce memory consumption. This may involve a pseudo-columnar data representation
-in memory, or changes to Parquet and Avro's deserialization codec which would reuse allocated objects.
+applications to reduce memory consumption. We have changed Parquet and Avro's deserialization codec
+to reuse allocated objects. For every value that is RLE'd, we only allocate the value once in memory. We
+then share the value across all records which contained that value. This is especially important since we
+maintain a lot of string metadata which is RLE'd on disk.
 
 It is worth noting that there are many significant scientific applications (such as genome
 assembly) that are expressed as traversal over graphs. Recent work by Simpson et al~(ABySS,
 \cite{simpson09}) and Georganas et al~\cite{georganas14} has focused on using MPI
-or Unified Parallel C~(UPC) to roll their own distributed graph traversal. Both systems
+or Unified Parallel C~(UPC) to implement their own distributed graph traversal. Both systems
 find that synchronization via message passing is a significant cost; specifically, the ABySS assembler
 experiences scaling problems because it thrashes portions of the graph across nodes during traversal.
 By building our system using Spark, we are able to leverage the GraphX processing library~\cite{xin13,
 gonzalez14}. We are in the process of developing a genome assembler using this library system, and
 believe that we can achieve improved performance through careful graph partitioning. This involves
 algorithmic changes to the graph creation and traversal phases to bypass ``knotted'' sections of the
-graph which correspond to highly repetitive areas of the genome, which cause the major performance
+graph that correspond to highly repetitive areas of the genome, which cause the major performance
 issues in MPI based assemblers.
 
 \section{Conclusion}
@@ -1086,11 +1083,11 @@ through PySpark.
 \end{enumerate}
 
 By rethinking the architecture of scientific data management systems, we have been able to achieve
-significant scalability improvements while also expanding the methods which can be used to process
+significant scalability improvements while also expanding the methods that can be used to process
 the data. The architecture we have developed is clean and principled and minimizes the
-mixture-of-concerns which occurs in current scientific systems. Additionally, by applying our techniques
+mixture-of-concerns that occurs in current scientific systems. Additionally, by applying our techniques
 to both astronomy and genomics, we have demonstrated that the techniques are applicable to both
-traditional matrix-based scientific computing, as well as novel scientific areas which have less structured
+traditional matrix-based scientific computing, as well as novel scientific areas that have less structured
 data.
 
 \balancecolumns
@@ -1328,7 +1325,7 @@ The following code implements duplicate marking.
 
 \begin{lstlisting}
 for (((leftPos, library), readsByLeftPos) <- 
-    rdd.adamSingleReadBuckets()
+    rdd.singleReadBuckets()
        .keyBy(ReferencePositionPair(_))
        .groupBy(leftPositionAndLibrary);
 
