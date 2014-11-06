@@ -774,10 +774,11 @@ Table~\ref{tab:overview} previews our performance versus current systems. The te
 high coverage \texttt{NA12878} full genome BAM file that is available from the 1000 Genomes
 project\footnote{The file used for these experiments can be found on the
 1000 Genomes ftp site, \url{ftp.1000genomes.ebi.ac.uk} in directory 
-\texttt{/vol1/ftp/data/NA12878/high\_coverage\_alignment/} for NA12878.}. These tests have been run on the EC2 
-cloud, using the instance types listed in table~\ref{tab:machines}. We compute the cost of running each
-experiment by multiplying the number of instances used by the total wall time for the run and by the cost of
-running a single instance of that type for an hour, which is the process Amazon uses to charge customers.
+\texttt{/vol1/ftp/data/NA12878/high\_coverage\_alignment/} for NA12878. For anonymity, we refer to our system
+as \texttt{SparkG} in this table.}. These tests have been run on the EC2  cloud, using the instance types listed in
+table~\ref{tab:machines}. We compute the cost of running each experiment by multiplying the number of instances
+used by the total wall time for the run and by the cost of running a single instance of that type for an hour, which is
+the process Amazon uses to charge customers.
 
 \begin{table}[h]
 \caption{Summary Performance on NA12878}
@@ -789,36 +790,36 @@ running a single instance of that type for an hour, which is the process Amazon 
 \bf Software & \bf EC2 profile & \bf Time & \bf Cost \\
 \hline
 Picard & 1 \texttt{hs1.8xlarge} & 17h 44m & \$81.57 \\
-Us & 1 \texttt{hs1.8xlarge} & 8h 56m & \$41.09 \\
-Us & 128 \texttt{m2.4xlarge} & 9m & \$31.49 \\
+SparkG & 1 \texttt{hs1.8xlarge} & 8h 56m & \$41.09 \\
+SparkG & 128 \texttt{m2.4xlarge} & 9m & \$31.49 \\
 \hline
 \multicolumn{4}{c}{\bf \textit{Mark Duplicates}} \\
 \bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
 \hline
 Picard & 1 \texttt{hs1.8xlarge} & 20h 22m & \$93.68 \\
-Us & 1 \texttt{hs1.8xlarge} & 9h & \$41.40 \\
-Us & 128 \texttt{m2.4xlarge} & 19m & \$64.48 \\ 
+SparkG & 1 \texttt{hs1.8xlarge} & 9h & \$41.40 \\
+SparkG & 128 \texttt{m2.4xlarge} & 19m & \$64.48 \\ 
 \hline
 \multicolumn{4}{c}{\bf \textit{BQSR}} \\
 \bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
 \hline
 GATK & 1 \texttt{hs1.8xlarge} & 31h 18m & \$143.98 \\
-Us & 1 \texttt{hs1.8xlarge} & 34h & \$156.40 \\
-Us & 128 \texttt{m2.4xlarge} & 54m & \$188.93 \\
+SparkG & 1 \texttt{hs1.8xlarge} & 34h & \$156.40 \\
+SparkG & 128 \texttt{m2.4xlarge} & 54m & \$188.93 \\
 \hline
 \multicolumn{4}{c}{\bf \textit{INDEL Realignment}} \\
 \bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
 \hline
 GATK & 1 \texttt{hs1.8xlarge} & 42h 49m & \$196.88 \\
-Us & 1 \texttt{hs1.8xlarge} & 12h 58m & \$82.80 \\
-Us & 128 \texttt{m2.4xlarge} & 24m & \$83.97 \\
+SparkG & 1 \texttt{hs1.8xlarge} & 12h 58m & \$82.80 \\
+SparkG & 128 \texttt{m2.4xlarge} & 24m & \$83.97 \\
 \hline
 \multicolumn{4}{c}{\bf \textit{Flagstat}} \\
 \bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
 \hline
 SAMtools & 1 \texttt{hs1.8xlarge} & 25m 24s & \$1.95 \\
-Us & 1 \texttt{hs1.8xlarge} & 7m 4s & \$1.95 \\
-Us & 128 \texttt{cr1.8xlarge} & 1m 53s & \$5.35 \\
+SparkG & 1 \texttt{hs1.8xlarge} & 7m 4s & \$1.95 \\
+SparkG & 128 \texttt{cr1.8xlarge} & 1m 53s & \$5.35 \\
 \hline
 \end{tabular}
 \end{center}
@@ -881,11 +882,11 @@ compared to them due to time limitations, but will compare to them in a later re
 \subsection{Astronomy Workloads}
 \label{sec:astro-workloads}
 
-We use the 2MASS data and the Montage test case of 3x3 degree mosaicing with Galaxy m101 as the
-center. The tile mosaicing phase has 1.5~GB input data and produces a 1.2~GB aggregated output file.
-We compare the \texttt{Spark-mAdd} performance against the High Performance Computing~(HPC)
-styled MPI based parallel implementation in Montage v3.3 (\texttt{MPI-mAdd}). We performed the test on
-1, 4, and 16 Amazon \texttt{c3.8xlarge} instances. We chose these instances because they provided
+To evaluate the Mosaicing application, we use the 2MASS data and the Montage test case of 3x3 degree
+mosaicing with Galaxy m101 as the center. The tile mosaicing phase has 1.5~GB input data and produces a
+1.2~GB aggregated output file. We compare the \texttt{Spark-mAdd} performance against the High Performance
+Computing~(HPC) styled MPI based parallel implementation in Montage v3.3 (\texttt{MPI-mAdd}). We performed
+the test on 1, 4, and 16 Amazon \texttt{c3.8xlarge} instances. We chose these instances because they provided
 HPC-optimized networking, which is necessary for good MPI performance. We use OrangeFS
 v2.8.8, a successor of PVFS~\cite{PVFS}, as the shared file system when running \texttt{MPI-mAdd}. All
 32 cores on each instance are used for both \texttt{Spark-mAdd} and \texttt{MPI-mAdd}.
@@ -899,7 +900,12 @@ v2.8.8, a successor of PVFS~\cite{PVFS}, as the shared file system when running 
 \end{figure}
 
 As shown in Figure~\ref{fig:madd-speedup}, \texttt{Spark-mAdd} runs 2.8x, 5.7x, 8.9x faster than
-MPImAdd on 1, 4, and 16 instances with a data compression rate of 2.8x for input and 1.4x for output.
+MPImAdd on 1, 4, and 16 instances. In the single machine case, \texttt{MPI-mAdd} achieves a cost of \$0.17 per
+analysis. \texttt{Spark-mAdd} costs \$0.06 to run on a single instance, which is a $2.8\times$ improvement in
+cost. \texttt{Spark-mAdd} is still cheaper than \texttt{MPI-mAdd} by a factor of $2.2\times$ on four nodes.
+\texttt{Spark-mAdd} is only more expensive than a single node of \texttt{MPI-mAdd} when running on 16 nodes,
+and even then is only 40\% more expensive while providing a $8.85\times$ performance improvement.
+
 The performance improvement is contributed by multiple factors: less I/O amount, less I/O contention,
 and better data locality. We manage to combine the metadata processing stage with mAdd together,
 since we explicitly define the data schema in \texttt{Spark-mAdd}, so that the same set of inputs can just
@@ -908,6 +914,10 @@ amount is reduced. Parquet writes output files into HDFS in a contention free ma
 coordinates all processes to write to a single file in the shared file system. The Spark framework lets the
 computation benefit from data locality, while MPI distributes the computation across the available
 resources without concerning data placement.
+
+While the dataset used is a small dataset, larger datasets are commonplace. For example, the Large Synoptic
+Survey Telescope~(LSST, \cite{lsst2008}) has been used to collect terabyte sized datasets~\cite{moyers13}. As
+future work, we plan to tackle these very large astronomy datasets using our framework.
 
 \subsection{Column Store Performance}
 \label{sec:column-store-perf}
@@ -965,7 +975,7 @@ Parquet & 185 GB & 1.26$\times$ \\
 \hline
 BAM & 14.5 GB & --- \\
 CRAM & 3.6 GB & 4.83$\times$ \\
-Parquet & 185 GB & 1.26$\times$ \\
+Parquet & 11.4 GB & 1.27$\times$ \\
 \hline
 \end{tabular}
 \end{center}
@@ -1009,16 +1019,71 @@ presented earlier in this paper.
 \subsubsection{Horizontal Scalability}
 \label{sec:horizontal-scalability}
 
-The Parquet format is optimized for horizontal scalability as it 
+The representation Parquet uses to store data to disk is optimized for horizontal scalability in several manners.
+Specifically, Parquet is implemented as a hybrid row/column store where the whole set of records in a dataset
+are partitioned into row groups which are then serialized in a columnar layout. This provides us with two additional
+benefits:
 
-. Specifically, it is 
-ADAM demonstrates superior scalability over Hadoop-BAM. This performance is likely because ADAM files can be more evenly distributed across machines.
-Hadoop-BAM must guess the proper partitioning when splitting files~\cite{niemenmaa12}. The Parquet file format that ADAM is based on is partitioned
-evenly when it is written\cite{parquet}. This paritioning is critical for small files such as the one used in this test~---~in a 16 machine cluster, there is only 1 GB of
-data per node, so imbalances on the order of the Hadoop file split size (128 MB) can lead to 40\% differences in loading between nodes.
+\begin{enumerate}
+\item We are able to perform parallel access to Parquet row groups without consulting metadata or checking for
+a file split.
+\item Parquet achieves very even balance across partitions. On the \texttt{HG00096} dataset, the average
+partition size was 105 MB with a standard deviation of 7.4 MB. Out of the 116 partitions in the file, there is only
+one partition whose size is not between 105--110MB.
+\end{enumerate}
+
+This is preferable when compared to Hadoop-BAM~\cite{niemenmaa12}, a project that supports the direct usage
+of legacy BAM files in Hadoop. Hadoop-BAM must pick splits, which adds non-trivial overhead. Additionally, once
+Hadoop-BAM has picked a split, there is no guarantee that the split is well placed. It is only guaranteed that the
+split position will not cause a \emph{functional error}.
 
 \subsubsection{Projection and Predicate Performance}
 \label{sec:projection-predicate-performance}
+
+We use the \texttt{flagstat} workload to evaluate the performance of predicates and projections in Parquet.
+We define three projections and four predicates, and test all of these combinations. In addition to projecting the
+full schema~(see Appendix~\ref{sec:genomics-schema}), we also use the following two projections:
+
+\begin{enumerate}
+\item We project the read sequence \emph{and} all of the flags (40\% of data on disk).
+\item We only project the flags (10\% of data on disk).
+\end{enumerate}
+
+Beyond the null predicate (which passes every record), we use the following three predicates:
+
+\begin{enumerate}
+\item We pass only uniquely mapped reads (99.06\% of reads).
+\item We pass only the first pair in a paired end read (50\% of reads).
+\item We pass only \emph{un}mapped reads (0.94\% of reads).
+\end{enumerate}
+
+Our performance is documented in table~\ref{tab:ppp}. Projections are arranged in the columns of the table
+while predicates are assigned to rows.
+
+\begin{table}[h]
+\caption{Predicate/Projection Speedups}
+\label{tab:ppp}
+\begin{center}
+\begin{tabular}{ l | c c c c }
+\hline
+& 0 & 1 & 2 \\
+\hline
+\hline
+0 & --- & 1.7 & 1.9 \\
+1 & 1.0 & 1.7 & 1.7 \\
+2 & 1.3 & 2.2 & 2.6 \\
+3 & 1.8 & 3.3 & 4.4 \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+We get a $1.7\times$ speedup from moving to a projection that eliminates the deserialization of our most
+complex field~(the quality scores which consume 60\% of space on disk), while we only get a $1.3\times$
+performance improvement when running a predicate that filters 50\% of records. This can be partially attributed
+to overhead from predicate pushdown; we must first deserialize a column, process the filter, and then read all
+records who passed the pushdown filter. If we did not perform this step, we could do a straight scan over all of
+the data in each partition.
 
 \section{Discussion and Future Work}
 \label{sec:discussion-future-work}
@@ -1058,33 +1123,21 @@ issues in MPI based assemblers.
 \section{Conclusion}
 \label{sec:conclusion}
 
-In this paper, we have advocated for a clean architecture for decomposing components in a scientific
-system, and then demonstrated how to efficiently implement genomic and astronomy processing
-pipelines using the open source Avro, Parquet, and Spark systems~\cite{avro, parquet, zaharia10}.
-We demonstrate $22-131\times$ performance improvements over conventional genomics processing
-systems, along with linear strong scaling and a $2\times$ cost improvement. On the astronomy
-workload, we achieve an average of $5.8\times$ speedup over the current best MPI-based solution at various scales.
-Additionally, while
-an obvious advantage of using commodity systems is code reuse, we have gained several valuable
-features for free:
-
-\begin{enumerate}
-\item Beyond efficient parallel performance, Parquet is also supported as a data format by several
-database-like systems, like Spark-SQL and Impala. This allows us to support efficient database style
-processing, without needing to manually retrofit a tool like GQL to the data~\cite{kozanitis14}.
-\item While the native Spark Scala API provides rich programming abstractions, scientists may prefer
-other language environments, like Python or R. Other scientific systems like SciDB~\cite{brown10}
-support native Python and R bindings. Likewise, we provide distributed processing using Python
-through PySpark.
-\end{enumerate}
+In this paper, we have advocated for a clean architecture for decomposing the implementation of a scientific
+system, and then demonstrated how to efficiently implement genomic and astronomy processing pipelines using
+the open source Avro, Parquet, and Spark systems~\cite{avro, parquet, zaharia10}. We have identified common
+characteristics across scientific systems, like the need to run queries that touch slices of datasets and the need
+for fast access to metadata. We then enforced data independence through a layering model that uses a schema
+as the ``narrow waist'' of the stack, and used optimizations to make common, coordinate-based processing
+fast. By using Parquet, a modern columnar store, we use predicates and projections to minimize IO, and are able
+to denormalize our schemas to improve the performance of accessing metadata.
 
 By rethinking the architecture of scientific data management systems, we have been able to achieve
-significant scalability improvements while also expanding the methods that can be used to process
-the data. The architecture we have developed is clean and principled and minimizes the
-mixture-of-concerns that occurs in current scientific systems. Additionally, by applying our techniques
-to both astronomy and genomics, we have demonstrated that the techniques are applicable to both
-traditional matrix-based scientific computing, as well as novel scientific areas that have less structured
-data.
+$22-131\times$ performance improvements over conventional genomics processing systems, along with linear
+strong scaling and a $2\times$ cost improvement. On the astronomy workload, we achieve an average of
+$5.8\times$ speedup over the current best MPI-based solution at various scales. By applying our techniques
+to both astronomy and genomics, we have demonstrated that the techniques are applicable to both traditional
+matrix-based scientific computing, as well as novel scientific areas that have less structured data.
 
 \balance
 
