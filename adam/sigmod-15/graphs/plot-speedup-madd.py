@@ -17,12 +17,12 @@ def plot (name, t, n, mpi, spark):
     l_n = [n [0], n [-1]]
 
     figure ()    
-    loglog (l_n, exp_n, 'b--', basex=2, basey=2, label="Ideal Speedup")
+    loglog (l_n, exp_n, 'k-', basex=2, basey=2, label="Ideal Speedup")
     loglog (n, mpi_speedup, 'bx-', basex=2, basey=2, label="MPI")
     loglog (n, spark_speedup, 'g+-', basex=2, basey=2, label="Spark")
 
     locs,labels = xticks()
-    xn = ["1", "2", "4", "8", "16"]
+    xn = ["32", "64", "128", "256", "512"]
     xticks(locs, xn)
 
     yn = ["1", "2", "4", "8", "16"]
@@ -30,7 +30,7 @@ def plot (name, t, n, mpi, spark):
     yticks(locs, yn)
 
     ylabel ("Speedup")
-    xlabel ("Number of Machines")
+    xlabel ("Number of Cores")
     legend (loc=2)
     title (t)
     grid (True)
@@ -38,8 +38,8 @@ def plot (name, t, n, mpi, spark):
 
 n = [1, 4, 16]
 
-mpi_madd = [392.01, 256.94, 212.47]
-spark_madd = [306.89, 90.74, 63.61]
+mpi_madd = [373.59, 236.80, 292.93]
+spark_madd = [132.17, 41.56, 33.10]
 
 plot ("speedup_madd.pdf",
       "Speedup for mAdd",

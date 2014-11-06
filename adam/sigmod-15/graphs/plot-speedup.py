@@ -1,54 +1,59 @@
 from pylab import loglog, ylabel, xlabel, title, grid, savefig, show, legend, xticks, yticks, figure
 
-def plot (name, t, n, sort, markdup):
-
-    sort_speedup = []
-    markdup_speedup = []
-    
-    for s in sort:
-        
-        sort_speedup.append (sort [0] / s)
-        
-    for m in markdup:
-        
-        markdup_speedup.append (markdup [0] / m)
-
+def setup(n):
     exp_n = [1, n [-1] / n [0]]
     l_n = [n [0], n [-1]]
 
-    figure ()    
-    loglog (l_n, exp_n, 'b--', basex=2, basey=2, label="Ideal Speedup")
-    loglog (n, sort_speedup, 'bx-', basex=2, basey=2, label="Sort")
-    loglog (n, markdup_speedup, 'g+-', basex=2, basey=2, label="Mark Duplicates")
+    figure ()
+    loglog (l_n, exp_n, 'k-', basex=2, basey=2, label="Ideal Speedup")
 
+def plot (n, st, mt, label_name, pattern):
+
+    speedup = []
+    
+    for m in mt:
+        
+        speedup.append (st / m)
+
+    loglog (n, speedup, pattern, basex=2, basey=2, label=label_name)
+
+def label(name, t):
     locs,labels = xticks()
-    locs = locs[1:-1]
-    xn = ["16", "32", "64", "128"]
+    xn = ["32", "64", "128", "256", "512", "1024"]
     xticks(locs, xn)
 
-    yn = ["1", "2", "4", "8"]
+    yn = ["1/2", "1", "2", "4", "8", "16", "32", "64", "128"]
     locs,labels = yticks()
-    locs = locs[1:-1]
     yticks(locs, yn)
 
     ylabel ("Speedup")
-    xlabel ("Number of Machines")
+    xlabel ("Number of Cores")
     legend (loc=2)
     title (t)
     grid (True)
     savefig (name)
 
-n = [16, 32, 64, 82]
+n = [32, 1024]
 
-na12878_sort = [29.6625, 17.046, 11.56, 8.8]
-na12878_markdup = [50.29, 34.835, 15.14, 14]
-hg00096_sort = [3.82, 3.36, 3.54, 3.51]
-hg00096_markdup = [4.87, 3.08, 2.37, 2.45]
+flagstat_n = [256, 1024]
+flagstat = [1.0 / 60.0, 1.9 / 60.0]
+markdup_n = [1024]
+markdup = [19.0 / 60.0]
+bqsr_n = [32, 256, 1024]
+bqsr = [34.0, 2.0 + 0.7 / 60.0, 54.0 / 60.0]
+ir_n = [32, 256, 1024]
+ir = [16.0, 100.0 / 60.0, 24.0 / 60.0]
+sort_n = [32, 256, 1024]
+sort = [9.0, 32.0 / 60.0, 9.4 / 60.0]
 
-plot ("speedup_na12878.pdf",
-      "Speedup on NA12878 (High Coverage)",
-      n, na12878_sort, na12878_markdup)
+setup(n)
 
-plot ("speedup_hg00096.pdf",
-      "Speedup on HG00096 (Low Coverage)",
-      n, hg00096_sort, hg00096_markdup)
+plot(flagstat_n, 25.5 / 60.0, flagstat, 'Flagstat', 'r+--')
+plot(markdup_n, 20.0 + 22 / 60.0, markdup, 'Mark Duplicates', 'bx-')
+plot(bqsr_n, 12.9 + 18.4, bqsr, 'BQSR', 'mo-.')
+plot(ir_n, 42.8, ir, 'INDEL Realignment', 'c.--')
+plot(sort_n, 17.75, sort, 'Sort', 'y*-')
+
+label("speedup_na12878.pdf",
+      "Speedup on NA12878 (High Coverage)")
+

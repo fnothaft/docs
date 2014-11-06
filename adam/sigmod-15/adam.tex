@@ -811,45 +811,57 @@ Additionally, we achieve 30-50\% compression over current file formats when stor
 \subsection{Genomics Workloads}
 \label{sec:genomics-performance}
 
-\textbf{FIXME: These are old/outdated/need to be anonymized! Frank to update. Also, comment about data conversion cost.}
-
-Table~\ref{tab:overview} previews the performance of ADAM for \textit{Sort}, \textit{Mark Duplicates},
-and \textit{Flagstat}. The tests in this table are run on the high coverage \textit{NA12878} full genome
-BAM file that is available from the 1000 Genomes project; the HG00096 low coverage BAM from 1000
-Genomes is used later in this section\footnote{The files used for these experiments can be found on the
-1000 Genomes ftp site, \url{ftp.1000genomes.ebi.ac.uk} in directory
-\texttt{/vol1/ftp/data/NA12878/high\_coverage\_alignment/} for NA12878, and in directory
-\texttt{/vol1/ftp/data/HG00096/alignment/} for HG00096.}. These tests have been run on the EC2 cloud,
-using the instance types listed. We compute the cost of running each experiment by multiplying the
-number of instances used by the total wall time for the run and by the cost of running a single instance
-of that type for an hour, which is the process Amazon uses to charge customers.
+Table~\ref{tab:overview} previews our performance versus current systems. The tests in this table are run on the
+high coverage \texttt{NA12878} full genome BAM file that is available from the 1000 Genomes
+project\footnote{The file used for these experiments can be found on the
+1000 Genomes ftp site, \url{ftp.1000genomes.ebi.ac.uk} in directory 
+\texttt{/vol1/ftp/data/NA12878/high\_coverage\_alignment/} for NA12878.}. These tests have been run on the EC2 
+cloud, using the instance types listed in table~\ref{tab:machines}. We compute the cost of running each
+experiment by multiplying the number of instances used by the total wall time for the run and by the cost of
+running a single instance of that type for an hour, which is the process Amazon uses to charge customers.
 
 \begin{table}[h]
-\caption{\textit{Sort}, \textit{Mark Duplicates}, and \textit{Flagstat} Performance on NA12878}
+\caption{Summary Performance on NA12878}
 \label{tab:overview}
-\begin{tabular}{ l c c c c }
+\begin{center}
+\begin{tabular}{ l c c c }
 \hline
-\multicolumn{5}{c}{\bf \textit{Sort}} \\
-\bf Software & \bf EC2 profile & \bf Wall Time & \bf Speedup & \bf Cost \\
+\multicolumn{4}{c}{\bf \textit{Sort}} \\
+\bf Software & \bf EC2 profile & \bf Time & \bf Cost \\
 \hline
-Picard 1.103 & 1 \texttt{hs1.8xlarge} & 17h 44m & 1$\times$ & \$81.57 \\
-ADAM 0.5.0 & 1 \texttt{hs1.8xlarge} & 8h 56m & 2$\times$ & \$41.09 \\
-ADAM 0.5.0 & 32 \texttt{cr1.8xlarge} & 33m & 32$\times$ & \$61.60 \\
-ADAM 0.5.0 & 100 \texttt{m2.4xlarge} & 21m & 52$\times$ & \$56.00 \\ 
+Picard & 1 \texttt{hs1.8xlarge} & 17h 44m & \$81.57 \\
+Us & 1 \texttt{hs1.8xlarge} & 8h 56m & \$41.09 \\
+Us & 128 \texttt{m2.4xlarge} & 19m & \$64.48 \\ 
 \hline
-\multicolumn{5}{c}{\bf \textit{Mark Duplicates}} \\
-\bf Software & \bf EC2 profile & \bf Wall Time & \bf Speedup & \bf Cost  \\
+\multicolumn{4}{c}{\bf \textit{Mark Duplicates}} \\
+\bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
 \hline
-Picard 1.103 & 1 \texttt{hs1.8xlarge} & 20h 22m & 1$\times$ & \$93.68 \\
-ADAM 0.5.0 & 100 \texttt{m2.4xlarge} & 29m & 42$\times$ & \$79.26 \\
+Picard & 1 \texttt{hs1.8xlarge} & 20h 22m & \$93.68 \\
+Us & 1 \texttt{hs1.8xlarge} & 9h & \$41.40 \\
+Us & 128 \texttt{m2.4xlarge} & 9m & \$31.49 \\
 \hline
-\multicolumn{5}{c}{\bf \textit{Flagstat}} \\
-\bf Software & \bf EC2 profile & \bf Wall Time & \bf Speedup & \bf Cost  \\
+\multicolumn{4}{c}{\bf \textit{BQSR}} \\
+\bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
 \hline
-SAMtools 0.1.19 & 1 \texttt{hs1.8xlarge} & 25m 24s & 1$\times$ & \$1.95 \\
-ADAM 0.5.0 & 32 \texttt{cr1.8xlarge} & 0m 46s & 33$\times$ & \$1.43 \\
+GATK & 1 \texttt{hs1.8xlarge} & 31h 18m & \$143.98 \\
+Us & 1 \texttt{hs1.8xlarge} & 34h & \$156.40 \\
+Us & 128 \texttt{m2.4xlarge} & 54m & \$188.93 \\
+\hline
+\multicolumn{4}{c}{\bf \textit{INDEL Realignment}} \\
+\bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
+\hline
+GATK & 1 \texttt{hs1.8xlarge} & 42h 49m & \$196.88 \\
+Us & 1 \texttt{hs1.8xlarge} & 18h & \$82.80 \\
+Us & 128 \texttt{m2.4xlarge} & 24m & \$83.97 \\
+\hline
+\multicolumn{4}{c}{\bf \textit{Flagstat}} \\
+\bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
+\hline
+SAMtools & 1 \texttt{hs1.8xlarge} & 25m 24s & \$1.95 \\
+Us & 128 \texttt{cr1.8xlarge} & 1m 53s & \$5.35 \\
 \hline
 \end{tabular}
+\end{center}
 \end{table}
 
 Table~\ref{tab:machines} describes the instance types. Memory capacity is reported in Gibibytes~(GiB),
@@ -866,51 +878,45 @@ chosen to represent a workstation. Network bandwidth is constant across all inst
 \bf Machine & \bf Cost & \bf Description \\
 \hline
 \hline
-\texttt{hs1.8xlarge} & \$4.60/hr/machine & 16 cores, 117GiB RAM, 24$\times$ HDD \\
-\texttt{cr1.8xlarge} & \$3.50/hr/machine & 32 cores, 244GiB RAM, 2$\times$ SDD \\
-\texttt{m2.4xlarge} & \$1.64/hr/machine & 8 cores, 68.4GiB RAM, 2$\times$ HDD \\
+\texttt{hs1.8xlarge} & \$4.60/hr & 32p, 117GiB RAM, 24$\times$ HDD \\
+\texttt{m2.4xlarge} & \$1.64/hr & 8p, 68.4GiB RAM, 2$\times$ HDD \\
 \hline
 \end{tabular}
 \end{table}
 
-As can be seen from these results, the ADAM pipeline is approximately twice as fast as current pipelines
-when running on a single node. Additionally, ADAM achieves speedup that is close to linear. This point is
-not clear from Table~\ref{tab:overview}, as we change instance types when also changing the number of
-instances used. To clarify, Figure~\ref{fig:speedup} presents speedup plots for the NA12878 high
-coverage genome and the HG00096 low coverage genome~(16 GB BAM). These speedup
-measurements are taken on a dedicated cluster of 82 machines where each machine has 24 Xeon
-cores, 128GB of RAM, and 12 disks.
+As can be seen from these results, our pipeline is at best three times faster than current pipelines when running
+on a single node; at worst, we are approximately at parity. Additionally, ADAM achieves speedup that is close to
+linear. This point is not clear from Table~\ref{tab:overview}, as we change instance types when also changing the
+number of instances used. Figure~\ref{fig:speedup} presents speedup plots for the NA12878 high coverage
+genome.
 
 \begin{figure}[h]
 \begin{center}
 \includegraphics[width=0.99\linewidth]{graphs/speedup_na12878.pdf}
-\includegraphics[width=0.99\linewidth]{graphs/speedup_hg00096.pdf}
 \end{center}
-\caption{Speedup when running \textit{Sort} and \textit{Mark Duplicates} on NA12878 and HG00096}
+\caption{Speedup on NA12878}
 \label{fig:speedup}
 \end{figure}
 
-NA12878 sees linear speedup for both \textit{Sort} and \textit{Mark Duplicates} through 82 nodes. With
-82 nodes, it takes 8.8 minutes to sort reads, and 14 minutes to mark duplicate reads across the 250GB
-file. HG00096 is a significantly smaller genome at 16 GB. Although the speedup from sorting diminishes
-after 16 nodes, duplicate marking sees speedup through 64 nodes. With HG00096 on 64 nodes, each
-machine in the cluster is responsible for processing only 250MB of data. Sorting completes in 3.3
-minutes, and duplicate marking completes in 2.3 minutes. The speedup is limited by several factors:
+When testing on NA12878, we achieve linear speedup out through 1024 cores; this represents 128
+\texttt{m2.4xlarge} nodes. In this test, our performance is limited by several factors:
 
 \begin{itemize}
-\item Although columnar stores have very high read performance, they are limited by write performance.
-Our tests exaggerate this penalty---as a variant calling pipeline will consume a large read file, but then
-output a variant call file that is approximately two orders of magnitude smaller, the write penalty will be
-reduced.
-\item Additionally, for large clusters, straggler elimination is an issue. Phases of both \textit{Sort} and
-\textit{MarkDuplicates} currently suffer from stragglers---we are in the process of addressing these
-issues.
+\item Although columnar stores have very high read performance, they are limited by write performance. Our
+tests exaggerate this penalty---as a variant calling pipeline will consume a large read file, but then output a
+variant call file that is approximately two orders of magnitude smaller, the write penalty will be reduced. In
+practice, we also use in-memory caching to amortize write time across several stages.
+\item Additionally, for large clusters, straggler elimination is an issue. However, we have made optimizations to
+both the \texttt{Mark Duplicates} and \texttt{INDEL Realignment} code to eliminate stragglers by randomly
+rebalancing reads that are unmapped/do not map to a target across partitions.
 \end{itemize}
 
-However, as noted above, speedup continues until we reach approximately 1GB of data per node for
-sorting, or 250MB of data per node for duplicate marking. For a high coverage whole genome like
-NA12878, this should theoretically allow speedup through 250 nodes for sorting and 1,000 nodes for
-duplicate marking.
+We do note that the performance of \texttt{flagstat} degrades going from 32 to 128 \texttt{m2.4xlarge} nodes.
+It is worth noting that \texttt{flagstat} executes in one minute on 32 nodes. By increasing the number of machines
+we use to execute this query, we increase scheduling overhead, which leads to degraded performance. While we
+have tested against the SAMtools/Picard/GATK pipeline, we do note that new implementations have come out
+recently~(e.g., SAMBAMBA and SAMBLASTER~\cite{faust14}) that focus on fast duplicate marking. We have not
+compared to them due to time limitations, but will compare to them in a later revision of this paper.
 
 \subsection{Astronomy Workloads}
 \label{sec:astro-workloads}
