@@ -525,8 +525,7 @@ zaharia11}. This process is parallel per sequenced read.
 preprocessing steps to eliminate systemic errors in the reads. This may involve recalibrating the
 observed quality scores for the bases, or locally optimizing the read alignments. We will present a
 description of several of these algorithms in~\S\ref{sec:genomics-pipeline}; for a more detailed
-discussion, we refer readers to Appendix~\ref{sec:genomics-pseudocode}, DePristo et
-al~\cite{depristo11} and Massie et al~\cite{massie13}.
+discussion, we refer readers to DePristo et al~\cite{depristo11}.
 \item \textbf{Variant calling:} Variant calling is a statistical process that uses the read alignments
 and the observed quality scores to compute whether a given sample \linebreak matches or diverges
 from the reference genome. This process is typically parallel per position or region in the genome.
@@ -545,24 +544,19 @@ and variant calling performance~\cite{zaharia11, rimmer14}, which makes the pre-
 the performance bottleneck. We have focused on implementing the four most time consuming
 pre-processing stages, as well as \texttt{flagstat}, a command that is used for quality control~(QC). In
 the remainder of this section, we describe the stages that we have implemented, and the techniques
-we have used to improve performance and accuracy. We omit detailed pseudocode here, but make
-pseudocode available in Appendix~\ref{sec:genomics-pseudocode}.
+we have used to improve performance and accuracy.
 
-\paragraph{Sorting}
-\label{sec:sorting}
-This phase sorts all reads by the position of the start of their alignment. The implementation of this
-algorithm is trivial, as Spark provides a sort primitive~\cite{zaharia10}; we solely need to define an
-ordering for genomic coordinates, which is well defined. In practice, an explicit sort is unnecessary when
-using the rest of our MapReduce-based pipeline. We have included sort to enable the use of legacy
-tools that require sorted input.
-
-\paragraph{Duplicate Removal} 
-\label{sec:duplicate-removal}
-During the process of preparing DNA for sequencing, reads are duplicated by errors during the sample
-preparation and polymerase chain reaction~(PCR) stages. Detection of duplicate reads requires
-matching all reads by their position and orientation after read alignment. Reads with identical position
-and orientation are assumed to be duplicates. When a group of duplicate reads is found, each read is
-scored, and all but the highest quality read are marked as duplicates.
+\begin{enumerate}
+\item \textbf{Sorting:} This phase sorts all reads by the position of the start of their alignment. The implementation
+of this algorithm is trivial, as Spark provides a sort primitive~\cite{zaharia10}; we solely need to define an
+ordering for genomic coordinates, which is well defined. In practice, an explicit sort is unnecessary when using
+the rest of our MapReduce-based pipeline. We have included sort to enable the use of legacy tools that require
+sorted input.
+\item \textbf{Duplicate Removal:} During the process of preparing DNA for sequencing, reads are duplicated by
+errors during the sample preparation and polymerase chain reaction~(PCR) stages. Detection of duplicate reads
+requires matching all reads by their position and orientation after read alignment. Reads with identical position
+and orientation are assumed to be duplicates. When a group of duplicate reads is found, each read is scored,
+and all but the highest quality read are marked as duplicates.
 
 We have validated our duplicate removal code against Picard~\cite{picard}, which is used by the GATK
 for Marking Duplicates. Our implementation is fully concordant with the Picard/GATK duplicate removal
@@ -572,40 +566,35 @@ structural variants, which are important in cancer and some hereditary diseases 
 Specifically, because Picard's traversal engine is restricted to processing linearly sorted alignments,
 Picard mishandles these alignments. Since our engine is not constrained by the underlying layout of data
 on disk, we are able to properly handle chimeric read pairs.
-
-\paragraph{Local Realignment} 
-\label{sec:local-realignment}
-
-In local realignment, we correct areas where variant alleles cause reads to be locally misaligned from the
-reference genome.\footnote{This is typically caused by the presence of insertion/deletion (INDEL)
-variants; see DePristo et al~\cite{depristo11}.} In this algorithm, we first identify regions as targets for
-realignment. In the GATK, this is done by traversing sorted read alignments. In our implementation, we
-implement this as a fold over partitions where we generate targets, and then we merge the tree of
-targets. This allows us to eliminate the data shuffle needed to achieve the sorted ordering. As part of this
-fold, we must compute the convex hull of overlapping regions in parallel. We discuss this in more detail
-in~\S\ref{sec:coordinate-system-joins}
+\item \textbf{Local Realignment:} In local realignment, we correct areas where variant alleles cause reads to be
+locally misaligned from the reference genome.\footnote{This is typically caused by the presence of
+insertion/deletion (INDEL) variants; see DePristo et al~\cite{depristo11}.} In this algorithm, we first identify regions
+as targets for realignment. In the GATK, this is done by traversing sorted read alignments. In our implementation,
+we implement this as a fold over partitions where we generate targets, and then we merge the tree of targets.
+This allows us to eliminate the data shuffle needed to achieve the sorted ordering. As part of this fold, we must
+compute the convex hull of overlapping regions in parallel. We discuss this in more detail in
+Appendix~\ref{sec:convex-hull}
 
 After we have generated the targets, we associate reads to an overlapping target (if one exists). After
 associating reads to realignment targets, we run the heuristic realignment algorithm that is described
 in Appendix~\ref{sec:candidate-generation-realignment}.
-
-\paragraph{Base Quality Score Recalibration~(BQSR)} 
-\label{sec:bqsr}
-During the sequencing process, systemic errors occur that lead to the incorrect assignment of base
-quality scores. In this step, we label each base that we have sequenced with an \emph{error covariate}.
-For each covariate, we count the total number of bases that we saw, as well as the total number of
-bases within the covariate that do not match the reference genome. From this data, we apply a Yates'
-correction to each covariate to recalculate the quality scores of all member bases:
+\item \textbf{Base Quality Score Recalibration~(BQSR):} During the sequencing process, systemic errors occur
+that lead to the incorrect assignment of base quality scores. In this step, we label each base that we have
+sequenced with an \emph{error covariate}. For each covariate, we count the total number of bases that we saw,
+as well as the total number of bases within the covariate that do not match the reference genome. From this data, 
+we apply a correction by estimating the error probability for each set of covariates under a beta-binomial model
+with uniform prior:
 
 \begin{equation}
-\label{eqn:yates}
-P_{err}^{cov} = \frac{\text{\# errors} \in cov + 1}{\text{\# observations} \in cov + 2}
+\label{eqn:bqsrerr}
+\mathbf{E}(P_{err}|{cov}) = \frac{\texttt{\#errors}(cov) + 1}{\texttt{\#observations}(cov) + 2}
 \end{equation}
 
-We have validated the concordance of our BQSR implementation against the GATK. Across both tools,
-only 5000 of the $\sim$180B bases in the high-coverage NA12878 genome dataset differ. After
-investigating this discrepancy, we have determined that this is due to an error in the GATK, where
-paired-end reads are mishandled if the two reads in the pair overlap.
+We have validated the concordance of our BQSR implementation against the GATK. Across both tools, only 5000
+of the $\sim$180B bases in the high-coverage NA12878 genome dataset differ. After investigating this
+discrepancy, we have determined that this is due to an error in the GATK, where paired-end reads are
+mishandled if the two reads in the pair overlap.
+\end{enumerate}
 
 For current implementations of these read processing steps, performance is limited by disk
 bandwidth~\cite{diao15}. This bottleneck exists because the operations read in a SAM/BAM file, perform
@@ -641,27 +630,24 @@ in~\S\ref{sec:genomics-performance}
 
 \subsection{Astronomy Image Processing}
 \label{sec:astronomy-image-processing}
+
 The Montage~\cite{montage} application is a typical astronomy image processing pipeline that builds
 mosaics from small image tiles obtained from telescopes with the requirement of preserving the energy
 quantity and position for each pixel between the input and output images. The pipeline has multiple
-stages that can be grouped into the following phases.
+stages that can be grouped into the following phases:
 
-\paragraph{Tile Reprojection}
-The raw input images are reprojected with the defined scale as required in the final mosaic. 
-
-\paragraph{Background Modeling}
-This phase smoothes out the background levels between each pair of overlapped images and fits a plane
-to each of them. The phase can be further divided into steps of overlap calculation, difference image
-creation, and plane-fitting coefficient calculation.
-
-\paragraph{Background Matching}
-The background matching phase applies background removal to the reprojected images with the best
-solution derived from previous phase to smooth out the overlap regions.
-
-\paragraph{Tile Mosaicing}
-The tile masoning phase coadds all corrected images (after applying background matching to the
-reprojected images) into a aggregated mosaic file. This phase also involves a metadata processing stage
-before the mosaicing.
+\begin{enumerate}
+\item \textbf{Tile Reprojection:} The raw input images are reprojected with the defined scale as required in the
+final mosaic. 
+\item \textbf{Background Modeling:} This phase smoothes out the background levels between each pair of
+overlapped images and fits a plane to each of them. The phase can be further divided into steps of overlap
+calculation, difference image creation, and plane-fitting coefficient calculation.
+\item \textbf{Background Matching:} The background matching phase applies background removal to the
+reprojected images with the best solution derived from previous phase to smooth out the overlap regions.
+\item \textbf{Tile Mosaicing:} The tile masoning phase coadds all corrected images (after applying background
+matching to the reprojected images) into a aggregated mosaic file. This phase also involves a metadata
+processing stage before the mosaicing.
+\end{enumerate}
 
 The tile reproduction, background modeling, and background matching phases are embarrassingly
 parallel, with each task (both computation and I/O) running independent from other tasks in the same
@@ -692,76 +678,48 @@ improve the efficiency of accessing remotely staged data.
 \subsection{Coordinate System Joins}
 \label{sec:coordinate-system-joins}
 
-Genome informatics encompasses a wide array of experimental techniques and platforms, but almost all
-of these methods share one characteristic in common: they produce datapoints that are tied to
-locations in the genome through the use of genomic coordinates. The actual genome inside each cell is a
-mammoth molecule, a collection of DNA polymers coated with (and wrapped around) proteins and
-packed into the nucleus in a complex 3-dimensional shape. Bioinformaticians avoid this complexity by
-representing all 3.2 billion bases of the human genome as a single long string (of A's, T', G's, and C's);
-the ``tying'' of a datapoint or observation to the genome is represented by associating the data with a 1
-dimensional point or interval. The reference genome defines a 1-dimensional coordinate space against
-which all genomic phenomena are marked and measured.
+There are a wide array of experimental techniques and platforms in genome informatics, but most of these
+methods produce datapoints that are tied to locations in the genome through the use of genomic coordinates.
+Each cell contains a copy of the genome with one molecule per chromosome. Each molecule is a collection of
+DNA polymers coated with (and wrapped around) proteins and packed into the nucleus in a complex
+3-dimensional shape. In practice, computational biologists we abstract this complexity by storing a single long
+string (of A's, T', G's, and C's) per chromosome. We can then tie of a datapoint or observation to the genome by
+associating the data with chromosome name and a point or interval on a 1-dimensional space.
 
 A platform for scientific data processing in genomics needs to understand these 1-dimensional coordinate
-systems because these become the basis on which data processing is parallelized. For example, when
-calling variants from sequencing data, the sequence data that is localized to a single genomic region
-(or ``locus'') can be processed independently from the data localized to a different region, as long as the
-regions are far enough apart.
+systems because these become the basis on which data processing is parallelized. For example, when calling
+variants from sequencing data, the sequence data that is localized to a single genomic region (or ``locus'') can be 
+processed independently from the data localized to a different region, as long as the regions are far enough
+apart.
 
-Not only parallelization, but many of the core algorithms and methods for data aggregation in genomics
-are phrased in terms of geometric primitives on 1-D intervals and points: distance, overlap, and
+Beyond parallelization, many of the core algorithms and methods for data aggregation in genomics are phrased
+in terms of geometric primitives on 1-D intervals and points where we compute distance, overlap, and
 containment.  An algorithm for calculating quality control metrics may try to calculate ``coverage,'' a count
-of how many reads overlap each base in the genome. A method for filtering and annotating potential
-variants might assess the validity of a variant by the quality and mapping characteristics of all reads
-that overlap the putative variant.
+of how many reads overlap each base in the genome. A method for filtering and annotating potential variants
+might assess the validity of a variant by the quality characteristics of all reads that overlap the putative variant.
 
-In order to support these algorithms, we have implemented a ``region'' or ``spatial'' join  method, whose
-outline in code is given below. The region join operation takes as input two sets (RDDs) of
+To support these algorithms, we provide a ``region'' or ``spatial'' join primitive. The algorithm used is described
+in algorithm~\ref{alg:region-join} and takes as input two sets (RDDs, see Zaharia et al~\cite{zaharia12}) of
 \texttt{ReferenceRegions}, a data structure that represents intervals along the 1-D genomics coordinate
-space. It produces, as output, the set of all \texttt{ReferenceRegion} pairs~(one from each of the two
-input sets) such that the two regions overlap each other in terms of genomics spatial coordinates. 
+space. It produces, as output, the set of all \texttt{ReferenceRegion} pairs where a region from the first RDD
+overlaps with a region from the second RDD.
 
-\begin{lstlisting}
-def partitionAndJoin[T, U](sc: SparkContext,
-  baseRDD: RDD[T],
-  joinedRDD: RDD[U],
-  tMapping: ReferenceMapping[T],
-  uMapping: ReferenceMapping[U]): RDD[(T, U)] = {
-
-    val collectedLeft = baseRDD
-        .map(t => (tMapping.getReferenceName(t), 
-			tMapping.getReferenceRegion(t))) 
-        .groupBy(_._1) 
-        .map(t => (t._1, t._2.map(_._2))) 
-        .collect() 
-        .toSeq 
-
-    val multiNonOverlapping = 
-	new MultiContigNonoverlappingRegions(collectedLeft)
-
-    val regions = sc.broadcast(multiNonOverlapping)
-
-    val smallerKeyed: RDD[(ReferenceRegion, T)] =
-      baseRDD.keyBy(t => regions.value.regionsFor(t).head)
-
-    val largerKeyed: RDD[(ReferenceRegion, U)] =
-      joinedRDD.filter(regions.value.filter(_))
-        .flatMap(t => regions.value.regionsFor(t)
-			.map((r: ReferenceRegion) => (r, t)))
-
-    val joined: RDD[(ReferenceRegion, (T, U))] =
-      smallerKeyed.join(largerKeyed)
-
-    val filtered: RDD[(ReferenceRegion, (T, U))] = 
-	joined.filter({
-	  case (rr: ReferenceRegion, (t: T, u: U)) =>
-    tMapping.getReferenceRegion(t)
-      .overlaps(uMapping.getReferenceRegion(u))
-  })
-
-    filtered.map(rrtu => rrtu._2)
-  }
-\end{lstlisting}
+\begin{algorithm}
+\caption{Partition And Join Regions}
+\label{alg:region-join}
+\begin{algorithmic}
+\STATE $left \leftarrow$ input dataset; left side of join
+\STATE $right \leftarrow$ input dataset; right side of join
+\STATE $regions \leftarrow left$.map($data \Rightarrow $generateRegion($data$))
+\STATE $regions \leftarrow regions$.groupBy($region \Rightarrow region$.$name$)
+\STATE $distinctRegions \leftarrow regions$.findConvexHull()
+\STATE $keyLeft \leftarrow left$.keyBy($data \Rightarrow $getHullId($distinctRegions$, $data$))
+\STATE $keyRight \leftarrow right$.keyBy($data \Rightarrow $getHullId($distinctRegions$, $data$))
+\STATE $joined \leftarrow left$.join($right$)
+\STATE $truePositives \leftarrow joined$.filter($r1, r2 \Rightarrow r1$.overlaps($r2$))
+\RETURN $truePositives$
+\end{algorithmic}
+\end{algorithm}
 
 To find the maximal set of non-overlapping regions, we must find the convex hull of all regions emitted.
 We present a distributed algorithm for finding convex hulls in Appendix~\ref{sec:convex-hull}. The
