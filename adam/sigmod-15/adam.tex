@@ -32,6 +32,7 @@
 \usepackage{algorithmic}
 \usepackage{algorithm}
 \usepackage{listings}
+\usepackage{balance}
 % \usepackage{draftwatermark}
 % \SetWatermarkText{DRAFT}
 % \SetWatermarkScale{5}
@@ -1085,7 +1086,7 @@ to both astronomy and genomics, we have demonstrated that the techniques are app
 traditional matrix-based scientific computing, as well as novel scientific areas that have less structured
 data.
 
-\balancecolumns
+\balance
 
 \clearpage
 
@@ -1258,7 +1259,7 @@ maximal convex hulls that describe a genomic dataset.
 \STATE $regions \leftarrow data$.map($data \Rightarrow $generateTarget($data$))
 \STATE $regions \leftarrow regions$.sort()
 \STATE $hulls \leftarrow regions$.fold($r_1, r_2 \Rightarrow$ mergeTargetSets($r_1, r_2$))
-\RETURN $\Theta$
+\RETURN $hulls$
 \end{algorithmic}
 \end{algorithm}
 
@@ -1295,9 +1296,9 @@ algorithm~\ref{alg:join-targets}.
 
 For a region join~(see~\S\ref{sec:coordinate-system-joins}), we would use the maximal convex hull
 set to define partitioning for the join. Alternatively, for INDEL
-realignment~(see~\S\ref{sec:local-realignment}), we use this set as an index for mapping reads directly
+realignment~(see~\S\ref{sec:genomics-pipeline}), we use this set as an index for mapping reads directly
 to targets.
 
-\balancecolumns
+\balance
 
 \end{document}
