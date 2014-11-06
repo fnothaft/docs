@@ -789,14 +789,14 @@ running a single instance of that type for an hour, which is the process Amazon 
 \hline
 Picard & 1 \texttt{hs1.8xlarge} & 17h 44m & \$81.57 \\
 Us & 1 \texttt{hs1.8xlarge} & 8h 56m & \$41.09 \\
-Us & 128 \texttt{m2.4xlarge} & 19m & \$64.48 \\ 
+Us & 128 \texttt{m2.4xlarge} & 9m & \$31.49 \\
 \hline
 \multicolumn{4}{c}{\bf \textit{Mark Duplicates}} \\
 \bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
 \hline
 Picard & 1 \texttt{hs1.8xlarge} & 20h 22m & \$93.68 \\
 Us & 1 \texttt{hs1.8xlarge} & 9h & \$41.40 \\
-Us & 128 \texttt{m2.4xlarge} & 9m & \$31.49 \\
+Us & 128 \texttt{m2.4xlarge} & 19m & \$64.48 \\ 
 \hline
 \multicolumn{4}{c}{\bf \textit{BQSR}} \\
 \bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
@@ -809,13 +809,14 @@ Us & 128 \texttt{m2.4xlarge} & 54m & \$188.93 \\
 \bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
 \hline
 GATK & 1 \texttt{hs1.8xlarge} & 42h 49m & \$196.88 \\
-Us & 1 \texttt{hs1.8xlarge} & 18h & \$82.80 \\
+Us & 1 \texttt{hs1.8xlarge} & 12h 58m & \$82.80 \\
 Us & 128 \texttt{m2.4xlarge} & 24m & \$83.97 \\
 \hline
 \multicolumn{4}{c}{\bf \textit{Flagstat}} \\
 \bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
 \hline
 SAMtools & 1 \texttt{hs1.8xlarge} & 25m 24s & \$1.95 \\
+Us & 1 \texttt{hs1.8xlarge} & 7m 4s & \$1.95 \\
 Us & 128 \texttt{cr1.8xlarge} & 1m 53s & \$5.35 \\
 \hline
 \end{tabular}
@@ -836,8 +837,8 @@ chosen to represent a workstation. Network bandwidth is constant across all inst
 \bf Machine & \bf Cost & \bf Description \\
 \hline
 \hline
-\texttt{hs1.8xlarge} & \$4.60/hr & 32p, 117GiB RAM, 24$\times$ HDD \\
-\texttt{m2.4xlarge} & \$1.64/hr & 8p, 68.4GiB RAM, 2$\times$ HDD \\
+\texttt{hs1.8xlarge} & \$4.60/hr & 16 proc, 117GiB RAM, 24$\times$ HDD \\
+\texttt{m2.4xlarge} & \$1.64/hr & 8 proc, 68.4GiB RAM, 2$\times$ HDD \\
 \hline
 \end{tabular}
 \end{table}
@@ -910,120 +911,113 @@ resources without concerning data placement.
 \subsection{Column Store Performance}
 \label{sec:column-store-perf}
 
-\textbf{FIXME: This uses old data and also needs to be anonymized. Frank to fix. Also, discuss CRAM, and columnar representations for in-memory data.}
+Earlier in this paper, we motivated the use of a column store as it would allow us to better push processing to
+the data. Specifically, we can use predicate pushdown and projections to minimize the amount of IO that we
+perform. Additionally, column stores provide compressed storage, which allows us to minimize both the required
+IO bandwidth and space on disk. In this section, we'll look at the performance that our columnar store achieves
+in terms of read performance and compression. We will not look extensively at write performance; for genomic
+data, write performance is not a bottleneck because our workflow computes a \emph{summarization} of a large
+dataset. As a result, our output dataset tends to be O(100 MB) while our input dataset is in the range of
+O(10 GB)--O(100GB).
 
-The decision to use a columnar store was based on the observation that most genomics applications are read-heavy. In this section,
-we aim to quantify the improvements in read performance that we achieve by using a column store, and how far these gains can be
-maximized through the use of projections.
+\subsubsection{Compression}
+\label{sec:compression}
 
-\paragraph{Read Length and Quality:}
-\label{sec:read-length-and-quality}
+The Parquet columnar store~\cite{parquet} supports several compression features. Beyond traditional block-level
+compression, Parquet supports run length encoding for repeated values, dictionary encoding, and delta
+encoding. Currently, we make heavy use of run length encoding to compress highly repeated metadata value,
+and dictionary encoding to compress fields that can take a limited range of values. Dictionary encoding provides
+substantial improvements for genomic data; specifically, the majority of genomic sequence data can be
+represented with three bits per base.\footnote{Although DNA only contains four bases (A, C, G, and T),
+\emph{sequenced} DNA uses disambiguation codes to indicate that a base was read in error. As a result, we
+cannot achieve the ideal two-bits per base.} This is an improvement over our in-memory string representation
+which allocates a byte per base.
 
-This microbenchmark scans all the reads in the file, and collects statistics about the length of the read, and the mapping quality score. Figure~\ref{fig:length-quality} shows
-the results of this benchmark. Ideal speedup curves are plotted along with the speedup measurements. The speedups in this graph are plotted relative to the single machine Hadoop-BAM run.
-
-\begin{figure}[h]
-\begin{center}
-\includegraphics[width=\linewidth]{microbenchmarks/length_and_quality_low_coverage.pdf}
-\end{center}
-\caption{Read Length and Quality Speedup for HG00096}
-\label{fig:length-quality}
-\end{figure}
-
-This benchmark demonstrates several things:
-
-\begin{itemize}
-\item ADAM demonstrates superior scalability over Hadoop-BAM. This performance is likely because ADAM files can be more evenly distributed across machines.
-Hadoop-BAM must guess the proper partitioning when splitting files~\cite{niemenmaa12}. The Parquet file format that ADAM is based on is partitioned
-evenly when it is written\cite{parquet}. This paritioning is critical for small files such as the one used in this test~---~in a 16 machine cluster, there is only 1 GB of
-data per node, so imbalances on the order of the Hadoop file split size (128 MB) can lead to 40\% differences in loading between nodes.
-\item Projections can significantly accelerate computation, if the calculation does not need all the data. By projecting the minimum dataset necessary
-to calculate the target of this benchmark, we can accelerate the benchmark by $8\times$. Even a more modest projection leads to a $2\times$
-improvement in performance.
-\end{itemize}
-
-\subsubsection{Predicate Pushdown}
-\label{sec:predicate-pushdown}
-
-Predicate pushdown is one of the significant advantages afforded to us through the use of Parquet	~\cite{parquet}. In traditional
-pipelines, the full record is deserialized from disk, and the filter is implemented as a Map/Reduce processing stage. Parquet provides
-us with predicate pushdown: we deserialize only the columns needed to identify whether the record should be fully deserialized. We
-then process those fields; if they pass the predicate, we then deserialize the full record.
-
-We can prove that this process requires no additional reads. Intuitively, this is true as the initial columns read would need to be read
-if they were to be used in the filter later. However, this can be formalized. We provide a proof for this in Section C of the Appendix.
-In this section, we seek to provide an intuition for how predicate pushdown can improve the performance of actual genomics workloads.
-We apply predicate pushdown to implement read quality predication, mapping score predication, and predication by chromosome. 
-
-\paragraph{Quality Flags Predicate:}
-\label{sec:quality-flags-predicate}
-
-This microbenchmark scans the reads in a file, and filters out reads that do not meet a specified quality threshold. We use the following
-quality threshold:
-
-\begin{itemize}
-\item The read is mapped.
-\item The read is at its primary alignment position.
-\item The read did not fail vendor quality checks.
-\item The read has not been marked as a duplicate.
-\end{itemize}
-This threshold is typically applied as one of the first operations in any read processing pipeline.
-
-\paragraph{Gapped Predicate:}
-\label{sec:gapped-predicate}
-
-In many applications, the application seeks to look at a region of the genome~(e.g. a single chromosome or gene). We include this
-predicate as a proxy: the gapped predicate looks for 1 out of every $n$ reads. This selectivity achieves performance analogous to filtering
-on a single gene, but provides an upper bound as we pay a penalty due to our predicate hits being randomly distributed.
-
-To validate the performance of predicate pushdown, we ran the predicates described above on the HG00096 genome on a
-single AWS $m2.4xlarge$ instance. The goal of this was to determine the rough overhead of predicate projection.
-
-Figure~\ref{fig:gapped-filter} shows performance for the gapped predicate sweeping $n$.
-
-\begin{figure}[h]
-\begin{center}
-\includegraphics[width=\linewidth]{microbenchmarks/gapped_predicate_low_coverage.pdf}
-\end{center}
-\caption{Gapped Predicate on HG00096}
-\label{fig:gapped-filter}
-\end{figure}
-
-There are several conclusions to be drawn from this experiment:
-
-\begin{itemize}
-\item As is demonstrated by equation~(\ref{eqn:predicate}) in Section C of the Appendix, we see the largest speedup when our predicate read set is significantly
-smaller than our projection read set. For smaller projections, we see a fairly substantial reduction in speedup.
-\item As the number of records that passes the predicate drops, the number of reads done to evaluate the predicate begins to become
-a dominant term. This insight has one important implication: for applications that plan to access a very small segment of the data, accessing the
-data as a flat file with a predicate is likely not the most efficient access pattern. Rather, if the predicate is regular, it is likely better to access
-the data through a indexed database.
-\end{itemize}
-
-We additionally calculated the performance improvement that was achieved by using predicate pushdown instead of a Spark filter.
-Table~\ref{tab:filter-vs-predicate} lists these results.
+In table~\ref{tab:genomic-compression}, we look at the compression we achieve on the \texttt{NA12878}
+and \texttt{HG00096}\footnote{A link to the \texttt{NA12878} dataset was provided earlier in this paper. The
+\texttt{HG00096} dataset is available from \url{ftp.1000genomes.ebi.ac.uk} in directory 
+\texttt{/vol1/ftp/data/HG00096/alignment/}.} human genome sequencing samples. We compare against the
+GZIP compressed BAM~\cite{li09} format, and the CRAM format~\cite{fritz11}. We achieve approximately a
+$1.25\times$ improvement in storage. This is not as impressive as the result achieved by the CRAM project,
+but the CRAM project applies specific compression techniques that make use of the read alignment. Specifically,
+CRAM only stores the read bases that \emph{do not} appear in the reference genome. As we only expect a
+genomic variant at one in every 1000 bases, and a read error at one in every 50 bases, this allows them to
+achieve significant compression of the sequenced bases.
 
 \begin{table}[h]
-\caption{Predicate Pushdown Speedup vs. Filtering}
-\label{tab:filter-vs-predicate}
+\caption{Genomic Data Compression}
+\label{tab:genomic-compression}
 \begin{center}
-\begin{tabular}{| l | c  c c | c |}
+\begin{tabular}{ l c c }
 \hline
-\bf Predicate & \bf Min & \bf Avg & \bf Max & \bf Filtered \\
+\multicolumn{3}{c}{\bf \texttt{NA12878}} \\
+\bf Format & \bf Size & \bf Compression \\
 \hline
-Locus & 1.19 & 1.17 & 0.94 & 3\% \\
-Gapped, $n = 1$ & 1.0 & 1.0 & 1.01 & 0\% \\
-Gapped, $n = 2$ & 1.22 & 1.27 & 1.29 & 50\% \\
-Gapped, $n = 4$ & 1.31 & 1.42 & 1.49 & 75\% \\
-Gapped, $n = 8$ & 1.37 & 1.58 & 1.67 & 87.5\% \\
+\hline
+BAM & 234 GB & --- \\
+CRAM & 112 GB & 2.08$\times$ \\
+Parquet & 185 GB & 1.26$\times$ \\
+\hline
+\multicolumn{3}{c}{\bf \texttt{HG00096}} \\
+\bf Format & \bf Size & \bf Compression \\
+\hline
+\hline
+BAM & 14.5 GB & --- \\
+CRAM & 3.6 GB & 4.83$\times$ \\
+Parquet & 185 GB & 1.26$\times$ \\
 \hline
 \end{tabular}
 \end{center}
 \end{table}
 
-These results are promising, as they indicate that predicate pushdown is faster than a Spark filter in most cases. We believe that the
-only case that showed a slowdown (max projection on Locus predicate) is due to an issue in our test setup. We therefore can conclude
-that filtering operations that can be performed statically at file load-in should be performed using predicate pushdown.
+We achieve similar compression on the astronomy datasets. We compare against the legacy FITS~\cite{wells81}
+format in table~\ref{tab:astro-compression}. We measure the aggregate compression of the image files provided
+as input to our system, and the compression of our pipeline output.
+
+\begin{table}[h]
+\caption{Astronomy Data Compression}
+\label{tab:astro-compression}
+\begin{center}
+\begin{tabular}{ l c c }
+\hline
+\multicolumn{3}{c}{\bf Input Dataset} \\
+\bf Format & \bf Size & \bf Compression \\
+\hline
+\hline
+FITS & 1.5 GB & --- \\
+Parquet & 0.55 GB & 2.75$\times$ \\
+\hline
+\multicolumn{3}{c}{\bf Output Dataset} \\
+\bf Format & \bf Size & \bf Compression \\
+\hline
+\hline
+FITS & 1.2 GB & --- \\
+Parquet & 0.88 GB & 1.35$\times$ \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+For genomic datasets, our compression is limited by the sequence and base quality fields, which respectively
+account for approximately 30\% and 60\% of the space spent on disk. Quality scores are difficult to compress
+because they are high entropy. We are currently looking into computational strategies to address this problem;
+specifically, we are working to probabilistically estimate the quality scores \emph{without} having observed quality
+scores. This would be performed via a process that is similar to the base quality score recalibration algorithm
+presented earlier in this paper.
+
+\subsubsection{Horizontal Scalability}
+\label{sec:horizontal-scalability}
+
+The Parquet format is optimized for horizontal scalability as it 
+
+. Specifically, it is 
+ADAM demonstrates superior scalability over Hadoop-BAM. This performance is likely because ADAM files can be more evenly distributed across machines.
+Hadoop-BAM must guess the proper partitioning when splitting files~\cite{niemenmaa12}. The Parquet file format that ADAM is based on is partitioned
+evenly when it is written\cite{parquet}. This paritioning is critical for small files such as the one used in this test~---~in a 16 machine cluster, there is only 1 GB of
+data per node, so imbalances on the order of the Hadoop file split size (128 MB) can lead to 40\% differences in loading between nodes.
+
+\subsubsection{Projection and Predicate Performance}
+\label{sec:projection-predicate-performance}
 
 \section{Discussion and Future Work}
 \label{sec:discussion-future-work}
