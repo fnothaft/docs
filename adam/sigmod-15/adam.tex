@@ -107,7 +107,7 @@ neuroscience. We can attack the problem caused by exponential data growth by app
 techniques from current analytics systems to accelerate scientific processing pipelines.
 
 In this paper, we demonstrate an example genomics pipeline that leverages open-source MapReduce
-and columnar storage techniques to achieve a $22--130\times$ speedup over current genomics
+and columnar storage techniques to achieve a 22--$130\times$ speedup over current genomics
 pipelines, while reducing cost by 50\%. From building this system, we were able to distill a set of techniques for
 implementing scientific analyses efficiently using commodity ``big data'' systems. To demonstrate the
 generality of our architecture, we then achieve an average of $5.8\times$ improvement over the state-of-the-art
@@ -129,7 +129,7 @@ Development Process Management]
 \label{sec:introduction}
 
 Major improvements in scientific data acquisition techniques have increased scientific data storage and
-processing \linebreak needs~\cite{schadt10, cunningham14}. In fields like
+processing \linebreak needs~\cite{cunningham14, schadt10}. In fields like
 neuroscience~\cite{freeman14} and \linebreak genomics~\cite{stein10}, particle physics, and astronomy,
 scientists routinely perform analysis that use terabytes~(TB) to \linebreak petabytes~(PB) of data.
 While traditional scientific computing platforms are optimized for fast linear algebra, many emerging
@@ -148,7 +148,7 @@ prior projects like the 1000 Genomes Project~\cite{siva08}. These projects use t
 practice'' genomic variant calling pipeline~\cite{auwera13}, which takes approximately 120 hours to
 process a single, high-quality human genome using a single, beefy node~\cite{talwalkar14}. To address
 these challenges, scientists have started to apply computer systems techniques such as
-MapReduce~\cite{mckenna10, schatz09, langmead09} and columnar storage~\cite{fritz11} to custom
+MapReduce~\cite{langmead09, mckenna10, schatz09} and columnar storage~\cite{fritz11} to custom
 scientific compute/storage systems. While these systems have improved analysis cost and performance,
 current implementations incur significant overheads imposed by the legacy formats and
 codebases that they are built from.
@@ -191,7 +191,7 @@ Dremel~\cite{melnik10} to push computation to the data.
 
 We introduce the stack model in figure~\ref{fig:stack-model} as a way to decompose scientific systems. In
 addition to the genomics application described above, we demonstrate the generality of this model by using it to
-implement a system for processing astronomy images, which achieves a $2.8--8.9\times$ performance
+implement a system for processing astronomy images, which achieves a 2.8--$8.9\times$ performance
 improvement over a state-of-the-art Message Passing Interface~(MPI) based pipeline.
 
 While the abstraction inversion used in genomics to accelerate common access patterns is undesirable
@@ -219,7 +219,8 @@ of genomic sequencing has dropped by 10,000$\times$~\cite{nhgri}. This drop in c
 capture of petabytes of sequence data, which has (in turn) enabled significant population genomics
 experiments like the 1000 Genomes project~\cite{siva08} and The Cancer Genome Atlas~(TCGA,
 \cite{weinstein13}). These changes are not unique to genomics; indeed, fields such as
-neuroscience~\cite{cunningham14} and astronomy~\cite{sdss2000, lsst2008, turk11} are experiencing similar changes.
+neuroscience~\cite{cunningham14} and astronomy~\cite{lsst2008, turk11, sdss2000} are experiencing similar
+changes.
 
 Although there has been significant progress in the development of systems for processing large
 datasets---the development of first generation MapReduce systems~\cite{dean04}, followed by
@@ -279,6 +280,8 @@ Language~\cite{kozanitis14} have extended SQL to provide efficient query semanti
 coordinates. While GQL achieves performance improvements of up to 10$\times$ for certain algorithms,
 SQL is not an attractive language for many scientific domains, which make heavy use of user designed
 functions that may be cumbersome in SQL.
+
+\pagebreak
 
 \section{Characteristics of Scientific \\ Analysis Systems}
 \label{sec:principles}
@@ -375,7 +378,7 @@ and makes the system less general.
 
 Our stack enables us to serve the use cases we outline in~\S\ref{sec:workloads}. By using
 Parquet as a storage format, we are able to process the data in many Hadoop-based systems. We
-implement high performance batch and interactive processing with Spark, and can delegate to systems
+implement high performance batch and interactive processing with \linebreak Spark, and can delegate to systems
 like Impala and Spark-SQL for warehousing.
 
 \subsection{Workloads}
@@ -531,10 +534,10 @@ filtration has motivated the coordinate space joins presented in~\S\ref{sec:coor
 \end{enumerate}
 
 This process is very expensive in time to run; the current best practice pipeline uses the BWA tool~\cite{li10} for
-alignment and the GATK~\cite{mckenna10, depristo11} for pre-processing, variant calling, and filtration.
+alignment and the GATK~\cite{depristo11, mckenna10} for pre-processing, variant calling, and filtration.
 Current benchmark suites have measured this pipeline as taking between 90 and 130 hours to run
 end-to-end~\cite{talwalkar14}. Recent projects have achieved $5-10\times$ improvements in alignment
-and variant calling performance~\cite{zaharia11, rimmer14}, which makes the pre-processing stages
+and variant calling performance~\cite{rimmer14, zaharia11}, which makes the pre-processing stages
 the performance bottleneck. Our experimental results have corroborated this, as the four pre-processing stages
 take over 110 hours to run on a clinical quality human genome when run on an Amazon EC2 \texttt{cr1.8xlarge}
 machine. We have focused on implementing the four most-commonly used pre-processing stages, as well as
@@ -709,8 +712,8 @@ overlaps with a region from the second RDD.
 \STATE $regions \leftarrow left$.map($data \Rightarrow $generateRegion($data$))
 \STATE $regions \leftarrow regions$.groupBy($region \Rightarrow region$.$name$)
 \STATE $distinctRegions \leftarrow regions$.findConvexHull()
-\STATE $keyLeft \leftarrow left$.keyBy($data \Rightarrow $getHullId($distinctRegions$, $data$))
-\STATE $keyRight \leftarrow right$.keyBy($data \Rightarrow $getHullId($distinctRegions$, $data$))
+\STATE $keyLeft \leftarrow left$.keyBy($data \Rightarrow $getHullId($data$))
+\STATE $keyRight \leftarrow right$.keyBy($data \Rightarrow $getHullId($data$))
 \STATE $joined \leftarrow left$.join($right$)
 \STATE $truePositives \leftarrow joined$.filter($r1, r2 \Rightarrow r1$.overlaps($r2$))
 \RETURN $truePositives$
@@ -1110,8 +1113,8 @@ assembly) that are expressed as traversal over graphs. Recent work by Simpson et
 or Unified Parallel C~(UPC) to implement their own distributed graph traversal. Both systems
 find that synchronization via message passing is a significant cost; specifically, the ABySS assembler
 experiences scaling problems because it thrashes portions of the graph across nodes during traversal.
-By building our system using Spark, we are able to leverage the GraphX processing library~\cite{xin13,
-gonzalez14}. We are in the process of developing a genome assembler using this library system, and
+By building our system using Spark, we are able to leverage the GraphX processing library~\cite{gonzalez14,
+xin13}. We are in the process of developing a genome assembler using this library system, and
 believe that we can achieve improved performance through careful graph partitioning. This partitioning involves
 algorithmic changes to the graph creation and traversal phases to bypass ``knotted'' sections of the
 graph that correspond to highly repetitive areas of the genome, which cause the major performance
@@ -1130,9 +1133,9 @@ fast. By using Parquet, a modern columnar store, we use predicates and projectio
 to denormalize our schemas to improve the performance of accessing metadata.
 
 By rethinking the architecture of scientific data management systems, we have been able to achieve
-$22--131\times$ performance improvements over conventional genomics processing systems, along with linear
+22--$131\times$ performance improvements over conventional genomics processing systems, along with linear
 strong scaling and a $2\times$ cost improvement. On the astronomy workload, we achieve speedup between
-$2.8--8.9\times$ speedup over the current best MPI-based solution at various scales. By applying our techniques
+2.8--$8.9\times$ speedup over the current best MPI-based solution at various scales. By applying our techniques
 to both astronomy and genomics, we have demonstrated that the techniques are applicable to both traditional
 matrix-based scientific computing, as well as novel scientific areas that have less structured data.
 
