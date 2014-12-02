@@ -704,4 +704,80 @@ same tuple streams
 \end{enumerate}
 \end{itemize}
 
+\section{Lecture $n$---12/2/2014}
+
+\begin{itemize}
+\item Counting is hard
+\begin{itemize}
+\item Put time boundaries on measurements $\rightarrow$ synchronize!
+\end{itemize}
+\item Fundamental problem with distributed system: everyone has a different perception of time
+\item How can we resolve this problem?
+\begin{itemize}
+\item Define a local clock (a gap-free sequence)
+\item Send messages that can carry local time steps
+\end{itemize}
+\item How do we maintain time in Java?
+\begin{itemize}
+\item Posix time? This is a \emph{physical} clock, not a \emph{logical} clock.
+\item Order of byte code instructions?
+\end{itemize}
+\item How about in a Turing machine?
+\begin{itemize}
+\item What automaton transition are we at?
+\item Head activity
+\end{itemize}
+\item Time does not come for free in a distributed system? What defines time?
+\item When we voted, we waited a certain amount of time to get the results.
+\item So, if we count, we wait, and how do we wait? By counting (if we've heard from enough/all people)!
+\item CALM: Consistency and logical monotonicity go hand in hand
+\begin{itemize}
+\item Logically monotonically systems don't need coordination
+\item \emph{Or}, coordination is required for non-monotonicity
+\item What is non-monotonicity? For two sets $R$ and $S$ and a non-monotonic operator $\oplus$,
+increasing the size of $S$ reduces the size of $R \oplus S$.
+\item If operators are monotonic, then I can \emph{stream} them together and the results will eventually be
+correct.
+\item CALM theorem:
+\begin{enumerate}
+\item Scopes what is and is not computable w/o coordination. 
+\begin{itemize}
+\item As aside, all PTIME algorithms fit under CALM
+\end{itemize}
+\item Gives conservative tests for \emph{where} to coordinate.
+\item Drive innovation in developing coordination-free protocols.
+\end{enumerate}
+\item If you can do this, then you can take things that are hidden at the read/write layer, and then make
+them visible.
+\end{itemize}
+\item Why is coordination bad?
+\begin{itemize}
+\item Has bad availability issues...
+\item Coordination increases latency/reduces throughput $\rightarrow$ reduces percentage of time spent
+doing ``useful'' work
+\end{itemize}
+\item Data centric languages are embarrassingly parallel
+\item CALM consistency is roughly determinism of outputs, actor-ish model
+\item Invariant confluence is roughly using invariants to determine whether we can eliminate concurrents
+\item CALM consistency can be determined syntactically
+\item Invariant confluence requires programmer effort
+\item If two operations commute, they can be done in parallel
+\item Goal of invariant confluence: determine when coordination is necessary to maintain consistency
+\item Invariants:
+\begin{itemize}
+\item Currently, we keep lots of invariants in the system
+\item Allows us to avoid shooting selves in the foot
+\item Allows us to perform some system level performance optimizations
+\item Empirically, in OSS web applications, developers tend to write invariants instead of transactions
+\end{itemize}
+\item Four guarantees for invariant confluence:
+\begin{enumerate}
+\item Validity: if you define an invariant, all states must satisfy it
+\item Availability: all operations that you define should be able to return a result
+\item Coordination-freedom: you guarantee a response without contacting someone
+\item Convergence: replicas must converge to a consistent global state
+\end{enumerate}
+\item Merge via user defined merge function
+\end{itemize}
+
 \end{document}
