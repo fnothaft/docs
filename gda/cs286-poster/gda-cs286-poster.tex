@@ -56,22 +56,17 @@
 \end{minipage}
 }
 \colorbox{White}{
-\begin{minipage}[t][600pt][t]{\linewidth}
+\begin{minipage}[t][635pt][t]{\linewidth}
 \color{Blue}
 \vspace{20pt}
-\LARGE Three stages in modern DNA processing pipelines:
+\LARGE Many analytics workloads can benefit from geographically \linebreak distributed processing:
 \begin{enumerate}
-\item {\bf Sequencing:} Generate 100-250 base pair reads
-\item {\bf Alignment:} Align these reads to the reference genome
-\item {\bf Variant Calling:} Determine gene variants \& genotypes
-\end{enumerate}
-Variant calling is an interesting area: ``Accurate'' algorithms are slow and don't
-scale (60 hrs/genome), and are inaccurate for high complexity regions (error is $>75\%$).
-
-\textbf{Goals:}
-\begin{enumerate}
-\item Build a variant caller designed for distributed computing
-\item Develop an open-source alternative to the GATK
+\item {\bf ``Edge'' Clusters:} It is becoming common to place small clusters near data sources (app users)
+to improve latency for interactive queries, but still need to process data at edge node with batch queries
+\item {\bf Very Large Datasets:} Datasets that are too large to process efficiently in a single datacenter
+need to be distributed
+\item {\bf Geodistributed Datasets:} Data sources may be \linebreak geographically distributed (data
+acquisition instruments for scientific experiments)
 \end{enumerate}
 \hfill
 \pagebreak
@@ -89,7 +84,7 @@ scale (60 hrs/genome), and are inaccurate for high complexity regions (error is 
 \end{minipage}
 }
 \colorbox{White}{
-\begin{minipage}[t][1020pt][t]{\linewidth}
+\begin{minipage}[t][985pt][t]{\linewidth}
 \color{Blue}
 \vspace{20pt}
 \LARGE
