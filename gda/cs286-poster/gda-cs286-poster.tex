@@ -50,7 +50,7 @@
 \begin{minipage}{\linewidth}
 \vspace{25pt}
 \begin{center}
-\Huge \bf \color{White} Background
+\Huge \bf \color{White} Motivation
 \end{center}
 \vspace{10pt}
 \end{minipage}
@@ -83,7 +83,7 @@ scale (60 hrs/genome), and are inaccurate for high complexity regions (error is 
 \begin{minipage}{\linewidth}
 \vspace{25pt}
 \begin{center}
-\Huge \bf \color{White} Pipeline
+\Huge \bf \color{White} Approach
 \end{center}
 \vspace{10pt}
 \end{minipage}
@@ -130,7 +130,7 @@ scale (60 hrs/genome), and are inaccurate for high complexity regions (error is 
 \end{minipage}
 }
 \colorbox{White}{
-\begin{minipage}[t][500pt][t]{\linewidth}
+\begin{minipage}[t][800pt][t]{\linewidth}
 \begin{minipage}{0.3\linewidth}
 \LARGE
 \color{Blue}
@@ -171,47 +171,18 @@ Performance Over Different Datasets
 }
 
 \vspace{75pt}
-\colorbox{Blue}{
-\begin{minipage}[t]{\linewidth}
-\vspace{30pt}
-\begin{center}
-\Huge \bf \color{White} Local Assembly
-\end{center}
-\vspace{17pt}
-\end{minipage}
-}
-\colorbox{White}{
-\begin{minipage}[t][400pt][t]{1.0\linewidth}
-\vspace{20pt}
-\color{Blue}
-\LARGE We partition the high-complexity locations into regions and use local
-$k$-mer assembly to discover the most likely haplotype pair per region.
-%The $k$-mer assembly slices the reads in a region into $k$-mer edges (i.e.,
-%strings of length $k$), and the overlaps between edges form the $k$-mer graph.
-The likelihood of a pair of haplotypes $H_j$ and $H_{j'}$ is given by:
-\large $$ \mathcal{L}(H_j,H_{j'})=\prod_i\left[ \frac{P(r_i|H_j)}{2}+\frac{P(r_i|H_{j'})}{2} \right] $$
-\LARGE where $r_i$ is a read.
-We obtain $P(r|H)$ by a pairwise HMM alignment model.
-
-\small \hfill
-
-\pagebreak
-\end{minipage}
-}
-
-\vspace{75pt}
 \begin{minipage}{0.47\linewidth}
 \colorbox{Blue}{
 \begin{minipage}[t]{\linewidth}
 \vspace{30pt}
 \begin{center}
-\Huge \bf \color{White} Base SNP Calling
+\Huge \bf \color{White} Applications
 \end{center}
 \vspace{17pt}
 \end{minipage}
 }
 \colorbox{White}{
-\begin{minipage}[t][520pt][t]{\linewidth}
+\begin{minipage}[t][795pt][t]{\linewidth}
 \color{Blue}
 \vspace{20pt}
 \LARGE For calling SNPs on a single sample, we look at genome loci that show evidence
@@ -237,13 +208,13 @@ frequency and call a non-reference genotype if $g \in (1, 2)$ has the highest pr
 \begin{minipage}[t]{\linewidth}
 \vspace{30pt}
 \begin{center}
-\Huge \bf \color{White} Sufficient Statistics/Joint Calling
+\Huge \bf \color{White} Future Work
 \end{center}
 \vspace{17pt}
 \end{minipage}
 }
 \colorbox{White}{
-\begin{minipage}[t][520pt][t]{\linewidth}
+\begin{minipage}[t][795pt][t]{\linewidth}
 \color{Blue}
 \vspace{20pt}
 \LARGE For a few samples, one may look-up the MAF $\phi$ in a reference and compensate the
