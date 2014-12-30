@@ -78,7 +78,17 @@ morestring=[b]"}
 % of EIGHT authors. SIX appear on the 'first-page' (for formatting
 % reasons) and the remaining two appear in the \additionalauthors section.
 %
-\author{}
+\numberofauthors{1} 
+\author{\alignauthor Frank~Austin~Nothaft$^{*}$, Matt~Massie$^{*}$, Timothy~Danford$^{*,\ddagger}$, Carl~Yeksigian$^{\ddagger}$, Jey~Kottalam$^{*}$, Arun~Ahuja$^{\dagger}$, Zhao~Zhang$^{*}$, Uri~Laserson$^{\circ}$, Jeff~Hammerbacher$^{\dagger, \circ}$, Michael~Linderman$^{\star}$, Michael~Franklin$^{*}$, Anthony~D.~Joseph$^{*}$, David~A.~Patterson$^{*}$ \\
+$^{*}$\affaddr{Department of Electrical Engineering and Computer Sciences, University of California, Berkeley} \\
+$^{\dagger}$\affaddr{Carl Icahn School of Medicine, Mount Sinai} \\
+$^{\ddagger}$\affaddr{Genomebridge, Cambridge, MA} \\
+$^{\circ}$\affaddr{Cloudera, San Francisco, CA} \\
+\email{\{fnothaft, massie, tdanford, jey, zhaozhang, franklin, adj, pattrsn\}@berkeley.edu} \\
+\email{\{arun.ahuja, jeff.hammerbacher, michael.linderman\}@mssm.edu} \\
+\email{cyeksig@genomebridge.org} \\
+\email{laserson@cloudera.com}
+} 
 % You can go ahead and credit any number of authors here,
 % e.g. one 'row of three' or two rows (consisting of one row of three
 % and a second row of one, two or three).
@@ -106,7 +116,7 @@ lower cost. These trends are broadly impacting many scientific fields, including
 neuroscience. We can attack the problem caused by exponential data growth by applying horizontally scalable
 techniques from current analytics systems to accelerate scientific processing pipelines.
 
-In this paper, we demonstrate an example genomics pipeline that leverages open-source MapReduce
+In this paper, we demonstrate \texttt{ADAM}, an example genomics pipeline that leverages open-source MapReduce
 and columnar storage techniques to achieve a 22--$130\times$ speedup over current genomics
 pipelines, while reducing cost by 50\%. From building this system, we were able to distill a set of techniques for
 implementing scientific analyses efficiently using commodity ``big data'' systems. To demonstrate the
@@ -153,9 +163,9 @@ scientific compute/storage systems. While these systems have improved analysis c
 current implementations incur significant overheads imposed by the legacy formats and
 codebases that they use.
 
-In this paper, we demonstrate a genomic data processing system built using Apache Avro, Parquet, and
+In this paper, we demonstrate \texttt{ADAM}, a genomic data processing system built using Apache Avro, Parquet, and
 Spark~\cite{avro, parquet, zaharia10}, that achieves a 50$\times$ increase in throughput over the current best
-practice pipeline, while reducing analysis cost by 50\%. In the process of creating this
+practice pipeline, while reducing analysis cost by 50\%~\cite{massie13}. In the process of creating this
 system, we developed a ``narrow waisted'' layering model for building similar scientific analysis systems.
 This narrow waisted stack is inspired by the OSI model for networked systems~\cite{zimmermann80}.
 However, in our stack model, the data schema is the narrow waist that separates data processing from
@@ -280,8 +290,6 @@ Language~\cite{kozanitis14} have extended SQL to provide efficient query semanti
 coordinates. While GQL achieves performance improvements of up to 10$\times$ for certain algorithms,
 SQL is not an attractive language for many scientific domains, which make heavy use of user designed
 functions that may be cumbersome in SQL.
-
-\pagebreak
 
 \section{Characteristics of Scientific \\ Analysis Systems}
 \label{sec:principles}
@@ -772,8 +780,7 @@ Table~\ref{tab:overview} previews our performance versus current systems. The te
 high coverage \texttt{NA12878} full genome BAM file that is available from the 1000 Genomes
 project.\footnote{The file used for these experiments can be found on the
 1000 Genomes ftp site, \url{ftp.1000genomes.ebi.ac.uk} in directory 
-\texttt{/vol1/ftp/data/NA12878/high\_coverage\_alignment/} for NA12878. For anonymity, we refer to our system
-as \texttt{SparkG} in this table.} These tests have been run on the EC2 cloud, using the instance types listed in
+\texttt{/vol1/ftp/data/NA12878/high\_coverage\_alignment/} for NA12878.} These tests have been run on the EC2 cloud, using the instance types listed in
 Table~\ref{tab:machines}. We compute the cost of running each experiment by multiplying the number of instances
 used by the total wall time for the run and by the cost of running a single instance of that type for an hour, which is
 the process Amazon uses to charge customers.
@@ -788,36 +795,36 @@ the process Amazon uses to charge customers.
 \bf Software & \bf EC2 profile & \bf Time & \bf Cost \\
 \hline
 Picard & 1 \texttt{hs1.8xlarge} & 17h 44m & \$81.57 \\
-SparkG & 1 \texttt{hs1.8xlarge} & 8h 56m & \$41.09 \\
-SparkG & 128 \texttt{m2.4xlarge} & 9m & \$31.49 \\
+ADAM & 1 \texttt{hs1.8xlarge} & 8h 56m & \$41.09 \\
+ADAM & 128 \texttt{m2.4xlarge} & 9m & \$31.49 \\
 \hline
 \multicolumn{4}{c}{\bf \textit{Mark Duplicates}} \\
 \bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
 \hline
 Picard & 1 \texttt{hs1.8xlarge} & 20h 22m & \$93.68 \\
-SparkG & 1 \texttt{hs1.8xlarge} & 9h & \$41.40 \\
-SparkG & 128 \texttt{m2.4xlarge} & 19m & \$64.48 \\ 
+ADAM & 1 \texttt{hs1.8xlarge} & 9h & \$41.40 \\
+ADAM & 128 \texttt{m2.4xlarge} & 19m & \$64.48 \\ 
 \hline
 \multicolumn{4}{c}{\bf \textit{BQSR}} \\
 \bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
 \hline
 GATK & 1 \texttt{hs1.8xlarge} & 31h 18m & \$143.98 \\
-SparkG & 1 \texttt{hs1.8xlarge} & 34h & \$156.40 \\
-SparkG & 128 \texttt{m2.4xlarge} & 54m & \$188.93 \\
+ADAM & 1 \texttt{hs1.8xlarge} & 34h & \$156.40 \\
+ADAM & 128 \texttt{m2.4xlarge} & 54m & \$188.93 \\
 \hline
 \multicolumn{4}{c}{\bf \textit{INDEL Realignment}} \\
 \bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
 \hline
 GATK & 1 \texttt{hs1.8xlarge} & 42h 49m & \$196.88 \\
-SparkG & 1 \texttt{hs1.8xlarge} & 12h 58m & \$82.80 \\
-SparkG & 128 \texttt{m2.4xlarge} & 24m & \$83.97 \\
+ADAM & 1 \texttt{hs1.8xlarge} & 12h 58m & \$82.80 \\
+ADAM & 128 \texttt{m2.4xlarge} & 24m & \$83.97 \\
 \hline
 \multicolumn{4}{c}{\bf \textit{Flagstat}} \\
 \bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
 \hline
 SAMtools & 1 \texttt{hs1.8xlarge} & 25m 24s & \$1.95 \\
-SparkG & 1 \texttt{hs1.8xlarge} & 7m 4s & \$1.95 \\
-SparkG & 128 \texttt{cr1.8xlarge} & 1m 53s & \$5.35 \\
+ADAM & 1 \texttt{hs1.8xlarge} & 7m 4s & \$1.95 \\
+ADAM & 128 \texttt{cr1.8xlarge} & 1m 53s & \$5.35 \\
 \hline
 \end{tabular}
 \end{center}
@@ -846,7 +853,7 @@ chosen to represent a workstation. Network bandwidth is constant across all inst
 \end{table}
 
 As can be seen from these results, our pipeline is at best three times faster than current pipelines when running
-on a single node; at worst, we are approximately at parity. Additionally, \texttt{SparkG} achieves speedup that is
+on a single node; at worst, we are approximately at parity. Additionally, \texttt{ADAM} achieves speedup that is
 close to linear. This point is not clear from Table~\ref{tab:overview}, as we change instance types when also
 changing the number of instances used. Figure~\ref{fig:speedup} presents speedup plots for the NA12878 high
 coverage genome.
@@ -933,8 +940,6 @@ in terms of read performance and compression. We will not look extensively at wr
 data, write performance is not a bottleneck because our workflow computes a \emph{summarization} of a large
 dataset. As a result, our output dataset tends to be O(100 MB) while our input dataset is in the range of
 O(10 GB)--O(100GB).
-
-\pagebreak
 
 \subsubsection{Compression}
 \label{sec:compression}
@@ -1144,6 +1149,10 @@ strong scaling and a $2\times$ cost improvement. On the astronomy workload, we a
 2.8--$8.9\times$ speedup over the current best MPI-based solution at various scales. By applying our techniques
 to both astronomy and genomics, we have demonstrated that the techniques are applicable to both traditional
 matrix-based scientific computing, as well as novel scientific areas that have less structured data.
+
+\section{Acknowledgements}
+
+This research is supported in part by NSF CISE Expeditions Award CCF-1139158, LBNL Award 7076018, and DARPA XData Award FA8750-12-2-0331, NIH BD2K Award \linebreak 1-U54HG007990-01, NIH Cancer Cloud Pilot Award \linebreak HHSN261201400006C and gifts from Amazon Web Services, Google, SAP,  The Thomas and Stacey Siebel Foundation, Adatao, Adobe, Apple, Inc., Blue Goji, Bosch, C3Energy, Cisco, Cray, Cloudera, EMC, Ericsson, Facebook, Guavus, Huawei, Intel, Microsoft, NetApp, Pivotal, Samsung, Splunk, Virdata, VMware, and Yahoo!. Author FAN is supported by a National Science Foundation Graduate Research Fellowship.
 
 \balance
 
