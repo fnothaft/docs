@@ -1,4 +1,4 @@
-\documentclass[10pt]{report} %Sets the default text size to 11pt and class to article.
+\documentclass[masters]{ucbthesis} %Sets the default text size to 11pt and class to article.
 %------------------------Dimensions--------------------------------------------
 \topmargin=0.0in %length of margin at the top of the page (1 inch added by default)
 \oddsidemargin=0.0in %length of margin on sides for odd pages
@@ -28,55 +28,94 @@ morecomment=[s]{/*}{*/},
 morestring=[b]"}
 % Default settings for code listings
 \lstset{frame=tb,language=scala,aboveskip=3mm,belowskip=3mm,showstringspaces=false,columns=flexible,basicstyle={\small\ttfamily}}
+\usepackage{amsmath}
 
 \begin{document}
 
-\title{Scalable Systems for Genomic Analysis}
+\title{Scalable Genome Resequencing with \texttt{ADAM} and \texttt{avocado}}
 \author{Frank Austin Nothaft}
-\date{June 2014}
+\degreesemester{Spring}
+\degreeyear{2015}
+\degree{Master of Science}
+\chair{Professor David Patterson}
+\othermembers{Professor Anthony Joseph \\
+Assistant Professor Nir Yosef}
+\numberofmembers{3}
+% Previous degrees are no longer to be listed on the title page.
+% \prevdegrees{B.A. (University of Northern South Dakota at Hoople) 1978 \\
+%   M.S. (Ed's School of Quantum Mechanics and Muffler Repair) 1989}
+\field{Computer Science}
+% Designated Emphasis -- this is optional, and rare
+% \emphasis{Colloidal Telemetry}
+% This is optional, and rare
+% \jointinstitution{University of Western Maryland}
+% This is optional
+\campus{Berkeley}
+
 \maketitle
 
+\approvalpage
+\copyrightpage
+
 \begin{abstract}
-This is an abstract.
+The decreased cost of genome sequencing technologies has made genome sequencing a viable
+tool for clinical and populations genomics applications. The efficiency of genome sequencing has
+been further improved through large projects like the Human Genome Project, which have assembled
+reference genomes for medically/agriculturally important organisms. These reference quality assemblies
+have enabled the creation of \emph{genome resequencing pipelines}, where the genome of a single
+sample is computed by computing the \emph{difference} between a given sample and the reference
+genome for the organism.
+
+While sequencing cost has decreased by more than 10,000$\times$ since the Human Genome Project
+concluded in 2003, resequencing pipelines have struggled to keep pace with the growing volume of
+genomic data. These tools suffer from limited parallelism because they were not designed to use parallel
+or distributed computing techniques, and are limited by asymptotically inefficient algorithms. In this thesis,
+we introduce two tools, \texttt{ADAM} and \texttt{avocado}. \texttt{ADAM} provides an efficient framework
+for performing distributed genomic analyses, and \texttt{avocado} implements efficient local reassembly
+to discover genomic variants.
 \end{abstract}
 
 \tableofcontents
 
 \chapter{Introduction}
 
-Major improvements in scientific data acquisition techniques have increased scientific data storage and
-processing needs~\cite{cunningham14, schadt10}. In fields like
-neuroscience~\cite{freeman14} and genomics~\cite{stein10}, particle physics, and astronomy,
-scientists routinely perform analysis that use terabytes~(TB) to petabytes~(PB) of data.
-While traditional scientific computing platforms are optimized for fast linear algebra, many emerging
-domains make heavy use of statistical learning techniques and user defined functions~(UDFs) on top of
-semistructured data. This move towards statistical techniques has been driven by the increase in the
-amount of data available to scientists. At the same time, commercial needs have led to the development of
-horizontally-scalable analytics systems like MapReduce~\cite{dean04, dean08} and Spark~\cite{zaharia10}, as
-well as statistical systems that are accessible to non-experts, such as \texttt{Scikit-learn}~\cite{pedregosa11} and
-\texttt{MLI}~\cite{sparks13}.
+Since the completion of the Human Genome Project in 2003, genome sequencing costs have dropped
+by more than $10,000\times$~\cite{nhgri}. The rapidly declining cost of sequencing a single human
+genome has enabled large sequencing projects like the 1000 Genomes Project~\cite{siva08} and
+the Cancer Genome Atlas~(TCGA,~\cite{weinstein13}). As these large sequencing projects perform
+analysis that process terabytes~(TB) to petabytes~(PB) of genomic data, they have created a demand
+for genomic analysis tools that can efficiently process these scales of data~\cite{schadt10, stein10}.
 
-Since the amount of scientific data being generated is growing so quickly, there is a good opportunity to apply
-modern, horizontally scalable analytics systems to science. New scientific
+Over a similar time range, commercial needs led to the development of horizontally scalable analytics
+systems. The development and deployment of MapReduce at Google~\cite{dean04, dean08} spawned
+the development of a variety of distributed analytics tools and the Hadoop ecosystem~\cite{hadoop}.
+In turn, these systems led to other systems that provided a more fluent programming
+model~\cite{yu08} and higher performance~\cite{zaharia10}. The demand for these systems has
+been driven by the increase in the amount of data available to analysts, and has coincided with the
+development of statistical systems that are accessible to non-experts, such as
+\texttt{Scikit-learn}~\cite{pedregosa11} and \texttt{MLI}~\cite{sparks13}.
+
+With the rapid drop in the cost of sequencing a genome, and the accompanying growth in available data,
+there is a good opportunity to apply modern, horizontally scalable analytics systems to genomics. New
 projects such as the 100K for UK, which aims to sequence the genomes of 100,000 individuals in the
 United Kingdom~\cite{uk100k} will generate three to four \emph{orders of magnitude} more data than
 prior projects like the 1000 Genomes Project~\cite{siva08}. These projects use the current ``best
-practice'' genomic variant calling pipeline~\cite{auwera13}, which takes approximately 120 hours to
+practice'' genomic variant calling pipelines~\cite{auwera13}, which take approximately 120 hours to
 process a single, high-quality human genome using a single, beefy node~\cite{talwalkar14}. To address
 these challenges, scientists have started to apply computer systems techniques such as
 MapReduce~\cite{langmead09, mckenna10, schatz09} and columnar storage~\cite{fritz11} to custom
 scientific compute/storage systems. While these systems have improved analysis cost and performance,
-current implementations incur significant overheads imposed by the legacy formats and
-codebases that they use.
+current implementations incur significant overheads imposed by the legacy formats and codebases that
+they use.
 
-In this paper, we demonstrate a genomic data processing system built using Apache Avro, Parquet, and
-Spark~\cite{avro, parquet, zaharia10}, that achieves a 50$\times$ increase in throughput over the current best
-practice pipeline, while reducing analysis cost by 50\%. In the process of creating this
-system, we developed a ``narrow waisted'' layering model for building similar scientific analysis systems.
-This narrow waisted stack is inspired by the OSI model for networked systems~\cite{zimmermann80}.
-However, in our stack model, the data schema is the narrow waist that separates data processing from
-data storage. Our stack solves the following three problems that are common across current scientific
-analysis systems:
+In this thesis, we demonstrate \texttt{ADAM}, a genomic data processing and storage system built using
+Apache Avro, Parquet, and Spark~\cite{avro, parquet, zaharia10}, and \texttt{avocado}, a variant caller
+built on top of \texttt{ADAM}. This pipeline achieves a 50$\times$ increase in throughput over the current
+best practice pipeline, while reducing analysis cost by 50\%. In the process of creating \texttt{ADAM},
+we developed a ``narrow waisted'' layering model for building scientific analysis systems. This narrow
+waisted stack is inspired by the OSI model for networked systems~\cite{zimmermann80}. However, in our
+stack model, the data schema is the narrow waist that separates data processing from data storage. Our
+stack solves the following three problems that are common across current scientific analysis systems:
 
 \begin{enumerate}
 \item Current scientific systems improve the performance of common patterns by changing the data
@@ -89,26 +128,22 @@ targeted analyses.
 We solve these problems with the following techniques:
 
 \begin{enumerate}
-\item We make a schema the ``narrow waist'' of our stack and enforce data independence. We then
-devise algorithms for making common scientific processing patterns fast (e.g., coordinate-space joins,
-see~\S\ref{sec:coordinate-system-joins}).
+\item We make a schema the ``narrow waist'' of our stack to enforce data independence and
+devise algorithms for making common genomics patterns fast.
 \item To improve horizontal scalability, we use Parquet, a modern parallel columnar store based off of
 Dremel~\cite{melnik10} to push computation to the data.
 \item We use a denormalized schema to achieve O(1) parallel access to metadata.
 \end{enumerate}
 
+We introduce the stack model in figure~\ref{fig:stack-model} as a way to decompose scientific systems.
+
 \begin{figure}[h]
 \begin{center}
-\includegraphics[width=0.6\linewidth]{stack-model.pdf}
+\includegraphics[width=0.25\linewidth]{stack-model.pdf}
 \end{center}
 \caption{A Stack Model for Scientific Computing}
 \label{fig:stack-model}
 \end{figure}
-
-We introduce the stack model in figure~\ref{fig:stack-model} as a way to decompose scientific systems. In
-addition to the genomics application described above, we demonstrate the generality of this model by using it to
-implement a system for processing astronomy images, which achieves a 2.8--$8.9\times$ performance
-improvement over a state-of-the-art Message Passing Interface~(MPI) based pipeline.
 
 While the abstraction inversion used in genomics to accelerate common access patterns is undesirable
 because it violates data independence, we also find that it sacrifices performance and
@@ -119,8 +154,16 @@ processing stages that occur \emph{because} of the sorted access invariant. Our 
 these stages do not make use of sort order, and achieve higher performance \emph{while} eliminating
 these errors.
 
-We have made all of the software~(source code and executables) described in this paper available free
-of charge under the permissive Apache 2 open-source license.
+Additionally, this thesis describes the variant discovery and genotyping algorithms implemented in
+\texttt{avocado}. \texttt{avocado} introduces a new algorithm for local reassembly that eliminates the
+expensive step of realigning reads to candidate haplotypes. Additionally, \texttt{avocado} introduces
+a novel statistical model for genotyping that eliminates errors caused by statistical models that
+optimistically assume the local independence of genomic loci.
+
+All of the software~(source code and executables) described in this thesis are available free of charge
+under the permissive Apache 2 open-source license. \texttt{ADAM} is available at
+\url{https://www.github.com/bigdatagenomics/adam}, and \texttt{avocado} is available at
+\url{https://www.github.com/bigdatagenomics/avocado}.
 
 \section{Background}
 \label{sec:background}
@@ -197,9 +240,7 @@ coordinates. While GQL achieves performance improvements of up to 10$\times$ for
 SQL is not an attractive language for many scientific domains, which make heavy use of user designed
 functions that may be cumbersome in SQL.
 
-\pagebreak
-
-\section{Characteristics of Scientific \\ Analysis Systems}
+\section{Characteristics of Scientific Analysis Systems}
 \label{sec:principles}
 
 Most prior work on scientific computing has been focused on linear algebra and other problems that can
@@ -373,7 +414,21 @@ allow for interactive/exploratory analysis through both Scala and Python. Throug
 we lay out in the next section and the performance optimizations we introduce
 in~\S\ref{sec:loading-remote-data}, we make our system useful for warehousing scientific data.
 
-\chapter{Read Storage and Preprocessing}
+\section{Related Work}
+\label{sec:related-work}
+
+Similar to what we propose, the \texttt{Thunder} system was developed as a novel MapReduce-based system for
+processing terabytes of neuroscience imaging data~\cite{freeman14}. \texttt{Thunder} performs a largely statistical
+workload, and the significant tasks in terms of execution time are clustering and regression. The system is
+constructed using Spark and Python and is designed to process datasets larger than 4 TB, and leverages
+significant functionality from the MLI/MLLib libraries~\cite{sparks13}. Similar to our system, they are able to use
+Spark's in-memory caching to amortize load time across several pipeline stages. Additionally, they use Spark's
+filtering primitives to allow scientists to cut problems into subproblems. This is a common trend across scientific
+analyses, and is one of the reasons that we advocate for the use of a columnar store with efficient predicate
+pushdown. \texttt{Thunder} is an example pipeline that demonstrates the power of using horizontally scalable
+systems to enable novel scientific analyses.
+
+\chapter{Genomic Data Storage and Preprocessing Using \texttt{ADAM}}
 
 To validate our architectural choices, we have implemented pipelines for processing short read genomic
 data and astronomy image processing. Both of these pipelines are implemented using
@@ -388,7 +443,7 @@ following technologies to implement both of our applications:
 \begin{itemize}
 \item \textbf{Physical Storage:} We have designed our system to run on top of local or distributed
 drives, as well as block stores.
-\item \textbf{Data Distribution:} Our system is designed to operate on top of the Hadoop Distributed File \linebreak
+\item \textbf{Data Distribution:} Our system is designed to operate on top of the Hadoop Distributed File
 System~(HDFS), or to perform it's own data distribution over HTTP or by reaching out to an Amazon
 S3 bucket. We describe these optimizations in~\S\ref{sec:loading-remote-data}.
 \item \textbf{Materialized Data:} We store data using the open source Parquet columnar store.
@@ -405,7 +460,7 @@ astronomy application.
 In the remainder of this section, we describe the two applications that we have implemented, and the
 optimizations we have made to improve the horizontal scalability of these algorithms.
 
-\subsection{Genomics Pipeline}
+\section{Pipeline Structure}
 \label{sec:genomics-pipeline}
 
 Contemporary genomics has been revolutionized by ``next generation'' sequencing
@@ -456,7 +511,42 @@ end-to-end~\cite{talwalkar14}. Recent projects have achieved 5--$10\times$ impro
 and variant calling performance~\cite{rimmer14, zaharia11}, which makes the pre-processing stages
 the performance bottleneck. Our experimental results have corroborated this, as the four pre-processing stages
 take over 110 hours to run on a clinical quality human genome when run on an Amazon EC2 \texttt{cr1.8xlarge}
-machine. We have focused on implementing the four most-commonly used pre-processing stages, as well as
+machine. 
+
+For current implementations of these read processing steps, performance is limited by disk
+bandwidth~\cite{diao15}. This bottleneck exists because the operations read in a SAM/BAM file, perform
+a small amount of processing, and write the data to disk as a new SAM/BAM file. We achieve a
+performance bump by performing our processing iteratively in memory. The four read processing stages
+can then be chained together, eliminating three long writes to disk and an additional three long reads
+from disk. Additionally, by rethinking the design of our algorithms, we are able to reduce overhead in
+several other ways:
+
+\begin{enumerate}
+\item Current algorithms require the reference genome to be present on all nodes. This assembly is then used to
+look up the reference sequence that overlaps all reads. The reference genome is several gigabytes in
+size, and performing a lookup in the reference genome can be costly due to its size. Instead, we leverage
+the \texttt{mismatchingPositions} field in our schema to embed information about the reference in each read. This
+optimization allows us to avoid broadcasting the reference, and provides O(1) lookup.
+\item Shared-memory genomics applications tend to be impacted significantly by false sharing of data
+structures~\cite{zaharia11}. Instead of having data structures that are modified in parallel, we
+restructure our algorithms so that we only touch data structures from a single thread, and then merge
+structures in a reduce phase. The elimination of sharing improves the performance of covariate calculation during
+BQSR and the target generation phase of local realignment.
+\item In a na\"{i}ve implementation, the local realignment and duplicate marking tasks can suffer from
+stragglers. The stragglers occur due to a large amount of reads that either do not associate to a realignment
+target, or that are unaligned. We pay special attention to these cases by manually randomizing the
+partitioning for these reads. This resolves load imbalance and mitigates stragglers.
+\item For the Flagstat command, we are able to project a limited subset of fields. Flagstat touches fewer
+than 10 fields, which account for less than 10\% of space on disk. We discuss the performance
+implications of this further in~\S\ref{sec:column-store-perf}.
+\end{enumerate}
+
+These techniques allow us to achieve a $>50\times$ performance improvement over current tools, and
+scalability beyond 128 machines. We perform a detailed performance review
+in~\S\ref{sec:genomics-performance}.
+
+\section{Read Preprocessing Algorithms}
+We have focused on implementing the four most-commonly used pre-processing stages, as well as
 \texttt{flagstat}, a command that is used at the end of pre-processing for validating the quality of an
 aligned/pre-processed sample. In the remainder of this section, we describe the stages that we have implemented,
 and the techniques we have used to improve performance and accuracy.
@@ -510,44 +600,569 @@ this discrepancy, we have determined that this is due to an error in the GATK, w
 mishandled if the two reads in the pair overlap.
 \end{enumerate}
 
-For current implementations of these read processing steps, performance is limited by disk
-bandwidth~\cite{diao15}. This bottleneck exists because the operations read in a SAM/BAM file, perform
-a small amount of processing, and write the data to disk as a new SAM/BAM file. We achieve a
-performance bump by performing our processing iteratively in memory. The four read processing stages
-can then be chained together, eliminating three long writes to disk and an additional three long reads
-from disk. Additionally, by rethinking the design of our algorithms, we are able to reduce overhead in
-several other ways:
+\subsection{BQSR Implementation}
+\label{sec:bqsr-implementation}
+
+Base Quality Score Recalibration is an important early data-normalization step in the bioinformatics pipeline, and after alignment
+it is the next most costliest step. Since quality score recalibration can vastly improve the accuracy of variant calls~---~particularly for
+pileup-based callers like the UnifiedGenotyper or Samtools mpileup. Because of this, it is likely to remain a part of bioinformatics pipelines.
+
+BQSR is also an interesting algorithm in that it doesn't neatly fit into the framework of map reduce (the design philosophy of the GATK).
+Instead it is an embarrassingly parallelizable aggregate. The ADAM implementation is:
+
+\begin{lstlisting}
+def computeTable(rdd: Records, dbsnp: Mask) :
+  RecalTable = {
+  
+  rdd.aggregate(new RecalTable)(
+    (table, read) => { table + read },
+    (table, table) => { table ++ table })
+}
+\end{lstlisting}
+
+The ADAM implementation of BQSR utilizes the MD field to identify bases in the read that mismatch the reference. This enables
+base quality score recalibration to be entirely reference-free, avoiding the need to have a central Fasta store for the human
+reference. However, dbSNP is still needed to mask out positions that are polymorphic (otherwise errors due to real variation will
+severely bias the error rate estimates).
+
+\subsection{Indel Realignment Implementation}
+\label{sec:indel-realignment-implementation}
+
+Indel realignment is implemented as a two step process. In the first step, we identify regions that have evidence of an insertion or
+deletion. After these regions are identified, we generate candidate haplotypes, and realign reads to minimize the overall quantity
+of mismatches in the region. The quality of mismatches near an indel serves as a good proxy for the local quality of an alignment.
+This is due to the nature of indel alignment errors: when an indel is misaligned, this causes a temporary shift in the read sequence
+against the reference sequence. This shift manifests as a run of several bases with mismatches due to their incorrect alignment.
+
+\subsubsection{Realignment Target Identification}
+\label{sec:realignment-target-identification}
+
+Realignment target identification is done by converting our reads into reference oriented ``rods''\footnote{Also known as pileups: a
+group of bases that are all aligned to a specific locus on the reference.}. At each locus where there is evidence of an insertion or a
+deletion, we create a \emph{target} marker. We also create a target if there is evidence of a mismatch. These targets contain the indel
+range or mismatch positions on the reference, and the range on the reference covered by reads that overlap these sites.
+
+After an initial set of targets are placed, we merge targets together. This is necessary, as during the read realignment process, all
+reads can only be realigned once. This necessitates that all reads are members of either one or zero realignment targets. Practically,
+this means that over the set of all realignment targets, no two targets overlap.
+
+The core of our target identification algorithm can be found below.
+
+\begin{lstlisting}
+def findTargets (reads: RDD[ADAMRecord]):
+    TreeSet[IndelRealignmentTarget] = {
+
+  // convert reads to rods
+  val processor = new Read2PileupProcessor
+  val rods: RDD[Seq[ADAMPileup]] = reads.flatMap(
+      processor.readToPileups(_))
+    .groupBy(_.getPosition).map(_._2)
+
+  // map and merge targets
+  val targetSet = rods.map(
+      IndelRealignmentTarget(_))
+    .filter(!_.isEmpty)
+    .keyBy(_.getReadRange.start)
+    .sortByKey()
+    .map(new TreeSet()(TargetOrdering) + _._2)
+    .fold(new TreeSet()(TargetOrdering))(
+      joinTargets)
+
+  targetSet
+}
+\end{lstlisting}
+
+To generate the initial unmerged set of targets, we rely on the ADAM toolkit's pileup generation utilities~(see~\-S\ref{sec:reference-oriented-storage}).
+We generate realignment targets for all pileups, even if they do not have indel or mismatch evidence. We eliminate pileups that do not contain indels
+or mismatches with a filtering stage that eliminates empty targets. To merge overlapping targets, we map all of the targets into a sorted set. This set
+is implemented using Red-Black trees. This allows for efficient merges, which are implemented with the tail-call recursive \emph{joinTargets} function:
+
+\begin{lstlisting}
+@tailrec def joinTargets (                                                                                                                                                               
+  first: TreeSet[IndelRealignmentTarget],                                                                                                                                                                
+  second: TreeSet[IndelRealignmentTarget]):
+    TreeSet[IndelRealignmentTarget] = {
+
+  if (!TargetOrdering.overlap(first.last,
+      second.head)) {
+    first.union(second)
+  } else {
+    joinTargets (first - first.last +
+      first.last.merge(second.head),
+      second - second.head)
+  }
+}
+\end{lstlisting}
+
+As we are performing a fold on an RDD which is sorted by the starting position of the target on the reference sequence, we know a priori that the elements
+in the ``first'' set will always be ordered earlier relative to the elements in the ``second'' set. However, there can still be overlap between the two sets, as this
+ordering does not account for the end positions of the targets. If there is overlap between the last target in the ``first'' set and the first target in the ``second''
+set, we merge these two elements, and try to merge the two sets again.
+
+\subsubsection{Candidate Generation and Realignment}
+\label{sec:candidate-generation-realignment}
+
+Candidate generation is a several step process:
 
 \begin{enumerate}
-\item Current algorithms require the reference genome to be present on all nodes. This assembly is then used to
-look up the reference sequence that overlaps all reads. The reference genome is several gigabytes in
-size, and performing a lookup in the reference genome can be costly due to its size. Instead, we leverage
-the \texttt{mismatchingPositions} field in our schema to embed information about the reference in each read. This
-optimization allows us to avoid broadcasting the reference, and provides O(1) lookup.
-\item Shared-memory genomics applications tend to be impacted significantly by false sharing of data
-structures~\cite{zaharia11}. Instead of having data structures that are modified in parallel, we
-restructure our algorithms so that we only touch data structures from a single thread, and then merge
-structures in a reduce phase. The elimination of sharing improves the performance of covariate calculation during
-BQSR and the target generation phase of local realignment.
-\item In a na\"{i}ve implementation, the local realignment and duplicate marking tasks can suffer from
-stragglers. The stragglers occur due to a large amount of reads that either do not associate to a realignment
-target, or that are unaligned. We pay special attention to these cases by manually randomizing the
-partitioning for these reads. This resolves load imbalance and mitigates stragglers.
-\item For the Flagstat command, we are able to project a limited subset of fields. Flagstat touches fewer
-than 10 fields, which account for less than 10\% of space on disk. We discuss the performance
-implications of this further in~\S\ref{sec:column-store-perf}.
+\item Realignment targets must ``collect'' the reads that they contain.
+\item For each realignment group, we must generate a new set of candidate haplotype alignments.
+\item Then, these candidate alignments must be tested and compared to the current reference haplotype.
+\item If a candidate haplotype is sufficiently better than the reference, reads are realigned.
 \end{enumerate}
 
-These techniques allow us to achieve a $>50\times$ performance improvement over current tools, and
-scalability beyond 128 machines. We perform a detailed performance review
-in~\S\ref{sec:genomics-performance}.
+The mapping of reads to realignment targets is done through a tail recursive function that performs a binary search across the sorted set of indel alignment targets:
 
-\chapter{Variant Calling}
+\begin{lstlisting}
+@tailrec def mapToTarget (read: ADAMRecord,                                                                                                                                                        
+  targets: TreeSet[IndelRealignmentTarget]):
+    IndelRealignmentTarget = {
+
+  if (targets.size == 1) {
+    if (TargetOrdering.equals (targets.head, read)) {
+      targets.head
+    } else {
+      IndelRealignmentTarget.emptyTarget
+    }
+  } else {
+    val (head, tail) = targets.splitAt(
+      targets.size / 2)
+    val reducedSet = if (TargetOrdering.lt(
+        tail.head, read)) {
+      head
+    } else {
+      tail
+    }
+    mapToTarget (read, reducedSet)
+  }
+}
+\end{lstlisting}
+
+This function is applied as a groupBy against all reads. This means that the function is mapped to the RDD that contains all reads. A new RDD is generated where all
+reads that returned the same indel realignment target are grouped together into a list.
+
+Once all reads are grouped, we identify new candidate alignments. However, before we do this, we left align all indels. For many reads that show evidence of a single
+indel, this can eliminate mismatches that occur after the indel. This involves shifting the indel location to the ``left''\footnote{To a lower position against the reference
+sequence.} by the length of the indel. After this, if the read still shows mismatches, we generate a new consensus alignment. This is done with the
+\emph{generateAlternateConsensus} function, which distills the indel evidence out from the read.
+
+\begin{lstlisting}
+def generateAlternateConsensus (sequence: String,
+  start: Long, cigar: Cigar): Option[Consensus] = {
+  var readPos = 0
+  var referencePos = start
+
+  if (cigar.getCigarElements.filter(elem =>
+        elem.getOperator == CigarOperator.I ||
+        elem.getOperator == CigarOperator.D
+      ).length == 1) {
+    cigar.getCigarElements.foreach(cigarElement =>
+      { cigarElement.getOperator match {
+        case CigarOperator.I => return Some(
+          new Consensus(sequence.substring(readPos,
+            readPos + cigarElement.getLength),
+            referencePos to referencePos))
+        case CigarOperator.D => return Some(
+          new Consensus("",
+          referencePos until (referencePos +
+            cigarElement.getLength)))
+        case _ => {
+          if (cigarElement.getOperator
+                .consumesReadBases &&
+              cigarElement.getOperator
+                .consumesReferenceBases
+              ) {
+            readPos += cigarElement.getLength
+            referencePos += cigarElement.getLength
+          } else {
+            return None
+          }
+        }
+      }
+    })
+    None
+  } else {
+    None
+  }
+}
+\end{lstlisting}
+
+From these consensuses, we generate new haplotypes by inserting the indel consensus into the reference sequence. The quality of each haplotype is measured
+by sliding each read across the new haplotype, using \emph{mismatch quality}. Mismatch quality is defined for a given alignment by the sum of the quality scores
+of all bases that mismatch against the current alignment. While sliding each read across the new haplotype, we aggregate the mismatch quality scores. We take
+the minimum of all of these scores and the mismatch quality of the original alignment. This sweep is performed using the \emph{sweepReadOverReferenceForQuality}
+function:
+
+\begin{lstlisting}
+def sweepReadOverReferenceForQuality (
+    read: String,reference: String,
+    qualities: Seq[Int]): (Int, Int) = {
+  var qualityScores = List[(Int, Int)]()
+
+  for (i <- 0 until (reference.length -
+      read.length)) {
+    qualityScores = (
+      sumMismatchQualityIgnoreCigar(
+        read,
+        reference.substring(i, i + read.length),
+          qualities),
+        i) :: qualityScores
+  }
+
+  qualityScores.reduce ((p1: (Int, Int),
+      p2: (Int, Int)) => {
+    if (p1._1 < p2._1) {
+      p1
+    } else {
+      p2
+    }
+  })
+}
+\end{lstlisting}
+
+If the consensus with the lowest mismatch quality score has a log-odds ratio~(LOD) that is greater than $5.0$ with respect to the reference, we realign the reads.
+This is done by recomputing the cigar and MDTag for each new alignment. Realigned reads have their mapping quality score increased by 10 in the Phred scale.
+
+\subsection{Duplicate Marking Implementation}
+\label{sec:duplicate-marking-implementation}
+
+The following ADAM code, reformatted for this report, expresses the algorithm succinctly in 42 lines of Scala code.
+
+\begin{lstlisting}
+for (((leftPos, library), readsByLeftPos) <- 
+    rdd.adamSingleReadBuckets()
+       .keyBy(ReferencePositionPair(_))
+       .groupBy(leftPositionAndLibrary);
+
+buckets <- {
+
+leftPos match {
+ // These are all unmapped reads. 
+ // There is no way to determine if
+ // they are duplicates
+ case None =>
+    markReads(readsByLeftPos.unzip._2,
+      areDups = false)
+ // These reads have their left position mapped
+ case Some(leftPosWithOrientation) =>
+   // Group the reads by their right position
+   val readsByRightPos = readsByLeftPos.groupBy(
+     rightPosition)
+   // Find any reads with no right position
+   val fragments = readsByRightPos.get(None)
+   // Check if we have any pairs
+   // (reads with a right position)
+   val hasPairs = readsByRightPos.keys
+     .exists(_.isDefined)
+   if (hasPairs) {
+     // Since we have pairs,
+     // mark all fragments as duplicates
+     val processedFrags = if (fragments.isDefined
+     ) {
+       markReads(fragments.get.unzip._2,
+         areDups = true)
+     } else {
+       Seq.empty
+     }
+     val processedPairs = 
+         for (buckets <- (readsByRightPos - None)
+           .values;
+             processedPair <- 
+                scoreAndMarkReads(buckets.unzip._2)) 
+        yield processedPair
+     processedPairs ++ processedFrags
+   } else if (fragments.isDefined) {
+     // No pairs. Score the fragments.
+     scoreAndMarkReads(fragments.get.unzip._2)
+   } else {
+     Seq.empty
+   }
+};
+read <- buckets.allReads) yield read
+\end{lstlisting}
+
+For lines 1-4, all reads with the same record group name and read name are collected 
+into buckets. These buckets contain the read and optional mate or secondary alignments.
+Each read bucket is then keyed by 5 $'$ position and orientation and grouped together by
+left (lowest coordinate) position, orientation and library name.
+
+For lines 8-41, we processed each read bucket with a common left 5$'$ position. Unmapped
+reads are never marked duplicate as their position is not known. Mapped reads with a common
+left position are separated into paired reads and fragments. Fragments, in this context,
+are reads that have no mate or should have a mate but it doesn't exist.
+
+If there are pairs in a group, all fragments are marked duplicates and the paired reads are grouped
+by their right 5$'$ position. All paired reads that have a common right and left 5$'$
+position are scored and all but the highest scoring read is marked a duplicate.
+
+If there are no pairs in a group, all fragments are scored and all but the highest scoring fragment
+are marked duplicates.
+
+\chapter{Variant Calling via Reassembly Using \texttt{avocado}}
+
+\section{Reference Threaded \emph{de Bruijn} Graphs}
+
+The local assembler in \texttt{avocado} is a de bruijn graph based assembler. The assembler creates
+a ``reference threaded'' assembly. In this approach, we label $k$-mers that appear in the
+reference genome with their reference position. The advantage of this approach is that we can
+determine whether a $k$-mer in the graph can be mapped to the reference genome or if it
+represents a divergence from the reference (an alternate allele). Additionally, for bubbles
+off of reference arcs, we can identify the exact allele represented by the bubble without
+needing to enumerate haplotypes which we then align against the reference sequence. This
+approach has the following benefits:
+
+\begin{itemize}
+\item For a region that contains $n$ variants, we only need to evaluate $n$ variant arcs, as
+opposed to $n^2$ variant haplotypes.
+\item We can emit statistics for computing genotype likelihoods directly from the de bruijn
+graph. This is more efficient than emitting all haplotypes, scoring haplotype pairs, and
+then realigning reads to the top scoring haplotype pair.
+\end{itemize}
+
+\subsection{Formulation}
+
+First, we start with the traditional formulation of a \emph{de bruijn} graph for sequence assembly:
+
+\begin{itemize}
+\item Each $k$-mer $s$ represents a $k$-length string, with a $k - 1$ length prefix given by
+$\text{prefix}(s)$ and a length 1 suffix given by $\text{suffix}(s)$.
+\item We place a directed edge ($\rightarrow$) from $k$-mer $s_1$ to $k$-mer $s_2$ if
+$\text{prefix}(s_1)^{\{1, k - 2\}} + \text{suffix}(s_1) = \text{prefix}(s_2)$.
+\end{itemize}
+
+Additionally, we add the following:
+
+\begin{itemize}
+\item There is a set $\mathcal{R}$ which contains all of the $k$-mers that are in the reference
+genome that covers a certain region.
+\item If $k$-mer $s \in \mathcal{R}$, then the output of function $\text{refPos}(s)$ is defined.
+This function provides us with the integer position of $s$ in the reference genome.
+\item For two $k$-mers $s_1, s_2 \in \mathcal{R}$, we can define a distance function
+$\text{distance}(s_1, s_2) = | \text{refPos}(s_1) - \text{refPos}(s_2) |$.
+\end{itemize}
+
+As stated above, this condition assumes that there is a 1-dimensional reference (e.g., a single
+assembled reference). In reality, genomic assemblies provide a 2-dimensional space, where the
+second dimension is defined by the chromosome that we are on. In practice, we will reassemble
+reads from a region which is restricted to a single chromosome.
+
+To discover alternate alleles from this graph without performing a search for all haplotypes,
+we need to address the $k$-mers that are not in $\mathcal{R}$. These can be processed with
+path-based methods. First, let us classify paths into two types:
+
+\begin{itemize}
+\item \textbf{Spurs:} A spur is a set $S$ of $n$ $k$-mers $\{s_1, \dots, s_n\}$ where either $s_1$ or
+$s_n \in \mathcal{R}$ and all other $k$-mers are $\not\in \mathcal{R}$, and where
+$s_i \rightarrow s_{i + 1} \forall i \in \{1, \dots, n - 1\}$. If $s_1 \in \mathcal{R}$,
+then $s_n$ must not have a successor. Alternatively, if $s_n \in \mathcal{R}$, than $s_1$ is
+required to not have a predecessor.
+\item \textbf{Bubbles:} A bubble is a set $S$ of $n$ $k$-mers $\{s_1, \dots, s_n\}$ where both
+$s_1$ and $s_n \in \mathcal{R}$ and all other $k$-mers are $\not\in \mathcal{R}$, and where
+$s_i \rightarrow s_{i + 1} \forall i \in \{1, \dots, n - 1\}$.
+\end{itemize}
+
+Currently, we do not process spurs. Spurs typically result from sequencing errors near the
+start or end of a read. Additionally, given a spur, we cannot put a constraint on what sort of
+edit it may be from the reference.
+
+However, it is easy to define constraints for bubbles so that we can determine what variant
+has been seen at that site. For many variants, we can even canonically determine the variant.
+First, let us make three definitions:
+
+\begin{itemize}
+\item The \emph{bubble length} is the number of non-reference $k$-mers that appear in the bubble.
+\item The \emph{gap length} is the distance between $s_1$ and $s_n$ in the reference genome. Formally,
+$l_{\text{gap}} = \text{distance}(s_1, s_n)$.
+\item The \emph{allele length} is the absolute difference between the bubble length and the gap length.
+\end{itemize}
+
+With these definitions, we can define the allelic composition of bubbles as follows:
+
+\begin{itemize}
+\item A bubble contains a single/multiple nucleotide variant (S/MNV) if $l_{\text{allele}} = 0$.
+\item A bubble contains a canonical insert if $l_{\text{bubble}} = l_{\text{gap}} + l_{\text{allele}}$.
+\item A bubble contains a canonical deletion if $l_{\text{bubble}} < k$, where $k$ is the $k$-mer size,
+and $\text{distance}(s_1, s_n) > 0$.
+\item If a bubble does not meet any of the above constraints, it is a non-canonical indel.
+\end{itemize}
+
+We discuss how to process these alleles in \S\ref{sec:reassembly-implementation}. It
+is also worth noting that this approach can be used for detecting structural variants. A simple
+extension involves jointly processing multiple reference regions (e.g., $\mathcal{R}_1$ and
+$\mathcal{R}_2$). If $s_1$ and $s_n$ are members of different reference sets, then this bubble
+identifies a possible structural variant breakpoint. While this section has just provided intuition about the
+canonical representation of alleles from a de bruijn graph, we provide full proofs
+in~\S\ref{sec:canonical-proofs} at the end of this chapter.
+
+\subsection{Reassembly Implementation}
+\label{sec:reassembly-implementation}
+
+Reassembly is performed as a two step process. In the first step, we build a reference threaded
+de bruijn graph using the sequence of reference region $\mathcal{R}$ and the reads from sample $n$.
+Once we have built a reference threaded de bruijn graph, we then elaborate the graph and identify
+the allelic content of all bubbles.
+
+\subsubsection{Graph Construction}
+\label{sec:graph-construction}
+
+A reference threaded de bruijn graph is constructed per sample. We start by extracting the
+reference $k$-mers. This algorithm---\texttt{addReferenceKmers}---is tail recursive.
+
+\begin{algorithm}
+\caption{Incorporate Reference \emph{k}-mers: \texttt{addReferenceKmers(iter, pos, lastKmer, kmerMap)}}
+\label{alg:build-reference-kmers}
+\begin{algorithmic}
+\STATE $iter \leftarrow$ iterator across $k$-mer strings from the reference
+\STATE $pos \leftarrow$ current reference position
+\STATE $lastKmer \leftarrow$ the last $k$-mer seen
+\STATE $kmerMap \leftarrow$ a map from $k$-mer strings $\rightarrow$ objects
+\IF{$iter \ne \emptyset$}
+\STATE $ks \leftarrow iter$.next
+\IF{$lastKmer \ne \emptyset$}
+\STATE $newKmer \leftarrow $ \texttt{Kmer(} $ks$, $pos$, $predecessors = \{lastKmer\}$\texttt{)}
+\STATE $lastKmer$.$successors \leftarrow lastKmer$.$successors + newKmer$
+\ELSE
+\STATE $newKmer \leftarrow $ \texttt{Kmer(} $ks$, $pos$\texttt{)}
+\ENDIF
+\STATE $newPos \leftarrow pos + 1$
+\STATE $kmerMap \leftarrow kmerMap + (ks, newKmer)$
+\STATE \texttt{addReferenceKmers(} $iter$, $newPos$, $newKmer$, $kmerMap$\texttt{)}
+\ENDIF
+\end{algorithmic}
+\end{algorithm}
+
+We use a similar algorithm for processing the $k$-mers from the read dataset. However, this
+algorithm filters out $k$-mers that contain \texttt{N}s, checks to see whether the $k$-mer
+sequence has been seen before, and also stores information about the mapping quality, base
+quality, and read strand.
+
+\subsubsection{Graph Elaboration}
+\label{sec:graph-elaboration}
+
+To elaborate the graph (the \texttt{toObservations} class method of a \texttt{KmerGraph}), we rely on a
+tail-recursive state machine that pushes state onto a stack at branch points. Our machine
+has the following states:
+
+\begin{itemize}
+\item \texttt{R}, \texttt{Reference}: We are on a run of $k$-mers that are mapped to a position in $\mathcal{R}$.
+\item \texttt{A}, \texttt{Allele}: We are on a run of $k$-mers that have diverged off of the reference. We have a
+divergence start point, but have not connected back to the reference yet. This could be either
+a bubble or a spur. 
+\item \texttt{C}, \texttt{ClosedAllele}: We were on a run of $k$-mers that had diverged off of the reference, but
+have just reconnected back to the reference and now know the start and end positions of the bubble,
+as well as the alleleic content of the bubble.
+\end{itemize}
+
+The following state transitions are allowed:
+
+\begin{itemize}
+\item \texttt{R} $\rightarrow$ \texttt{R}: We are continuing along a reference run.
+\item \texttt{R} $\rightarrow$ \texttt{A}: We were at a reference mapped $k$-mer, and have seen a branch to a
+non-reference $k$-mer.
+\item \texttt{A} $\rightarrow$ \texttt{A}: We are continuing along a non-reference run.
+\item \texttt{A} $\rightarrow$ \texttt{C}: We were on a non-reference run, and have just connected back to a
+reference $k$-mer.
+\item \texttt{C} $\rightarrow$ \texttt{R}: We have just closed out an allele, and are back at a reference position.
+\end{itemize}
+
+We initialize the state machine to `R` with the first $k$-mer from $\mathcal{R}$. Per $k$-mer,
+we evaluate the state transition per successor $k$-mer. If the successor set contains a single
+$k$-mer, we continue to that state. If the successor set contains multiple $k$-mers, we choose
+a successor state to transition to, and push the branch context of all other successor states
+onto our stack. If the successor set is empty, we pop a branch context off of the stack, and
+switch to that context. We stop once we reach a $k$-mer whose successor set is empty, and our
+branch context stack is empty.
+
+The implementation of the \texttt{R} and \texttt{A} states are trivial and largely amount to bookkeeping.
+The \texttt{C} state though, is more complex. First, let us discuss how to canonicalize the canonical
+alleles:
+
+\begin{itemize}
+\item For a canonical S/MNV bubble, the SNV sites can be determined by calculating the Hamming distance
+of the bubble sequence versus the reference sequence. Evidence for SNVs exist at any site
+where an edit is made.
+\item For a canonical insert, sequence is inserted $k - 1$ bases from the bubble start. There will be
+$l_{\text{allele}}$ bases inserted. We can derive the inserted bases by computing the bubble
+sequence and trimming the first $k - 1$ bases.
+\item For a canonical deletion, we guarantee that the bubble sequence is derived from the start and
+end of the reference sequences that the bubble overlaps. To canonicalize this, we can perform
+a greedy match of the bubble sequence, where we match bases to the front of the deletion until
+we see a mismatch, and then align all remaining bases to the end of the deletion.
+\end{itemize}
+
+For a complex variant, we take the bubble sequence and align it against the reference sequence
+from the bubble gap using a pairwise HMM~\cite{durbin98}. From the HMM alignment, we
+emit observations according to the observed alignment states. The HMM uses an infinite padding
+penalty to ensure that the ends of the sequences are matched.
+
+\section{Statistical Models for Genotyping}
+\label{sec:statistical-genotyping}
+
+Given a set of observed alleles and reads spanning these alleles, we can put together a graph. Each
+allele is given a node. We connect two nodes with an edge if and only if a read is observed to cover both
+nodes. In Figure~\ref{fig:alleles}, we present a sequence where the reference is
+\texttt{ACCCTATCGCTCACA}. Evidence of a \texttt{C} $\rightarrow$ \texttt{G} single nucleotide
+polymorphism~(SNP) is present at position 3, and evidence of a deletion of bases 8--9 (\texttt{GC}) is
+present.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.4\linewidth]{graphs/alleles.pdf}
+\end{center}
+\caption{Allele Graph}
+\label{fig:alleles}
+\end{figure}
+
+Between two nodes, we can define a conditional probability $P(x = X | y = Y)$, which is the probability that
+node $x$ has copy number $X$ and node $y$ has copy number $Y$:
+
+\begin{equation}
+\label{eq:cond-prob}
+P(x = X | y = Y) = \frac{1}{Y^k}\prod_{i = 1}^{j} ( X P_i + (Y - X) (1 - P_i)) \prod_{i = j + 1}^{k} ((Y - X) P_i + X P_i )
+\end{equation}
+
+In equation~\eqref{eq:cond-prob}, we have the following terms:
+
+\begin{table}[h]
+\begin{center}
+\caption{Equation~\eqref{eq:cond-prob} Terms}
+\label{tab:cond-prob-terms}
+\begin{tabular}{| c | l |}
+\hline
+Term & Definition \\
+\hline
+\hline
+$X$ & The copy number of the $x$ allele. \\
+$Y$ & The copy number of the $y$ allele. \\
+$k$ & The number of reads in the $y$ allele that span \emph{any} allele in the $x$ direction. \\
+$i$ & Reads $\in k$ that support a transition from $y \rightarrow x$. \\
+$j$ & Reads $\in k$ that do \emph{not} support a transition from $y \rightarrow x$. \\
+$P_i$ & The probability that read $i$ supports a transition from $y \rightarrow x$. \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+While equation~\eqref{eq:cond-prob} is useful, it only covers a single, uninteresting scenario. Specifically, it does not cover the case
+where we have a fork in the graph. In this case, we can define a further equation:
+
+\begin{equation}
+\label{eq:multi-cond}
+P(x = X | y_1 = Y_1, \dots, y_n = Y_n) = \sum_{X_1 + \dots + X_n = X, X_i \ge 0} P(X_1, \dots, X_n | \frac{Y_1}{\sum Y}, \dots, \frac{Y_n}{\sum Y}) \prod_{i = 1}^{n} P(x = X | y_i = Y_i)
+\end{equation}
+
+where $P(X_1, \dots, X_n | \frac{Y_1}{\sum Y}, \dots, \frac{Y_n}{\sum Y})$ is multinomial.
+
+With equation~\eqref{eq:multi-cond} defined, we can calculate full conditional probabilities for all nodes in the graph. Once we've done
+this, we can marginalize out all the conditional probabilities by running elimination from the root of the graph. We do make a single
+assertion here: specifically, we assume that all spurs are trimmed from the allele graph, and we have a clearly defined ``root'' for the
+graph. This may be easy to provide in a local assembly scenario, where we have a clearly defined start to the active region for
+reassembly; for \emph{de novo} assembly, we may be able to define this by finding a cut of the graph that minimizes a certain function.
+
+\section{Proofs of Allele Canonicality}
+\label{sec:canonical-proofs}
 
 \chapter{Performance and Accuracy Analysis}
-
-\section{Performance}
-\label{sec:performance}
 
 Thus far, we have discussed ways to improve the performance of scientific workloads that are
 being run on commodity MapReduce systems by rethinking how we decompose and build algorithms.
@@ -556,15 +1171,14 @@ near-linear speedup across 128 nodes for a genomics workload, and achieve a $3\t
 improvement over the current best MPI-based system for the Montage astronomy application.
 Additionally, both systems achieve 25-50\% compression over current file formats when storing to disk.
 
-\subsection{Genomics Workloads}
+\section{Genomics Workloads}
 \label{sec:genomics-performance}
 
 Table~\ref{tab:overview} previews our performance versus current systems. The tests in this table are run on the
 high coverage \texttt{NA12878} full genome BAM file that is available from the 1000 Genomes
 project.\footnote{The file used for these experiments can be found on the
 1000 Genomes ftp site, \url{ftp.1000genomes.ebi.ac.uk} in directory 
-\texttt{/vol1/ftp/data/NA12878/high\_coverage\_alignment/} for NA12878. For anonymity, we refer to our system
-as \texttt{SparkG} in this table.} These tests have been run on the EC2 cloud, using the instance types listed in
+\texttt{/vol1/ftp/data/NA12878/high\_coverage\_alignment/} for NA12878.} These tests have been run on the EC2 cloud, using the instance types listed in
 Table~\ref{tab:machines}. We compute the cost of running each experiment by multiplying the number of instances
 used by the total wall time for the run and by the cost of running a single instance of that type for an hour, which is
 the process Amazon uses to charge customers.
@@ -579,36 +1193,36 @@ the process Amazon uses to charge customers.
 \bf Software & \bf EC2 profile & \bf Time & \bf Cost \\
 \hline
 Picard & 1 \texttt{hs1.8xlarge} & 17h 44m & \$81.57 \\
-SparkG & 1 \texttt{hs1.8xlarge} & 8h 56m & \$41.09 \\
-SparkG & 128 \texttt{m2.4xlarge} & 9m & \$31.49 \\
+ADAM & 1 \texttt{hs1.8xlarge} & 8h 56m & \$41.09 \\
+ADAM & 128 \texttt{m2.4xlarge} & 9m & \$31.49 \\
 \hline
 \multicolumn{4}{c}{\bf \textit{Mark Duplicates}} \\
 \bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
 \hline
 Picard & 1 \texttt{hs1.8xlarge} & 20h 22m & \$93.68 \\
-SparkG & 1 \texttt{hs1.8xlarge} & 9h & \$41.40 \\
-SparkG & 128 \texttt{m2.4xlarge} & 19m & \$64.48 \\ 
+ADAM & 1 \texttt{hs1.8xlarge} & 9h & \$41.40 \\
+ADAM & 128 \texttt{m2.4xlarge} & 19m & \$64.48 \\ 
 \hline
 \multicolumn{4}{c}{\bf \textit{BQSR}} \\
 \bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
 \hline
 GATK & 1 \texttt{hs1.8xlarge} & 31h 18m & \$143.98 \\
-SparkG & 1 \texttt{hs1.8xlarge} & 34h & \$156.40 \\
-SparkG & 128 \texttt{m2.4xlarge} & 54m & \$188.93 \\
+ADAM & 1 \texttt{hs1.8xlarge} & 34h & \$156.40 \\
+ADAM & 128 \texttt{m2.4xlarge} & 54m & \$188.93 \\
 \hline
 \multicolumn{4}{c}{\bf \textit{INDEL Realignment}} \\
 \bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
 \hline
 GATK & 1 \texttt{hs1.8xlarge} & 42h 49m & \$196.88 \\
-SparkG & 1 \texttt{hs1.8xlarge} & 12h 58m & \$82.80 \\
-SparkG & 128 \texttt{m2.4xlarge} & 24m & \$83.97 \\
+ADAM & 1 \texttt{hs1.8xlarge} & 12h 58m & \$82.80 \\
+ADAM & 128 \texttt{m2.4xlarge} & 24m & \$83.97 \\
 \hline
 \multicolumn{4}{c}{\bf \textit{Flagstat}} \\
 \bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
 \hline
 SAMtools & 1 \texttt{hs1.8xlarge} & 25m 24s & \$1.95 \\
-SparkG & 1 \texttt{hs1.8xlarge} & 7m 4s & \$1.95 \\
-SparkG & 128 \texttt{cr1.8xlarge} & 1m 53s & \$5.35 \\
+ADAM & 1 \texttt{hs1.8xlarge} & 7m 4s & \$1.95 \\
+ADAM & 128 \texttt{cr1.8xlarge} & 1m 53s & \$5.35 \\
 \hline
 \end{tabular}
 \end{center}
@@ -637,7 +1251,7 @@ chosen to represent a workstation. Network bandwidth is constant across all inst
 \end{table}
 
 As can be seen from these results, our pipeline is at best three times faster than current pipelines when running
-on a single node; at worst, we are approximately at parity. Additionally, \texttt{SparkG} achieves speedup that is
+on a single node; at worst, we are approximately at parity. Additionally, \texttt{ADAM} achieves speedup that is
 close to linear. This point is not clear from Table~\ref{tab:overview}, as we change instance types when also
 changing the number of instances used. Figure~\ref{fig:speedup} presents speedup plots for the NA12878 high
 coverage genome.
@@ -671,49 +1285,7 @@ have tested against the SAMtools/Picard/GATK pipeline, we do note that new imple
 recently~(e.g., SAMBAMBA and SAMBLASTER~\cite{faust14}) that focus on fast duplicate marking. We have not
 compared to them due to time limitations, but will compare to them in a later revision of this paper.}
 
-\subsection{Astronomy Workloads}
-\label{sec:astro-workloads}
-
-To evaluate the mosaicing application, we use the 2MASS data\footnote{Available from
-\url{http://irsa.ipac.caltech.edu/applications/2MASS/IM/}.} and the Montage test case of 3x3 degree
-mosaicing with Galaxy m101 as the center. The tile mosaicing phase converts 1.5~GB of input data into a
-1.2~GB aggregated output file. We compare the \texttt{Spark-mAdd} performance against the High Performance
-Computing~(HPC) styled MPI-based parallel implementation from Montage v3.3 (\texttt{MPI-mAdd}). We
-performed the test on 1, 4, and 16 Amazon \texttt{c3.8xlarge} instances. We chose the \texttt{c3.8xlarge} instances
-for this test because they provided HPC-optimized networking, which is a prerequisite for good MPI performance.
-We use OrangeFS v2.8.8---a successor of PVFS~\cite{PVFS}---as the shared file system when running
-\texttt{MPI-mAdd}. All 32 cores on each instance are used for both \texttt{Spark-mAdd} and \texttt{MPI-mAdd}.
-
-\begin{figure}[h]
-\begin{center}
-\includegraphics[width=0.99\linewidth]{graphs/speedup_madd.pdf}
-\end{center}
-\caption{Speedup when running \textit{mAdd} using MPI and Spark}
-\label{fig:madd-speedup}
-\end{figure}
-
-As shown in Figure~\ref{fig:madd-speedup}, \texttt{Spark-mAdd} runs 2.8x, 5.7x, 8.9x faster than
-MPImAdd on 1, 4, and 16 instances. In the single machine case, \texttt{MPI-mAdd} achieves a cost of \$0.17 per
-analysis. \texttt{Spark-mAdd} costs \$0.06 to run on a single instance, which is a $2.8\times$ improvement in
-cost. \texttt{Spark-mAdd} is still cheaper than \texttt{MPI-mAdd} by a factor of $2.2\times$ when running on four
-nodes. \texttt{Spark-mAdd} is only more expensive than a single node of \texttt{MPI-mAdd} when running on 16
-nodes, and even then is only 40\% more expensive than the lowest cost \texttt{MPI-mAdd} run while providing a
-$8.9\times$ performance improvement over the fastest \texttt{MPI-mAdd} run.
-
-The performance improvement is caused by multiple factors. We are able to reduce the amount of I/O performed,
-while also reducing contention in the I/O system and improving data locality. By denormalizing the metadata into
-our data schema, we are able to combine the metadata processing stage with the mAdd stage. This allows us
-to only load the input dataset a single time. Parquet also compresses the input and output data, which reduces
-the volume of I/O performed. Additionally, MPI is bound by contention when trying to write all output to a single
-file in a shared file system, while Parquet writes output files into HDFS in a contention free manner. Finally, Spark
-allows the computation to benefit from data locality, while MPI distributes the computation across the available
-resources without optimizing for data placement.
-
-While the dataset used is a small dataset, larger datasets are commonplace. For example, the Large Synoptic
-Survey Telescope~(LSST, \cite{lsst2008}) has been used to collect terabyte sized datasets~\cite{moyers13}. As
-future work, we plan to tackle these very large astronomy datasets using our framework.
-
-\subsection{Column Store Performance}
+\section{Column Store Performance}
 \label{sec:column-store-perf}
 
 Earlier in this paper, we motivated the use of a column store as it would allow us to better push processing to
@@ -725,9 +1297,7 @@ data, write performance is not a bottleneck because our workflow computes a \emp
 dataset. As a result, our output dataset tends to be O(100 MB) while our input dataset is in the range of
 O(10 GB)--O(100GB).
 
-\pagebreak
-
-\subsubsection{Compression}
+\subsection{Compression}
 \label{sec:compression}
 
 The Parquet columnar store~\cite{parquet} supports several compression features. Beyond traditional block-level
@@ -812,7 +1382,7 @@ specifically, we are working to probabilistically estimate the quality scores \e
 scores. This would be performed via a process that is similar to the base quality score recalibration algorithm
 presented earlier in this paper.
 
-\subsubsection{Horizontal Scalability}
+\subsection{Horizontal Scalability}
 \label{sec:horizontal-scalability}
 
 The representation Parquet uses to store data to disk is optimized for horizontal scalability in several ways.
@@ -833,7 +1403,7 @@ the direct usage of legacy BAM files in Hadoop. Hadoop-BAM must pick splits, whi
 Additionally, once Hadoop-BAM has picked a split, there is no guarantee that the split is well placed. It is only
 guaranteed that the split position will not cause a \emph{functional error}.
 
-\subsubsection{Projection and Predicate Performance}
+\subsection{Projection and Predicate Performance}
 \label{sec:projection-predicate-performance}
 
 We use the \texttt{flagstat} workload to evaluate the performance of predicates and projections in Parquet.
@@ -883,19 +1453,11 @@ the data in each partition.
 
 \chapter{Conclusion}
 
-\section{Discussion and Future Work}
-\label{sec:discussion-future-work}
+\section{Discussion}
+\label{sec:discussion}
 
-Similar to what we propose, the \texttt{Thunder} system was developed as a novel MapReduce-based system for
-processing terabytes of neuroscience imaging data~\cite{freeman14}. \texttt{Thunder} performs a largely statistical
-workload, and the significant tasks in terms of execution time are clustering and regression. The system is
-constructed using Spark and Python and is designed to process datasets larger than 4 TB, and leverages
-significant functionality from the MLI/MLLib libraries~\cite{sparks13}. Similar to our system, they are able to use
-Spark's in-memory caching to amortize load time across several pipeline stages. Additionally, they use Spark's
-filtering primitives to allow scientists to cut problems into subproblems. This is a common trend across scientific
-analyses, and is one of the reasons that we advocate for the use of a columnar store with efficient predicate
-pushdown. \texttt{Thunder} is an example pipeline that demonstrates the power of using horizontally scalable
-systems to enable novel scientific analyses.
+\section{Future Work}
+\label{sec:future-work}
 
 Our genomics work leverages columnar storage to improve performance and compression of data on disk,
 with special emphasis on repetitive fields that can be run length encoded. While this improves
