@@ -15,6 +15,7 @@
 \usepackage{algorithm}
 \usepackage{algorithmic}
 \usepackage{amsthm}
+\usepackage{graphicx}
 
 \newtheorem{defn}{Definition}
 \newtheorem{lemma}{Lemma}
@@ -52,7 +53,7 @@ First, we demonstrate how an index de Bruijn graph simplifies to an efficient al
 alignment. We are able to derive canonical edit representations, and achieve $\Omega(n)$ alignment cost
 for canonical edits. From this alignment formulation, we demonstrate how an \emph{indexed de Bruijn}
 graph can be used for variant discovery in a local reassembly pipeline with lower cost than a traditional
-reassembly algorithm. \emph{Indexed de Bruijn} graphs have identical storage cost as a traditional
+reassembly algorithm. An \emph{indexed de Bruijn} graph has identical storage cost as a traditional
 \emph{de Bruijn} graph. 
 
 \end{abstract}
@@ -197,10 +198,22 @@ previously unseen $k$-mers. This is the only possible explanation for the two in
 paths between $s_1$ and $s_2$.
 \end{proof}
 
+To visualize the graph corresponding to a substitution, take the two example sequences \texttt{CCACTGT}
+and \texttt{CCAATGT}. These two sequences differ by a \texttt{C} $\leftrightarrow$ \texttt{A} edit at
+position three. With $k$-mer length $k = 3$, this corresponds to the graph in Figure~\ref{fig:sne}.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.5\linewidth, clip=true, trim=0 39 0 39]{graphs/sne.pdf}
+\end{center}
+\caption{Subgraph Corresponding To a Single Nucleotide Edit}
+\label{fig:sne}
+\end{figure}
+
 If $m_i = k - 1, m_j \ge k$ or vice versa, we have a canonical INDEL edit (for convenience, we assume
 that $\mathcal{S}_i'$ contains the $k - 1$ length path). Here, we can prove that there is a $m_j - m_i$
 length insertion\footnote{This is equivalently a $m_j - m_i$ length deletion in $\mathcal{S}_i'$ relative to
-$\mathcal{S}_j'$.} in $\mathcal{S}_j'$ relative to $\mathcal{S}_i'$, $k$ letters \emph{after}
+$\mathcal{S}_j'$.} in $\mathcal{S}_j'$ relative to $\mathcal{S}_i'$, $k - 1$ letters \emph{after}
 $\text{index}(s_1)$:
 
 \begin{lemma}[Distance between $k$ length subsequences]
@@ -229,6 +242,18 @@ $\mathcal{S}_j'$ has length of $2k + l$, and is constructed by concatenating $s_
 This provides a canonical placement for the inserted sequence $\mathcal{L}$ in $\mathcal{S}_j'$ between
 $s_1$ and $s_2$.
 \end{proof}
+
+To visualize the graph corresponding to a canonical INDEL, take the two example sequences
+\texttt{CACTGT} and \texttt{CACCATGT}. Here, we have a \texttt{CA} insertion after position two. With
+$k$-mer length $k = 3$, this corresponds to the graph in Figure~\ref{fig:indel}.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.5\linewidth, clip=true, trim=0 39 0 39]{graphs/indel.pdf}
+\end{center}
+\caption{Subgraph Corresponding To a Canonical INDEL Edit}
+\label{fig:indel}
+\end{figure}
 
 Where we have a canonical allele, the cost of computing the edit is set by the need to walk the graph
 linearly from $s_1$ to $s_2$, and is therefore $\mathcal{O}(n)$. However, in practice, we will see
@@ -305,7 +330,7 @@ but have just reconnected back to the reference and now know the start and end p
 $\mathcal{R}$) of the bubble, as well as the non-reference sequence and length of the bubble.
 \end{itemize}
 
-We allow the FSM to make the following state transitions:
+We allow the FSM to make the following state transitions, which are depicted in Figure~\ref{fig:fsm}:
 
 \begin{itemize}
 \item \texttt{R} $\rightarrow$ \texttt{R}: We are continuing along a reference run.
@@ -317,6 +342,14 @@ a reference $k$-mer.
 \item \texttt{C} $\rightarrow$ \texttt{R}: We have just closed out an allele, and are back at a $k$-mer
 $\in \mathcal{R}$.
 \end{itemize}
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.5\linewidth, clip=true, trim=0 39 0 39]{graphs/fsm.pdf}
+\end{center}
+\caption{Finite State Machine for Pooled vs. Reference Assembly}
+\label{fig:fsm}
+\end{figure}
 
 We initialize the state machine to \texttt{R}, and start processing with the first $k$-mer from $\mathcal{R}$.
 Per $k$-mer, we evaluate the possible state transitions of each successor $k$-mer. If the set of successor
