@@ -49,7 +49,7 @@ variants in the presence of local mapping errors, current reassembly methods pro
 These methods achieve low throughput due to a reliance on an exhaustive graph search to identify
 haplotypes, coupled with the use of expensive realignment methods for haplotype scoring. In this paper,
 we enhance the traditional \emph{de Bruijn} graph with the location of $k$-mers in a reference sequence.
-First, we demonstrate how an index de Bruijn graph simplifies to an efficient algorithm for local sequence
+First, we demonstrate how an \emph{indexed de Bruijn} graph simplifies to an efficient algorithm for local sequence
 alignment. We are able to derive canonical edit representations, and achieve $\Omega(n)$ alignment cost
 for canonical edits. From this alignment formulation, we demonstrate how an \emph{indexed de Bruijn}
 graph can be used for variant discovery in a local reassembly pipeline with lower cost than a traditional
@@ -195,16 +195,16 @@ Now, suppose we have $n$ sequences $\mathcal{S}_1, \dots, \mathcal{S}_n$. Let us
 $k$-mer $s \in \mathcal{S}_i$, then the output of function $\text{index}_i(s)$ is defined. This function
 provides us with the integer position of $s$ in sequence $\mathcal{S}_i$. Further, given two $k$-mers
 $s_1, s_2 \in \mathcal{S}_i$, we can define a distance function
-$\text{distance}_i(s_1, s_2) = | \text{index}_i(s_1) - \text{index}_i(s_2) |$. To create an \emph{indexed}
-de Bruijn graph, we simply annotate each $k$-mer $s$ with the $\text{index}_i(s)$ value for all
+$\text{distance}_i(s_1, s_2) = | \text{index}_i(s_1) - \text{index}_i(s_2) |$. To create an \emph{indexed
+de Bruijn} graph, we simply annotate each $k$-mer $s$ with the $\text{index}_i(s)$ value for all
 $\mathcal{S}_i, i \in \{1, \dots, n\}$ where $s \in \mathcal{S}_i$. This index value is trivial to log when
 creating the original \emph{de Bruijn} graph from the provided sequences.
 
 Let us require that all sequences $\mathcal{S}_1, \dots, \mathcal{S}_n$ are not repetitive, which implies
-that the resulting de Bruijn graph is acyclic. If we select any two sequences $\mathcal{S}_i$ and
+that the resulting \emph{de Bruijn graph} is acyclic. If we select any two sequences $\mathcal{S}_i$ and
 $\mathcal{S}_j$ from $\mathcal{S}_1, \dots, \mathcal{S}_n$ that share at least two $k$-mers $s_1$ and
 $s_2$ with common ordering~($s_1 \rightarrow \dots \rightarrow s_2$ in both $\mathcal{S}_i$ and
-$\mathcal{S}_j$), the indexed de Bruijn graph $G$ provides several guarantees:
+$\mathcal{S}_j$), the \emph{indexed de Bruijn} graph $G$ provides several guarantees:
 
 \begin{enumerate}
 \item If two sequences $\mathcal{S}_i$ and $\mathcal{S}_j$ share at least two $k$-mers $s_1$ and
@@ -233,7 +233,7 @@ $\mathcal{S}_i$ and $\mathcal{S}_j$.
 
 \begin{defn}[Path Independence]
 \label{defn:path-independence}
-Given a non-repetitive de Bruijn graph $G$ constructed from $\mathcal{S}_i$ and $\mathcal{S}_j$, we say
+Given a non-repetitive \emph{de Bruijn} graph $G$ constructed from $\mathcal{S}_i$ and $\mathcal{S}_j$, we say
 that $G$ contains independent paths between $s_1$ and $s_2$ if we can construct two subsets
 $\mathcal{S}'_i \subset \mathcal{S}_i, \mathcal{S}'_j \subset \mathcal{S}_j$ of $k$-mers where $s_{i + n}
 \in \mathcal{S}'_i \forall n \in \{0, \dots, m_i\}, s_{i + n - 1} \rightarrow s_{i + n} \forall n \in \{1, \dots, m_i\}$,
@@ -251,7 +251,7 @@ substitution $k$ letters \emph{after} $\text{index}(s_1)$:
 \begin{proof}[Proof regarding Canonical Substitution]
 \label{proof:canonical-substitution}
 Suppose we have two non-repetitive sequences, $\mathcal{S}_i'$ and $\mathcal{S}_j'$, each of length
-$2k + 1$. Let us construct a de Bruijn graph $G$, with $k$-mer length $k$. If each sequence begins with
+$2k + 1$. Let us construct a \emph{de Bruijn} graph $G$, with $k$-mer length $k$. If each sequence begins with
 $k$-mer $s_1$ and ends with $k$-mer $s_2$, then that implies that the first and last $k$ letters of
 $\mathcal{S}_i'$ and $\mathcal{S}_j'$ are identical. If both subsequences had the same character at
 position $k$, this would imply that both sequences were identical and therefore the two paths between
@@ -281,8 +281,8 @@ $\text{index}(s_1)$:
 
 \begin{lemma}[Distance between $k$ length subsequences]
 \label{lem:minimum-distance}
-Indexed de Bruijn graphs naturally provide a distance metric for $k$ length substrings. Let us construct an
-indexed de Bruijn graph $G$ with $k$-mers of length $k$ from a non-repetitive sequence $\mathcal{S}$.
+\emph{Indexed de Bruijn} graphs naturally provide a distance metric for $k$ length substrings. Let us construct an
+\emph{indexed de Bruijn} graph $G$ with $k$-mers of length $k$ from a non-repetitive sequence $\mathcal{S}$.
 For any two $k$-mers $s_a, s_b \in \mathcal{S}, s_a \ne s_b$, the
 $\text{distance}_\mathcal{S}(s_a, s_b)$ metric is equal to $l_p + 1$, where $l_p$ is the length of the
 path (in $k$-mers) between $s_a$ and $s_b$. Thus, $k$-mers with overlap of $k - 1$ have an edge
@@ -322,7 +322,7 @@ Where we have a canonical allele, the cost of computing the edit is set by the n
 linearly from $s_1$ to $s_2$, and is therefore $\mathcal{O}(n)$. However, in practice, we will see
 differences that cannot be described as one of the earlier two canonical approaches. First, let us
 generalize from the two above proofs: if we have two independent paths between $s_1, s_2$ in the
-de Bruijn graph $G$ that was constructed from $\mathcal{S}_i, \mathcal{S}_j$, we can describe
+\emph{de Bruijn} graph $G$ that was constructed from $\mathcal{S}_i, \mathcal{S}_j$, we can describe
 $\mathcal{S}_i$ as a sequence created by concatenating $s_1, \mathcal{L}_i, s_2$.\footnote{This
 property holds true for $\mathcal{S}_j$ as well.} The canonical edits merely result from special cases:
 
@@ -348,7 +348,7 @@ our goal is to identify all possible variants and to associate probabilities to 
 variants. This hypothesized variants are generated by examining the reads aligned to the reference
 at/near a given site.
 
-However, we can adopt a ``pooled'' model that uses the indexed de Bruijn graph to discover alternate
+However, we can adopt a ``pooled'' model that uses the \emph{indexed de Bruijn} graph to discover alternate
 alleles without performing a search for all haplotypes. Here, we extract a substring $\mathcal{R}$ from a
 reference assembly, corresponding to the subsection of that reference that we would like to reassemble.
 Then, we create a pooled ``sequence'' $\mathcal{P}$, that is generated from the $k$-mers present in
@@ -373,7 +373,7 @@ Currently, we disregard spurs. Spurs typically result from sequencing errors nea
 read. Additionally, given a spur, we cannot put a constraint on what sort of edit it may be from the
 reference, which increases the computational complexity of processing the spur. We concede that this
 may not be the best approach, and have included a longer discussion of the accuracy impact of this
-decision, as well as options for processing spurs with an indexed de Bruijn graph in~\S\ref{sec:spurs}.
+decision, as well as options for processing spurs with an \emph{indexed de Bruijn} graph in~\S\ref{sec:spurs}.
 
 We can elaborate the graph and identify variants by walking the graph from the first $k$-mer in
 $\mathcal{R}$. Although haplotype elaboration algorithms have $\mathcal{O}(nh)$ cost where
@@ -457,8 +457,8 @@ from the reference 4-mer \texttt{CTGC} to \texttt{AGTC}. In this case, we need t
 \section{Discussion and Future Work}
 \label{sec:discussion}
 
-In this work, we have presented algorithms that allow for efficient sequence comparison using an indexed
-de Bruijn graph, and have then demonstrated how this can be used in a local reassembly pipeline. We are
+In this work, we have presented algorithms that allow for efficient sequence comparison using an \emph{indexed
+de Bruijn} graph, and have then demonstrated how this can be used in a local reassembly pipeline. We are
 working to build a variant calling and genotyping platform using this algorithm, and hope to demonstrate
 results on real data soon.
 
@@ -476,11 +476,11 @@ together can be used for detecting structural variants. If graph $G$ constructed
 arc from $s_1$ to $s_n$ identifies a possible structural variant breakpoint between $\mathcal{R}_1$ and
 $\mathcal{R}_2$.
 
-Although this paper motivates the use of indexed de Bruijn graphs for variant calling, they can also
+Although this paper motivates the use of \emph{indexed de Bruijn} graphs for variant calling, they can also
 be used for canonicalizing the output of multiple variant calling tools. Specifically, assume that we have
 two variants that are within $n$ bases of each other. For these two variants, we can generate sequences
 $\mathcal{V}_1, \mathcal{V}_2$ by substituting the variant into $\mathcal{R}$ overlapping the site. We
-can then construct an indexed de Bruijn graph from $\mathcal{V}_1, \mathcal{V}_2$ with $k$-mer length
+can then construct an \emph{indexed de Bruijn} graph from $\mathcal{V}_1, \mathcal{V}_2$ with $k$-mer length
 $k \ge n$. If both $\mathcal{V}_1, \mathcal{V}_2$ overhang the variants by $\ge k$ bases and the graph
 contains a single path, the two variant representations are equivalent. This presents a more principled
 strategy for canonicalizing variants than the \textsc{Rescue} strategy used in the \texttt{SMASH}
@@ -490,7 +490,7 @@ benchmarking suite~\cite{talwalkar14}.
 \label{sec:limits-repeated-sequences}
 
 In this paper, we constrain our sequences to not contain repeated subsequences of length greater than
-$k$, where $k$ is the $k$-mer length used when constructing a de Bruijn graph $G$. If there is a repeated 
+$k$, where $k$ is the $k$-mer length used when constructing a \emph{de Bruijn} graph $G$. If there is a repeated 
 subsequence with length $\ge k$, then $G$ will contain a cycle. Although \emph{de novo} assembly
 methods attempt to resolve repeats through scaffolding~\cite{zerbino09}, local reassembly methods
 frequently disallow repeats. Both the GATK's \texttt{HaplotypeCaller}~\cite{depristo11} and
@@ -519,8 +519,8 @@ In this paper, we have introduced the \emph{indexed de Bruijn} graph. This exten
 \emph{de Bruijn} graph allows for $\Omega(n)$ local alignment of two or more sequences, with a hard
 $\mathcal{O}(n)$ bound for canonical edits and an $\mathcal{O}(l^2)$ bound for non-canonical edits
 (in genotyping, $l$ is the variant allele length, which is typically much smaller than $n$). After describing this structure, we have demonstrated how
-indexed de Bruijn graphs can be used with a pooled model to locally reassemble haplotypes that contain
-variants. By using an indexed de Bruijn graph, we are able to reduce the runtime complexity of the local
+\emph{indexed de Bruijn} graphs can be used with a pooled model to locally reassemble haplotypes that contain
+variants. By using an \emph{indexed de Bruijn} graph, we are able to reduce the runtime complexity of the local
 reassembly algorithms that are commonly used for variant discovery and calling.
 
 \bibliographystyle{acm}
