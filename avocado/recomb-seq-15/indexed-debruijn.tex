@@ -91,7 +91,7 @@ In this paper, we focus on steps one through three of the local reassembly probl
 variation in the algorithms used in stages four and five~(see~\S\ref{sec:background}). Stage one (graph
 creation) has approximately $\mathcal{O}(r l_r)$ time complexity, and stage two (graph elaboration) has
 $\mathcal{O}(h \max(l_h))$ time complexity.
-The asymptotic time cost bound of this formulation of reassembly comes from stage three, where cost is $\mathcal{O}(h r l_r
+The asymptotic time cost bound of local reassembly comes from stage three, where cost is $\mathcal{O}(h r l_r
 \max(l_h))$, where $h$ is the number of haplotypes tested in this region\footnote{The number of
 haplotypes tested may be lower than the number of haplotypes reassembled. Several tools
 (see~\cite{depristo11,garrison12}) allow users to limit the number of haplotypes evaluated to improve
@@ -114,7 +114,7 @@ assembly, and achieves a more efficient approach for variant discovery via local
 \section{Background}
 \label{sec:background}
 
-Current variant calling pipelines depend heavily on realignment based approaches for correct
+Current variant calling pipelines depend heavily on realignment based approaches for accurate
 genotyping~\cite{li14}. Although there are several approaches that do not make explicit use of reassembly,
 all realignment based variant callers use an algorithmic structure similar to the one described
 in~\S\ref{sec:introduction}. In non-assembly approaches like \texttt{FreeBayes}~\cite{garrison12}, stages
@@ -127,7 +127,7 @@ the other reads seen in this area.
 Although the model used for choosing the best haplotype pair to finalize realignments to varies between
 methods~(e.g., the GATK's \texttt{IndelRealigner} uses a simple log-odds model~\cite{depristo11}, while
 methods like \texttt{FreeBayes}~\cite{garrison12} and \texttt{Platypus}~\cite{rimmer14} make use of richer
-Bayesian statistical models), these methods require an all-pairs alignment of reads to candidate
+Bayesian models), these methods require an all-pairs alignment of reads to candidate
 haplotypes. This leads to the runtime complexity bound of $\mathcal{O}(h r l_r \min(l_h))$ given
 in~\S\ref{sec:introduction}, as we must realign $r$ reads to $h$ haplotypes, where the cost of realigning
 one read to one haplotype is $\mathcal{O}(l_r \max(l_h))$, where $l_r$ is the read length~(assumed to be
@@ -174,7 +174,8 @@ sequencing errors, as sequencing errors are correlated with sequence context~\ci
 current tools allow users to limit the total number of evaluated haplotypes, or apply strategies to minimize
 the number of haplotypes considered, such as filtering observed variants that are likely to be sequencing
 errors~\cite{garrison12}, restricting realignment to INDELs~(\texttt{IndelRealigner},~\cite{depristo11}), or
-by trimming paths from the assembly graph. We provide~\eqref{eq:haplotypes} solely as a motivating
+by trimming paths from the assembly graph. Additionally, in an \emph{de Bruijn} graph, errors in the
+first $k$ or last $k$ bases of a read will manifest as spurs~(see~\S\ref{sec:spurs}) and will not contribute paths through the graph. We provide~\eqref{eq:haplotypes} solely as a motivating
 approximation, and hope to study these characteristics in more detail in future work.
 
 \section{Formulation}
@@ -376,9 +377,9 @@ may not be the best approach, and have included a longer discussion of the accur
 decision, as well as options for processing spurs with an \emph{indexed de Bruijn} graph in~\S\ref{sec:spurs}.
 
 We can elaborate the graph and identify variants by walking the graph from the first $k$-mer in
-$\mathcal{R}$. Although haplotype elaboration algorithms have $\mathcal{O}(nh)$ cost where
-$n = V(G)$ and $h$ is the number of haplotypes described by the graph, we can limit our graph traversal
-to have $\mathcal{O}(n)$ cost by introducing a tail-recursive finite state machine~(FSM). Whenever we
+$\mathcal{R}$. Although haplotype elaboration algorithms have $\Omega(h \min l_h)$ cost~(see~\S\ref{sec:background}) where
+$\min l_h$ is the length of the shortest haplotype and $h$ is the number of haplotypes described by the graph, we can limit our graph traversal
+to have $\mathcal{O}(n)$ runtime cost where $n = V(G)$ by introducing a tail-recursive finite state machine~(FSM). Whenever we
 reach a branch point in the graph, our FSM will push state onto a stack, which allows us---with a few
 exceptions---to avoid making multiple traversals through a single $k$-mer in the graph. Our FSM has
 the following states:
