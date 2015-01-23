@@ -57,9 +57,12 @@ variants in the presence of local mapping errors, current reassembly methods pro
 These methods achieve low throughput due to a reliance on an exhaustive graph search to identify
 haplotypes, coupled with the use of expensive realignment methods for haplotype scoring. In this paper,
 we enhance the traditional \emph{de Bruijn} graph with the location of $k$-mers in a reference sequence.
-This \emph{indexed de Bruijn} graph structure provides $\Omega(n)$ variant discovery with canonical
-representations for most common variants. Finally, we demonstrate how an index de Bruijn graph
-simplifies to an efficient algorithm for local sequence alignment.
+First, we demonstrate how an index de Bruijn graph simplifies to an efficient algorithm for local sequence
+alignment. We are able to derive canonical edit representations, and achieve $\Omega(n)$ alignment cost
+for canonical edits. From this alignment formulation, we demonstrate how an \emph{indexed de Bruijn}
+graph can be used for variant discovery in a local reassembly pipeline with lower cost than a traditional
+reassembly algorithm. \emph{Indexed de Bruijn} graphs have identical storage cost as a traditional
+\emph{de Bruijn} graph. 
 
 \keywords{local assembly, de Bruijn graphs, local sequence alignment}
 \end{abstract}
@@ -93,7 +96,11 @@ that most likely represents the variants hypothesized to exist in the region,
 then used for genotyping.
 \end{enumerate}
 
-This formulation of reassembly has an asymptotic cost bounded by \linebreak $\mathcal{O}(h r l_r
+In this paper, we focus on steps one through three of the local reassembly problem, as there is wide
+variation in the algorithms used in stages four and five~(see~\S\ref{sec:background}). Stage one (graph
+creation) has approximately $\mathcal{O}(r l_r)$ time complexity, and stage two (graph elaboration) has
+$\mathcal{O}(h \max(l_h))$ time complexity.
+The asymptotic time cost bound of this formulation of reassembly comes from stage three, where cost is $\mathcal{O}(h r l_r
 \min(l_h))$, where $h$ is the number of haplotypes tested in this region\footnote{The number of
 haplotypes tested may be lower than the number of haplotypes reassembled. Several tools
 (see~\cite{depristo11,garrison12}) allow users to limit the number of haplotypes evaluated to improve
@@ -101,9 +108,9 @@ performance.}, $r$ is the number of reads aligned to this region, $l_r$ is the r
 simplicity, we assume constant read length. This is a reasonable assumption as many of the variant
 callers discussed target Illumina reads that have constant length.}, and $\min(l_h)$ is the length of the
 shortest haplotype that we are evaluating. This complexity comes from realigning $r$ reads to $h$
-haplotypes, where realignment has complexity $\mathcal{O}(l_r l_h)$. We ignore the complexity of
-enumerating the haplotype paths through the \emph{de Bruijn} graph here, but provide an extended
-discussion of the complexity of path search in~\S\ref{sec:graph-complexity}.
+haplotypes, where realignment has complexity $\mathcal{O}(l_r l_h)$. We ignore the storage complexity of
+reassembly here, but provide an extended
+discussion of \emph{de Bruijin} graph complexity in~\S\ref{sec:background}.
 
 In this paper, we introduce the \emph{indexed de Bruijn} graph and demonstrate how it can be used to
 reduce the asymptotic complexity of reassembly. An \emph{indexed de Bruijn} graph is identical to a
@@ -112,6 +119,9 @@ $k$-mer with the index position of that $k$-mer in the sequence it was observed 
 enables the use of the \emph{indexed de Bruijn} graph for $\Omega(n)$ local sequence alignment with
 canonical edit representations for most edits. This structure can be used for both sequence alignment and
 assembly, and achieves a more efficient approach for variant discovery via local reassembly.
+
+\section{Background}
+\label{sec:background}
 
 \section{Formulation}
 \label{sec:formulation}
@@ -284,8 +294,8 @@ where $s_i \rightarrow s_{i + 1} \forall i \in \{1, \dots, n - 1\}$.
 Currently, we disregard spurs. Spurs typically result from sequencing errors near the start or end of a
 read. Additionally, given a spur, we cannot put a constraint on what sort of edit it may be from the
 reference, which increases the computational complexity of processing the spur. We concede that this
-may not be the best approach, and have included a longer discussion of options for processing spurs with
-an indexed de Bruijn graph in~\S\ref{sec:spurs}.
+may not be the best approach, and have included a longer discussion of the accuracy impact of this
+decision, as well as options for processing spurs with an indexed de Bruijn graph in~\S\ref{sec:spurs}.
 
 We can elaborate the graph and identify variants by walking the graph from the first $k$-mer in
 $\mathcal{R}$. Although haplotype elaboration algorithms have $\mathcal{O}(nh)$ cost where
@@ -339,7 +349,7 @@ between the branch point and the current $k$-mer is given by trimming the first 
 $\mathcal{L}'$. If we have a non-canonical edit, or a deletion in $\mathcal{P}$ relative to $\mathcal{R}$,
 we can look these bases up by indexing into $\mathcal{R}$.
 
-To improve efficiency, we should emit statistics for genotyping \emph{while} traversing the graph. By doing
+To improve computational efficiency, we should emit statistics for genotyping \emph{while} traversing the graph. By doing
 this, we can eliminate the need for realignment in haplotype reassembly. Since we have constructed a
 graph where every $k$-mer is anchored to a reference position or to a position in a variant, or is in a spur,
 if we log several statistics when processing reads from $\mathcal{P}$, we can directly emit the probability
@@ -422,7 +432,7 @@ the variant's path, plus any necessary bases from $\mathcal{R}$.
 In this paper, we have introduced the \emph{indexed de Bruijn} graph. This extension of the traditional
 \emph{de Bruijn} graph allows for $\Omega(n)$ local alignment of two or more sequences, with a hard
 $\mathcal{O}(n)$ bound for canonical edits and an $\mathcal{O}(l^2)$ bound for non-canonical edits
-(where $l$ is typically much smaller than $n$). After describing this structure, we have demonstrated how
+(in genotyping, $l$ is the variant allele length, which is typically much smaller than $n$). After describing this structure, we have demonstrated how
 indexed de Bruijn graphs can be used with a pooled model to locally reassemble haplotypes that contain
 variants. By using an indexed de Bruijn graph, we are able to reduce the runtime complexity of the local
 reassembly algorithms that are commonly used for variant discovery and calling.
