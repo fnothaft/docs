@@ -1,19 +1,23 @@
-% This is LLNCS.DEM the demonstration file of
-% the LaTeX macro package from Springer-Verlag
-% for Lecture Notes in Computer Science,
-% version 2.4 for LaTeX2e as of 16. April 2010
-%
-\documentclass{llncs}
+\documentclass[11pt]{article}
+\topmargin=0.0in %length of margin at the top of the page (1 inch added by default)
+\oddsidemargin=0.0in %length of margin on sides for odd pages
+\evensidemargin=0in %length of margin on sides for even pages
+\textwidth=6.5in %How wide you want your text to be
+\marginparwidth=0.5in
+\headheight=0pt %1in margins at top and bottom (1 inch is added to this value by default)
+\headsep=0pt %Increase to increase white space in between headers and the top of the page
+\textheight=9in %How tall the text body is allowed to be on each page
+
 %
 \usepackage{makeidx}  % allows for indexgeneration
 \usepackage{amsmath}
 \usepackage{listings}
 \usepackage{algorithm}
 \usepackage{algorithmic}
-%\usepackage{amsthm}
+\usepackage{amsthm}
 
 \newtheorem{defn}{Definition}
-%\newtheorem{proof}{Proof}
+\newtheorem{lemma}{Lemma}
 
 \lstdefinelanguage{scala}{morekeywords={class,object,trait,extends,with,new,if,while,for,def,val,var,this},
 otherkeywords={->,=>},
@@ -24,28 +28,15 @@ morestring=[b]"}
 % Default settings for code listings
 \lstset{frame=tb,language=scala,aboveskip=3mm,belowskip=3mm,showstringspaces=false,columns=flexible,basicstyle={\small\ttfamily}}
 %
+
 \begin{document}
-%
-\frontmatter          % for the preliminaries
-%
-\pagestyle{headings}  % switches on printing of running heads
-\addtocmark{Indexed de Bruijn Graphs}
-\mainmatter              % start of the contributions
-%
-\title{Variant Discovery and Canonicalization via Indexed de Bruijn Graphs}
-%
-\titlerunning{Indexed de Bruijn Graphs}  % abbreviated title (for running head)
-%                                     also used for the TOC unless
-%                                     \toctitle is used
-%
-\author{Frank~Austin~Nothaft, Anthony~D.~Joseph, \and David~A.~Patterson}
-%
-\authorrunning{Nothaft et al.} % abbreviated author list (for running head)
-%
-\institute{Department of Electrical Engineering and Computer Sciences\\
+
+\title{Variant Discovery and Canonicalization via \\ Indexed de Bruijn Graphs}
+\author{Frank~Austin~Nothaft, Anthony~D.~Joseph, \and David~A.~Patterson \\
+Department of Electrical Engineering and Computer Sciences\\
 University of California, Berkeley \\ 
 Berkeley, CA 94720, USA \\
-\email{\{fnothaft, adj, pattrsn\}@berkeley.edu}}
+\{fnothaft, adj, pattrsn\}@berkeley.edu}
 
 \maketitle              % typeset the title of the contribution
 
@@ -64,7 +55,6 @@ graph can be used for variant discovery in a local reassembly pipeline with lowe
 reassembly algorithm. \emph{Indexed de Bruijn} graphs have identical storage cost as a traditional
 \emph{de Bruijn} graph. 
 
-\keywords{local assembly, de Bruijn graphs, local sequence alignment}
 \end{abstract}
 
 \section{Introduction}
@@ -194,7 +184,7 @@ We have a canonical substitution edit if $m_i = m_j = k$, where $k$ is the $k$-m
 prove that the edit between $\mathcal{S}_i$ and $\mathcal{S}_j$ between $s_1, s_2$ is a single base
 substitution $k$ letters \emph{after} $\text{index}(s_1)$:
 
-\begin{proof}[Canonical Substitution]
+\begin{proof}[Proof regarding Canonical Substitution]
 \label{proof:canonical-substitution}
 Suppose we have two non-repetitive sequences, $\mathcal{S}_i'$ and $\mathcal{S}_j'$, each of length
 $2k + 1$. Let us construct a de Bruijn graph $G$, with $k$-mer length $k$. If each sequence begins with
@@ -204,7 +194,7 @@ position $k$, this would imply that both sequences were identical and therefore 
 $s_1, s_2$ would not be independent~(Definition~\ref{defn:path-independence}). If the two letters are
 different \emph{and} the subsequences are non-repetitive, each character is responsible for $k$
 previously unseen $k$-mers. This is the only possible explanation for the two independent $k$ length
-paths between $s_1$ and $s_2$. \qed
+paths between $s_1$ and $s_2$.
 \end{proof}
 
 If $m_i = k - 1, m_j \ge k$ or vice versa, we have a canonical INDEL edit (for convenience, we assume
@@ -224,7 +214,7 @@ directly between each other ($l_p = 0$) and a distance metric of 1. Conversely, 
 adjacent but not overlapping in $\mathcal{S}$ have a distance metric of $k$, which implies $l_p = k - 1$.
 \end{lemma}
 
-\begin{proof}[Canonical INDELs]
+\begin{proof}[Proof regarding Canonical INDELs]
 \label{proof:canonical-indels}
 We are given a graph $G$ which is constructed from two non-repetitive sequences $\mathcal{S}_i'$ and
 $\mathcal{S}_j'$, where the only two $k$-mers in both $\mathcal{S}_i'$ and $\mathcal{S}_j'$ are $s_1$
@@ -237,7 +227,7 @@ subsequence $\mathcal{L} \subset \mathcal{S}_j', \mathcal{L} \not\subset \mathca
 remaining $k - 1$ $k$-mers in the path provide a transition from $\mathcal{L}$ to $s_2$. Therefore,
 $\mathcal{S}_j'$ has length of $2k + l$, and is constructed by concatenating $s_1, \mathcal{L}, s_2$.
 This provides a canonical placement for the inserted sequence $\mathcal{L}$ in $\mathcal{S}_j'$ between
-$s_1$ and $s_2$. \qed
+$s_1$ and $s_2$.
 \end{proof}
 
 Where we have a canonical allele, the cost of computing the edit is set by the need to walk the graph
@@ -437,7 +427,7 @@ indexed de Bruijn graphs can be used with a pooled model to locally reassemble h
 variants. By using an indexed de Bruijn graph, we are able to reduce the runtime complexity of the local
 reassembly algorithms that are commonly used for variant discovery and calling.
 
-\bibliographystyle{splncs03}
+\bibliographystyle{acm}
 \bibliography{reference-threaded-debruijn}
 
 \end{document}
