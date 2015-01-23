@@ -92,7 +92,7 @@ variation in the algorithms used in stages four and five~(see~\S\ref{sec:backgro
 creation) has approximately $\mathcal{O}(r l_r)$ time complexity, and stage two (graph elaboration) has
 $\mathcal{O}(h \max(l_h))$ time complexity.
 The asymptotic time cost bound of this formulation of reassembly comes from stage three, where cost is $\mathcal{O}(h r l_r
-\min(l_h))$, where $h$ is the number of haplotypes tested in this region\footnote{The number of
+\max(l_h))$, where $h$ is the number of haplotypes tested in this region\footnote{The number of
 haplotypes tested may be lower than the number of haplotypes reassembled. Several tools
 (see~\cite{depristo11,garrison12}) allow users to limit the number of haplotypes evaluated to improve
 performance.}, $r$ is the number of reads aligned to this region, $l_r$ is the read length\footnote{For
@@ -113,6 +113,69 @@ assembly, and achieves a more efficient approach for variant discovery via local
 
 \section{Background}
 \label{sec:background}
+
+Current variant calling pipelines depend heavily on realignment based approaches for correct
+genotyping~\cite{li14}. Although there are several approaches that do not make explicit use of reassembly,
+all realignment based variant callers use an algorithmic structure similar to the one described
+in~\S\ref{sec:introduction}. In non-assembly approaches like \texttt{FreeBayes}~\cite{garrison12}, stages
+one and two are replaced with a single step where the variants observed in the reads aligned to a given
+haplotyping region are filtered for quality and integrated directly into the reference haplotype in that region.
+In both approaches, local alignment errors~(errors in alignment \emph{within} this region) are corrected
+by using a statistical model to identify the most likely location that the read could have come from, given
+the other reads seen in this area.
+
+Although the model used for choosing the best haplotype pair to finalize realignments to varies between
+methods~(e.g., the GATK's \texttt{IndelRealigner} uses a simple log-odds model~\cite{depristo11}, while
+methods like \texttt{FreeBayes}~\cite{garrison12} and \texttt{Platypus}~\cite{rimmer14} make use of richer
+Bayesian statistical models), these methods require an all-pairs alignment of reads to candidate
+haplotypes. This leads to the runtime complexity bound of $\mathcal{O}(h r l_r \min(l_h))$ given
+in~\S\ref{sec:introduction}, as we must realign $r$ reads to $h$ haplotypes, where the cost of realigning
+one read to one haplotype is $\mathcal{O}(l_r \max(l_h))$, where $l_r$ is the read length~(assumed to be
+constant for Illumina sequencing data) and $\max(l_h)$ is the length of the longest haplotype. Typically,
+the data structures used for realignment~($\mathcal{O}(l_r \max(l_h))$ storage cost) can be reused.
+These methods typically retain \emph{only} the best local realignment per read per haplotype, thus
+bounding storage cost at $\mathcal{O}(h r)$.
+
+For non-reassembly based approaches, the cost of generating candidate haplotypes is $\mathcal{O}(r)$,
+as each read must be scanned for variants, using the pre-existing alignment. These variants are typically
+extracted from the CIGAR string, but may need to be normalized~\cite{li14}. \emph{de Bruijn} graph based 
+reassembly methods have similar $\mathcal{O}(r)$ time complexity for building the \emph{de Bruijn}
+graph as each read must be sequentially broken into $k$-mers, but these methods have a different
+storage cost. Specifically, storage cost for a \emph{de Bruijn} graph is similar to $\mathcal{O}(k
+(l_{\text{ref}} + l_{\text{variants}} + l_{\text{errors}}))$, where $l_{\text{ref}}$ is the length of the reference
+haplotype in this region, $l_{\text{variants}}$ is the length of true variant sequence in this region, 
+$l_{\text{errors}}$ is the length of erroneous sequence in this region, and $k$ is the $k$-mer size. In
+practice, we can approximate both errors and variants as being random, which gives $\mathcal{O}(k
+l_{\text{ref}})$ storage complexity. From this graph, we must enumerate the haplotypes present in the
+graph. Starting from the first $k$-mer in the reference sequence for this region, we perform a depth-first
+search to identify all paths to the last $k$-mer in the reference sequence. Assuming that the graph is
+acyclic~(a common restriction for local assembly, see~\S\ref{sec:limits-repeated-sequences}), we can
+bound the best case cost of this search at $\Omega(h \min l_h)$.
+
+The number of haplotypes evaluated, $h$, is an important contributor to the algorithmic complexity of
+reassembly pipelines, as it sets the storage and time complexity of the realignment scoring phase, the
+time complexity of the haplotype enumeration phase, and is related to the storage complexity of the
+\emph{de Bruijn} graph. The best study of the complexity of assembly techniques was done by Kingsford
+et al.~\cite{kingsford10}, but is focused on \emph{de novo} assembly and pays special attention to
+resolving repeat structure. In the local realignment case, the number of haplotypes identified is determined
+by the number of putative variants seen. We can na\"{i}vely model this cost with \eqref{eq:haplotypes},
+where $f_v$ is the frequency with which variants occur, $\epsilon$ is the rate at which bases are
+sequenced erroneously, and $c$ is the coverage (read depth) of the region.
+
+\begin{align}
+\label{eq:haplotypes}
+h \sim f_v l_{\text{ref}} + \epsilon l_{\text{ref}} c
+\end{align}
+
+This model is na\"{i}ve, as the coverage depth and rate of variation varies across sequenced datasets,
+especially for targeted sequencing runs~\cite{fang14}. Additionally, while the $\epsilon$ term models the
+total number of sequence errors, this is not completely correlated with the number of \emph{unique}
+sequencing errors, as sequencing errors are correlated with sequence context~\cite{depristo11}. Many
+current tools allow users to limit the total number of evaluated haplotypes, or apply strategies to minimize
+the number of haplotypes considered, such as filtering observed variants that are likely to be sequencing
+errors~\cite{garrison12}, restricting realignment to INDELs~(\texttt{IndelRealigner},~\cite{depristo11}), or
+by trimming paths from the assembly graph. We provide~\eqref{eq:haplotypes} solely as a motivating
+approximation, and hope to study these characteristics in more detail in future work.
 
 \section{Formulation}
 \label{sec:formulation}
