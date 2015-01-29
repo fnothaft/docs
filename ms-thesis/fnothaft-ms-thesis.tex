@@ -1,13 +1,4 @@
-\documentclass[masters]{ucbthesis} %Sets the default text size to 11pt and class to article.
-%------------------------Dimensions--------------------------------------------
-\topmargin=0.0in %length of margin at the top of the page (1 inch added by default)
-\oddsidemargin=0.0in %length of margin on sides for odd pages
-\evensidemargin=0in %length of margin on sides for even pages
-\textwidth=6.5in %How wide you want your text to be
-\marginparwidth=0.5in
-\headheight=0pt %1in margins at top and bottom (1 inch is added to this value by default)
-\headsep=0pt %Increase to increase white space in between headers and the top of the page
-\textheight=9.1in %How tall the text body is allowed to be on each page
+\documentclass[masters]{ucbthesis}
 
 \usepackage{url}
 \usepackage{algorithmic}
@@ -16,6 +7,11 @@
 \usepackage{balance}
 \usepackage{graphicx}
 \usepackage{hyperref}
+\usepackage{amsthm}
+
+\newtheorem{defn}{Definition}
+\newtheorem{lemma}{Lemma}
+
 % \usepackage{draftwatermark}
 % \SetWatermarkText{DRAFT}
 % \SetWatermarkScale{5}
@@ -77,7 +73,10 @@ to discover genomic variants.
 
 \tableofcontents
 
-\chapter{Introduction}
+\chapter{Genome Processing Pipelines}
+
+\section{Introduction}
+\label{sec:introduction}
 
 Since the completion of the Human Genome Project in 2003, genome sequencing costs have dropped
 by more than $10,000\times$~\cite{nhgri}. The rapidly declining cost of sequencing a single human
@@ -168,27 +167,24 @@ under the permissive Apache 2 open-source license. \texttt{ADAM} is available at
 \section{Background}
 \label{sec:background}
 
-Our work is at the intersection of computational science, data management, and processing
+This work is at the intersection of computational biology, data management, and processing
 systems. As such, our architectural approach is informed by recent trends in both areas. The design of
-large scale data management has changed dramatically since the papers by Dean and
-Ghemawat~\cite{dean04, dean08} that described Google's \texttt{MapReduce} system. Over a
-similar timeframe, scientific fields have moved to take advantage of improvements in data acquisition
-technologies. For example, since the Human Genome Project finished in 2001~\cite{lander01}, the price
-of genomic sequencing has dropped by 10,000$\times$~\cite{nhgri}. This drop in cost has enabled the
-capture of petabytes of sequence data, which has (in turn) enabled significant population genomics
-experiments like the 1000 Genomes project~\cite{siva08} and The Cancer Genome Atlas~(TCGA,
-\cite{weinstein13}). These changes are not unique to genomics; indeed, fields such as
-neuroscience~\cite{cunningham14} and astronomy~\cite{lsst2008, turk11, sdss2000} are experiencing similar
-changes.
+large scale data management systems has changed dramatically since the papers by Dean and
+Ghemawat~\cite{dean04, dean08} describing Google's \texttt{MapReduce} system. Over a
+similar timeframe, genomics has arisen due to improvements in data acquisition technologies. For
+example, since the Human Genome Project finished in 2001~\cite{lander01}, the price of genomic
+sequencing has dropped by 10,000$\times$~\cite{nhgri}. This drop in cost has enabled the capture of
+petabytes of sequence data, which has (in turn) enabled significant population genomics experiments like 
+the 1000 Genomes project~\cite{siva08} and The Cancer Genome Atlas~(TCGA, \cite{weinstein13}).
 
 Although there has been significant progress in the development of systems for processing large
 datasets---the development of first generation MapReduce systems~\cite{dean04}, followed by
 iterative MapReduce systems like Spark~\cite{zaharia10}, as well as parallel and columnar
-DBMS~\cite{abadi06, lamb12}---the uptake of these systems in the scientific world has been slow.
-Most implementations have either used MapReduce as an inspiration for API
-design~\cite{mckenna10}, or have been limited systems that have used MapReduce to na\"{i}vely
-parallelize existing toolkits~\cite{langmead09, schatz09}. These approaches are perilous for several
-reasons:
+DBMS~\cite{abadi06, lamb12}---the uptake of these systems in genomics has been slow.
+\texttt{MapReduce}'s impact has been limited to tools that use the map-reduce programming model as an
+inspiration for API design~\cite{mckenna10}, or have been limited systems that have used \texttt{Hadoop}
+to na\"{i}vely parallelize existing toolkits~\cite{langmead09, schatz09}. These approaches are perilous for
+several reasons:
 
 \begin{itemize}
 \item A strong criticism levied against the MapReduce model is that the API is insufficiently expressive
@@ -202,14 +198,14 @@ zaharia12} is the ability to reliably distribute parallel tasks across a cluster
 the GATK uses MapReduce as a programming abstraction~(i.e., as an interface for writing
 \texttt{walker}s), it does not use MapReduce as an execution strategy. To run tools like the GATK across
 a cluster, organizations use workflow management systems for sharding and persisting intermediate
-data, and managing failures and retries. This approach is not only an inefficient duplication of work, but it is also a
-source of inefficiency during execution: the performance of iterative stages in the GATK is bottlenecked
-by I/O performance.
+data, and managing failures and retries. This approach is not only an inefficient duplication of work, but it
+is also a source of inefficiency during execution: the performance of iterative stages in the GATK is
+bottlenecked by I/O performance.
 \item The na\"{i}ve Hadoop-based implementations in Crossbow~\cite{langmead09} and
-Cloudburst~\cite{schatz09} use scripts to run unmodified legacy tools on top of Hadoop. This approach does
-achieve speedups, but does not attack any overhead. Several of the methods that they parallelize incur
-high overhead due to duplicated loading of indices (for fast aligners, loading of large indices can be a
-primary I/O bottleneck) and poor broadcasting of data.
+Cloudburst~\cite{schatz09} use scripts to run unmodified legacy tools on top of Hadoop. This approach
+does achieve speedups, but does not attack overhead. Several of the methods that they parallelize
+incur high overhead due to duplicated loading of indices (for fast aligners, loading of large indices can be
+a primary I/O bottleneck) and poor broadcasting of data.
 \end{itemize}
 
 Recent work by Diao et al~\cite{diao15} has looked at optimizations to MapReduce systems for
@@ -218,17 +214,18 @@ computation to minimize data shuffling. While this approach does improve shuffle
 preprocessing stages cannot be transposed. For instance, reversing the order of indel realignment and
 base quality score recalibration~(see~\S\ref{sec:genomics-pipeline}) will change the inferred quality
 score distribution. Additionally, we believe that the shuffle traffic that Diao et al observe is an artifact
-caused by the abstraction inversion discussed in~\S\ref{sec:introduction}. As we demonstrate
-in~\S\ref{sec:genomics-pipeline}, these penalties can be eliminated by restructuring the pre-processing
-algorithms.
+caused by an abstraction inversion present in many genomics tools. This abstraction inversion requires
+that all genomic data is processed in sorted order, which necessitates frequent shuffles. As we
+demonstrate in~\S\ref{sec:genomics-pipeline}, these penalties can be eliminated by restructuring the
+pre-processing algorithms.
 
 One notable area where modern data management techniques have been leveraged by scientists is in
 the data storage layer. Due to the storage costs of large genomic datasets, scientists have introduced the
 CRAM format that uses columnar storage techniques and special compression algorithms to achieve a
-30\% reduction in size over the original BAM format~\cite{fritz11}. While CRAM achieves high~($\gg 50\%$)
-compression, it imposes restrictions on the ordering and structure of the data, and does not provide
-support for predicates or projection. We perform a more comprehensive comparison against CRAM
-in~\S\ref{sec:column-store-perf}.
+30\% reduction in size over the original BAM format~\cite{fritz11}. While CRAM achieves high~($\gg
+50\%$) compression, it imposes restrictions on the ordering and structure of the data, and does not
+provide support for predicates or projection. We perform a more comprehensive comparison against
+CRAM in~\S\ref{sec:column-store-perf}.
 
 One interesting trend of note is the development of databases specifically for scientific applications.
 The exemplar is SciDB, which provides an array based storage model as well as efficient
@@ -240,28 +237,97 @@ coordinates. While GQL achieves performance improvements of up to 10$\times$ for
 SQL is not an attractive language for many scientific domains, which make heavy use of user designed
 functions that may be cumbersome in SQL.
 
-\section{Characteristics of Scientific Analysis Systems}
-\label{sec:principles}
+\section{Pipeline Structure}
+\label{sec:genomics-pipeline}
 
-Most prior work on scientific computing has been focused on linear algebra and other problems that can
-be structured as a matrix or network. However, in several of the emerging data-driven scientific
-disciplines, data is less rigorously structured. As discussed
-in~\S\ref{sec:background}, scientists have been developing ad hoc solutions to process this data. In this
-section, we discuss the common characteristics of workloads in these emerging scientific areas. Given
-these characteristics, we describe a way to decompose data processing and storage systems so that
-we can efficiently implement important processing patterns while providing a wide range of data access
-methods.
+This thesis targets the acceleration of \emph{variant calling}, which is a statistical process to infer the
+sites at that a single individual varies from the reference genome.\footnote{The reference genome
+represents the ``average'' genome for a species. The Human Genome Project~\cite{lander01} assembled
+the first human reference genome.} Although there are a variety of sequencing technologies in use, the
+majority of sequence data used for variant calling and genotyping comes from the Illumina sequencing
+platform, which uses a ``sequencing-by-synthesis'' technique to generate short read
+data~\cite{metzker09}. Short read refers to 
+sequencing run will generate many reads that are between 50 and 250 bases in length. In addition to
+adjusting the length of the reads, we can control the amount of the data that is generated by
+changing the amount of the genome that we sequence, or the amount of redundant sequencing that
+we perform~(the average number of reads that covers each base, or \emph{coverage}). A single
+human genome sequenced at 60$\times$ coverage will produce approximately 1.4 billion reads,
+which is approximately 600 GB of raw data, or 225 GB of compressed data. For each read, we also
+are provided \emph{quality scores}, which represent the likelihood that the base at a given position
+was observed. In a variant calling pipeline, we perform the following steps:
 
-\subsection{Layering}
+\begin{enumerate}
+\item \textbf{Alignment:} For each read, we find the position in the genome that the read is most likely to
+have come from. As an exact search is too expensive, there has been an extensive amount of research
+that has focused on indexing strategies for improving alignment performance~\cite{li10, li11wham,
+zaharia11}. This process is parallel per sequenced read.
+\item \textbf{Pre-processing:} After reads have been aligned to the genome, we perform several
+preprocessing steps to eliminate systemic errors in the reads. This may involve recalibrating the
+observed quality scores for the bases, or locally optimizing the read alignments. We will present a
+description of several of these algorithms in~\S\ref{sec:genomics-pipeline}; for a more detailed
+discussion, we refer readers to DePristo et al~\cite{depristo11}.
+\item \textbf{Variant calling:} Variant calling is a statistical process that uses the read alignments
+and the observed quality scores to compute whether a given sample matches or diverges
+from the reference genome. This process is typically parallel per position or region in the genome.
+\item \textbf{Filtration:} After variants have been called, we want to filter out false positive variant calls.
+We may perform queries to look for variants with borderline likelihoods, or we may look for clusters of
+variants, which may indicate that a local error has occurred. This process may be parallel per position,
+may involve complex traversals of the genomic coordinate space, or may require us to fit a statistical
+model to all or part of the dataset.
+\end{enumerate}
+
+This process is very expensive in time to run; the current best practice pipeline uses the BWA
+tool~\cite{li10} for alignment and the GATK~\cite{depristo11, mckenna10} for pre-processing, variant
+calling, and filtration. Current benchmark suites have measured this pipeline as taking between 90 and
+130 hours to run end-to-end~\cite{talwalkar14}. Recent projects have achieved 5--$10\times$
+improvements in alignment and variant calling performance~\cite{rimmer14, zaharia11}, which makes the
+pre-processing stages the performance bottleneck. Our experimental results have corroborated this, as
+the four pre-processing stages take over 110 hours to run on a clinical quality human genome when run
+on an Amazon EC2 \texttt{cr1.8xlarge} machine. 
+
+For current implementations of these read processing steps, performance is limited by disk
+bandwidth~\cite{diao15}. This bottleneck exists because the operations read in a SAM/BAM file, perform
+a small amount of processing, and write the data to disk as a new SAM/BAM file. We achieve a
+performance bump by performing our processing iteratively in memory. The four read processing stages
+can then be chained together, eliminating three long writes to disk and an additional three long reads
+from disk. Additionally, by rethinking the design of our algorithms, we are able to reduce overhead in
+several other ways:
+
+\begin{enumerate}
+\item Current algorithms require the reference genome to be present on all nodes. This assembly is then
+used to look up the reference sequence that overlaps all reads. The reference genome is several
+gigabytes in size, and performing a lookup in the reference genome can be costly due to its size. Instead,
+we leverage the \texttt{mismatchingPositions} field in our schema to embed information about the
+reference in each read. This optimization allows us to avoid broadcasting the reference, and provides
+O(1) lookup.
+\item Shared-memory genomics applications tend to be impacted significantly by false sharing of data
+structures~\cite{zaharia11}. Instead of having data structures that are modified in parallel, we
+restructure our algorithms so that we only touch data structures from a single thread, and then merge
+structures in a reduce phase. The elimination of sharing improves the performance of covariate
+calculation during BQSR and the target generation phase of local realignment.
+\item In a na\"{i}ve implementation, the local realignment and duplicate marking tasks can suffer from
+stragglers. The stragglers occur due to a large amount of reads that either do not associate to a
+realignment target, or that are unaligned. We pay special attention to these cases by manually
+randomizing the partitioning for these reads. This resolves load imbalance and mitigates stragglers.
+\item For the Flagstat command, we are able to project a limited subset of fields. Flagstat touches fewer
+than 10 fields, which account for less than 10\% of space on disk. We discuss the performance
+implications of this further in~\S\ref{sec:column-store-perf}.
+\end{enumerate}
+
+These techniques allow us to achieve a $>50\times$ performance improvement over current tools, and
+scalability beyond 128 machines. We perform a detailed performance review
+in~\S\ref{sec:genomics-performance}.
+
+\section{Layering}
 \label{sec:layering}
 
-The processing patterns being applied to scientific data shift widely
-as the data itself ages. Because of this change, we want to design a scientific data processing system that is
-flexible enough to accommodate our different use cases. At the same time, we want to ensure that the
-components in the system are well isolated so that we avoid bleeding functionality across the stack. If
-we bleed functionality across layers in the stack, we make it more difficult to adapt our stack to different
-applications. Additionally, as we discuss in~\S\ref{sec:genomics-pipeline}, improper separation of
-concerns can actually lead to errors in our application.
+The processing patterns being applied to scientific data shift widely as the data itself ages. Because of
+this change, we want to design a scientific data processing system that is flexible enough to
+accommodate our different use cases. At the same time, we want to ensure that the components in the
+system are well isolated so that we avoid bleeding functionality across the stack. If we bleed functionality
+across layers in the stack, we make it more difficult to adapt our stack to different applications.
+Additionally, as we discuss in~\S\ref{sec:genomics-pipeline}, improper separation of concerns can
+actually lead to errors in our application.
 
 These concerns are very similar to the factors that led to the development of the Open Systems
 Interconnection~(OSI) model and Internet Protocol~(IP) stack for networking
@@ -280,18 +346,18 @@ techniques which can clarify the data model and access patterns. The seven layer
 are decomposed as follows, and are numbered in ascending order from bottom to top:
 
 \begin{enumerate}
-\item {\bf Physical Storage:} This layer coordinates data writes to physical media.
-\item {\bf Data Distribution:} This layer manages access, replication, and distribution of the files that have
+\item \textbf{Physical Storage:} This layer coordinates data writes to physical media.
+\item \textbf{Data Distribution:} This layer manages access, replication, and distribution of the files that have
 been written to storage media.
-\item {\bf Materialized Data:} This layer encodes the patterns for how data is encoded and stored. This
+\item \textbf{Materialized Data:} This layer encodes the patterns for how data is encoded and stored. This
 layer determines I/O bandwidth and compression.
-\item {\bf Data Schema:} This layer specifies the representation of data, and forms the narrow waist of
+\item \textbf{Data Schema:} This layer specifies the representation of data, and forms the narrow waist of
 the stack that separates access from execution.
-\item {\bf Evidence Access:} This layer provides us with primitives for processing data, and allows us to
+\item \textbf{Evidence Access:} This layer provides us with primitives for processing data, and allows us to
 transform data into different views and traversals.
-\item {\bf Presentation:} This layer enhances the data schema with convenience methods for performing
+\item \textbf{Presentation:} This layer enhances the data schema with convenience methods for performing
 common tasks and accessing common derived fields from a single element.
-\item {\bf Application:} At this level, we can use our evidence access and presentation layers to compose
+\item \textbf{Application:} At this level, we can use our evidence access and presentation layers to compose
 the algorithms to perform our desired analysis.
 \end{enumerate}
 
@@ -311,9 +377,8 @@ and constrains how applications traverse datasets~(level 5, Evidence Access). Be
 constraining applications, this leads to bugs in applications that are difficult to detect.\footnote{The
 current best-practice implementations of the BQSR and Duplicate Marking algorithms both fail in certain
 corner-case alignments. These errors are caused because of the limitation on traversing reads in sorted
-order.} To resolve this conflict, we demonstrate several ways to efficiently implement conventional scientific
-traversals in~\S\ref{sec:optimizations-scientific-processing}. These traversals are implemented in the
-evidence access layer, and are independent of anything below the schema.
+order.} These views of evidence should be implemented at the evidence access layer instead of in the
+layout of data on disk. This enforces independence of anything below the schema.
 
 The idea of decomposing scientific applications into a stack model is not new; Bafna et al~\cite{bafna13}
 made a similar suggestion in 2013. We borrow some vocabulary from Bafna et al, but our approach is
@@ -326,237 +391,116 @@ a stack design should serve to abstract layers from methodologies/implementation
 technology trends may obsolete a layer of the stack and render the stack irrelevant.
 \item Bafna et al define a binary data format as the narrow waist in their stack, instead of a schema.
 While these two seem interchangeable, they are not in practice. A schema is a higher level of abstraction
-that encourages the use of literate programming techniques and allows for data serialization techniques to be
-changed as long as the same schema is still provided.
+that encourages the use of literate programming techniques and allows for data serialization techniques
+to be changed as long as the same schema is still provided.
 \item Notably, Bafna et al use this stack model to motivate GQL~\cite{kozanitis14}. While a query system
 should provide a way to process and transform data, Bafna et al instead move this system down to the
 data materialization layer. We feel that this inverts the semantics that a user of the system would prefer
 and makes the system less general.
 \end{itemize}
 
-Our stack enables us to serve the use cases we outline in~\S\ref{sec:workloads}. By using
-Parquet as a storage format, we are able to process the data in many Hadoop-based systems. We
-implement high performance batch and interactive processing with Spark, and can delegate to systems
-like Impala and Spark-SQL for warehousing.
-
-\subsection{Workloads}
-\label{sec:workloads}
-
-There are several common threads that unify the diverse set of applications that make up scientific
-computing. When looking at the data that is used in different fields, several trends pop out:
-
-\begin{enumerate}
-\item Scientific data tends to be rigorously associated with coordinates in some domain. These coordinate
-systems vary, but can include:
-\begin{itemize}
-\item Time~(e.g., fMRI data, particle simulations)
-\item Chromosomal position~(e.g., genomic read alignments and variants)
-\item Position in space~(imaging data, some sensor datasets)
-\end{itemize}
-\item For aggregated data, we frequently want to slice data into many different views. For example, for time
-domain data aggregated from many sensors, scientists may want to perform analyses by slicing
-across a single point in time, or by slicing across a single sensor. In genomics, we frequently aggregate data
-across many people from a given population. Once we have done this first aggregation, we may want to then
-slice the data by subsets of the population, or by regions of the genome~(e.g., specific genes of interest).
-\end{enumerate}
-
-There are two important consequences of the characteristics above. First, since data is attached to a
-coordinate system, the coordinate system itself may impose logical processing patterns. For example, for
-time domain data, we may frequently need to run functions that pass a sliding window across the dataset (e.g., for
-convolution). Second, the slicing of aggregated data is frequently used to perform analyses across
-subsets of a larger dataset. This is common if we want to study a specific phenomenon, like the role of a
-gene in a disease~(a common analysis in the TCGA~\cite{weinstein13}), or the measured activity in a
-single lobe of the brain while performing a task. Since the datasets we are processing are
-large,\footnote{For example, the Acute Myeloid Leukemia subset of the TCGA alone is over 4 TB in size, and
-is only one of 20 cancers in the TCGA.} it may be uneconomical to colocate data with processing nodes,
-because of either the number of nodes that would need to be provisioned, or the amount of storage that would
-need to be provisioned per node.
-
-For scientific fields that process very large datasets, the exact processing techniques and algorithms vary
-considerably, but common processing trends do exist:
-
-\begin{enumerate}
-\item There is increasing reliance on statistical methods. The \texttt{Thunder} pipeline makes heavy use
-of the MLI/MLLib statistical libraries~\cite{freeman14, sparks13}, and tools like the GATK perform multiple
-rounds of statistical refinement~\cite{depristo11}.
-\item Data parallelism is very common. This varies across applications; in some applications (like
-genomics), we may leverage the independence of sites across a coordinate system and process
-individual coordinate regions in parallel. For other systems, we may have matrix calculations that can
-be parallelized~\cite{sparks13}, or we may be able to run processing in parallel across samples or traces.
-\end{enumerate}
-
-Additionally, there are several different emerging use cases for scientific data processing and storage
-systems. These different use cases largely correspond to different points in the lifecycle of the data:
-
-\begin{itemize}
-\item \textbf{Batch processing:} After the initial acquisition of raw sensor data~(e.g., raw DNA reads,
-brain electrode traces, telescope images), we use a batch processing pipeline~(e.g., \texttt{Thunder} or
-the GATK) to perform some dimensionality reduction/statistical summarization of the data. This is
-generally used to extract notable features from the data, such as turning raw genomic reads into variant
-alleles, or identifying areas of activity in neuroscience traces. These tasks are unlikely to have any
-interactive component, and are likely to be long running compute jobs.
-\item \textbf{Ad hoc exploration:} Once the batch processing has completed, there is often a need
-for exploratory processing of the results. For example, when studying disease genetics, a geneticist may
-use the variant/genotype statistics to identify genomic sites with statistically significant links to the
-disease phenotype. Data exploration tasks have a significant user facing/interactive nature, and are
-generally performed by scientists who may be programming laypeople.
-\item \textbf{Data warehousing:} In large scientific projects, it is common to make data available to the
-members of the scientific community through some form of warehouse service~(e.g., the Cancer
-Genomics Hub, CGHub, for the TCGA). As is the case for all data warehousing, this implies that queries
-must be made reasonably efficient, even though the data is expected to be cold. To reduce the cost of
-storing data, we may prioritize compression here; this has led to the creation of compressed storage
-formats like CRAM~\cite{fritz11}.
-\end{itemize}
-
-In this paper, we design a system that can achieve all of the above goals. The genomics and
-astronomy pipelines we demonstrate achieve improvements in batch processing performance, and
-allow for interactive/exploratory analysis through both Scala and Python. Through the layering principles
-we lay out in the next section and the performance optimizations we introduce
-in~\S\ref{sec:loading-remote-data}, we make our system useful for warehousing scientific data.
+By using Parquet as a storage format, we are able to process genomic data using many Hadoop-based
+systems. We implement high performance batch and interactive processing with Spark, and can delegate
+to systems like Impala and Spark-SQL for warehousing.
 
 \section{Related Work}
 \label{sec:related-work}
 
-Similar to what we propose, the \texttt{Thunder} system was developed as a novel MapReduce-based system for
-processing terabytes of neuroscience imaging data~\cite{freeman14}. \texttt{Thunder} performs a largely statistical
-workload, and the significant tasks in terms of execution time are clustering and regression. The system is
-constructed using Spark and Python and is designed to process datasets larger than 4 TB, and leverages
-significant functionality from the MLI/MLLib libraries~\cite{sparks13}. Similar to our system, they are able to use
-Spark's in-memory caching to amortize load time across several pipeline stages. Additionally, they use Spark's
-filtering primitives to allow scientists to cut problems into subproblems. This is a common trend across scientific
-analyses, and is one of the reasons that we advocate for the use of a columnar store with efficient predicate
-pushdown. \texttt{Thunder} is an example pipeline that demonstrates the power of using horizontally scalable
-systems to enable novel scientific analyses.
+Several variant analysis toolkits exist, with the most well known analysis toolkit being the
+\texttt{GATK}~\cite{depristo11}. Additional toolkits include \texttt{HugeSeq}~\cite{lam12},
+\texttt{STORMSeq}~\cite{karczewski14}, and \texttt{SpeedSeq}~\cite{chiang14}. These tools combine
+alignment, variant calling, and filtration into an easy to use package, and may also orchestrate
+work distribution across a set of distributed machines. For example, the \texttt{GATK} and
+\texttt{HugeSeq} make use of an improvised map-reduce model, while \texttt{STORMSeq} uses a grid
+engine to distribute work according to a provided partitioning function. These tools delegate to either
+the \texttt{GATK}'s \texttt{HaplotypeCaller} or \texttt{UnifiedGenotyper}, or
+\texttt{FreeBayes}~\cite{garrison12} for calling germline point events and INDELs.
+\texttt{Platypus}~\cite{rimmer14} is an additional notable toolkit that directly integrates alignment with
+variant calling to improve computational efficiency.
+
+Although earlier methods such as the \texttt{mpileup} caller assumed the statistical independence of
+sites~\cite{li11snp} post-alignment, current variant calling pipelines depend heavily on realignment based
+approaches for accurate genotyping~\cite{li14}. These methods take two different approaches to generate candidate sequences for realignment:
+
+\begin{enumerate}
+\item \emph{Realignment-only:} Putative INDELs are extracted directly from the aligned reads, and the
+reads are locally realigned,
+\item \emph{Reassembly:} The aligned reads are reassembled into haplotypes, which the reads are
+aligned against.
+\end{enumerate}
+
+The realignment-only approach is used in \texttt{UnifiedGenotyper}\footnote{When used following
+\texttt{IndelRealignment}} and \texttt{FreeBayes}, while \texttt{HaplotypeCaller}, \texttt{Platypus}, and
+\texttt{Scalpel}~\cite{narzisi14} make use of reassembly. In both cases, we perform the following
+algorithmic steps:
+
+\begin{enumerate}
+\item Candidate haplotypes are generated for realignment,
+\item Each read is realigned to each haplotype, typically using a pair Hidden Markov Model~(HMM,
+see~\cite{durbin98}),
+\item A statistical model uses the read$\leftrightarrow$haplotype alignments to choose the haplotype pair
+that most likely represents the variants hypothesized to exist in the region, 
+\item The alignments of the reads to the chosen haplotype pair are used to generate statistics that are
+then used for genotyping.
+\end{enumerate}
+
+In haplotype reassembly, step 1 is broken down into two further steps:
+
+\begin{enumerate}
+\item A \emph{de Bruijn} graph is constructed from the reads aligned to a region of the reference genome,
+\item All valid paths between the start and end of the graph are enumerated.
+\end{enumerate}
+
+In both the \emph{realignment} and \emph{reassembly} approaches, local alignment errors~(errors in
+alignment \emph{within} this region) are corrected by using a statistical model to identify the most likely
+location that the read could have come from, given the other reads seen in this area. These approaches
+are algorithmically different from \emph{global alignment} because they make use of local context when
+picking the sequence to align to, and the alignment search space is much smaller, which enables the use
+of more expensive alignment methods.
+
+\emph{De novo} assembly provides another promising approach to variant discovery. In the \emph{de
+novo} formulation of assembly, the reads are not aligned to a reference genome. Instead, ``novel''
+contiguous fragments of sequence are assembled from the reads. Variants are called by aligning these
+assemblies to the reference genome, and by realigning the reads against the novel assemblies. Several
+implementations of \emph{de novo} variant calling exist, most notably the \texttt{Cortex}~\cite{iqbal12}
+and \texttt{Discovar}~\cite{weisenfeld14} assemblers. Although \emph{de novo} assembly solves
+several important issues seen by traditional variant callers~(reference bias, structural variant detection),
+\emph{de novo} assembly is currently too computationally expensive for widespread use in genotyping.
 
 \chapter{Genomic Data Storage and Preprocessing Using \texttt{ADAM}}
 
-To validate our architectural choices, we have implemented pipelines for processing short read genomic
-data and astronomy image processing. Both of these pipelines are implemented using
-Spark~\cite{zaharia10}, Avro~\cite{avro}, and Parquet~\cite{parquet}. We have chosen these two
-applications as they fit in different areas in the design space. Specifically, the genomics pipeline makes
-heavy use of statistical processing techniques over semistructured data, while the astronomy application
-has a traditional matrix structure.
+\section{Distributed Architectures for Genomics}
+\label{sec:distributed-architectures}
 
-Corresponding to the stack model that was introduced in Figure~\ref{fig:stack-model}, we use the
-following technologies to implement both of our applications:
+As discussed in~\S\ref{sec:introduction}, several 
+
+\texttt{ADAM} provides an API for storing and processing genomic data in a distributed system using
+Apache Spark~\cite{zaharia12}, Avro~\cite{avro}, and Parquet~\cite{parquet}. At a core level,
+\texttt{ADAM} couples with Apache Spark to implement an API for expressing common genomic patterns
+on a distributed system. This provides several important advantages over current frameworks, such as
+the \texttt{walker} interface in the \texttt{GATK}:
 
 \begin{itemize}
-\item \textbf{Physical Storage:} We have designed our system to run on top of local or distributed
-drives, as well as block stores.
-\item \textbf{Data Distribution:} Our system is designed to operate on top of the Hadoop Distributed File
-System~(HDFS), or to perform it's own data distribution over HTTP or by reaching out to an Amazon
-S3 bucket. We describe these optimizations in~\S\ref{sec:loading-remote-data}.
-\item \textbf{Materialized Data:} We store data using the open source Parquet columnar store.
-\item \textbf{Schema:} We manage our schemas~(and data serialization) via the Avro serialization
-framework~\cite{avro}. Our schemas are described in Appendix~\ref{sec:schema}.
-\item \textbf{Evidence Access:} We use Spark's Resilient Distributed Dataset~(RDD, \cite{zaharia12})
-abstraction to provide parallel processing over the data. We enhance this with the join patterns we
-describe in~\S\ref{sec:coordinate-system-joins}.
-\item \textbf{Presentation:} In our genomics application, we provide several rich datatypes that implicitly
-wrap our schemas to provide convenience methods for metadata access. This is not as crucial in the
-astronomy application.
+\item \texttt{ADAM} leverages the full Spark API, which is a more flexible and all-encompassing API than
+the map-reduce style API provided by the \texttt{GATK},
+\item Current genomics APIs generally enforce limitations on the layout of data on disk. We provide a
+data independent API, which eliminates errors that occur when processing chimeric reads.
+\item By building on top of efficient distributed computing technologies, \texttt{ADAM} is able to scale out
+horizontally to more than 128 compute nodes.
 \end{itemize}
 
-In the remainder of this section, we describe the two applications that we have implemented, and the
-optimizations we have made to improve the horizontal scalability of these algorithms.
-
-\section{Pipeline Structure}
-\label{sec:genomics-pipeline}
-
-Contemporary genomics has been revolutionized by ``next generation'' sequencing
-technologies~(NGS), which have driven a precipitous drop in the cost of running genomic
-assays~\cite{nhgri}. Although there are a variety of sequencing technologies in use, the majority of
-sequence data comes from the Illumina sequencing platform, which uses a ``sequencing-by-synthesis''
-technique to generate short read data~\cite{metzker09}. Short read refers to 
-sequencing run will generate many reads that are between 50 and 250 bases in length. In addition to
-adjusting the length of the reads, we can control the amount of the data that is generated by
-changing the amount of the genome that we sequence, or the amount of redundant sequencing that
-we perform~(the average number of reads that covers each base, or \emph{coverage}). A single
-human genome sequenced at 60$\times$ coverage will produce approximately 1.4 billion reads,
-which is approximately 600 GB of raw data, or 225 GB of compressed data. For each read, we also
-are provided \emph{quality scores}, which represent the likelihood that the base at a given position
-was observed.
-
-One of the most common genomic analyses is \emph{variant calling}, which is a statistical process to
-infer the sites at that a single individual varies from the reference genome.\footnote{The
-reference genome represents the ``average'' genome for a species. The Human Genome
-Project~\cite{lander01} assembled the first human reference genome.} To call variants, we perform the
-following steps:
-
-\begin{enumerate}
-\item \textbf{Alignment:} For each read, we find the position in the genome that the read is most likely to
-have come from. As an exact search is too expensive, there has been an extensive amount of research
-that has focused on indexing strategies for improving alignment performance~\cite{li10, li11,
-zaharia11}. This process is parallel per sequenced read.
-\item \textbf{Pre-processing:} After reads have been aligned to the genome, we perform several
-preprocessing steps to eliminate systemic errors in the reads. This may involve recalibrating the
-observed quality scores for the bases, or locally optimizing the read alignments. We will present a
-description of several of these algorithms in~\S\ref{sec:genomics-pipeline}; for a more detailed
-discussion, we refer readers to DePristo et al~\cite{depristo11}.
-\item \textbf{Variant calling:} Variant calling is a statistical process that uses the read alignments
-and the observed quality scores to compute whether a given sample matches or diverges
-from the reference genome. This process is typically parallel per position or region in the genome.
-\item \textbf{Filtration:} After variants have been called, we want to filter out false positive variant calls.
-We may perform queries to look for variants with borderline likelihoods, or we may look for clusters of
-variants, which may indicate that a local error has occurred. This process may be parallel per position,
-may involve complex traversals of the genomic coordinate space, or may require us to fit a statistical
-model to all or part of the dataset. While we do not present work on variant filtration in this paper, variant
-filtration has motivated the coordinate space joins presented in~\S\ref{sec:coordinate-system-joins}.
-\end{enumerate}
-
-This process is very expensive in time to run; the current best practice pipeline uses the BWA tool~\cite{li10} for
-alignment and the GATK~\cite{depristo11, mckenna10} for pre-processing, variant calling, and filtration.
-Current benchmark suites have measured this pipeline as taking between 90 and 130 hours to run
-end-to-end~\cite{talwalkar14}. Recent projects have achieved 5--$10\times$ improvements in alignment
-and variant calling performance~\cite{rimmer14, zaharia11}, which makes the pre-processing stages
-the performance bottleneck. Our experimental results have corroborated this, as the four pre-processing stages
-take over 110 hours to run on a clinical quality human genome when run on an Amazon EC2 \texttt{cr1.8xlarge}
-machine. 
-
-For current implementations of these read processing steps, performance is limited by disk
-bandwidth~\cite{diao15}. This bottleneck exists because the operations read in a SAM/BAM file, perform
-a small amount of processing, and write the data to disk as a new SAM/BAM file. We achieve a
-performance bump by performing our processing iteratively in memory. The four read processing stages
-can then be chained together, eliminating three long writes to disk and an additional three long reads
-from disk. Additionally, by rethinking the design of our algorithms, we are able to reduce overhead in
-several other ways:
-
-\begin{enumerate}
-\item Current algorithms require the reference genome to be present on all nodes. This assembly is then used to
-look up the reference sequence that overlaps all reads. The reference genome is several gigabytes in
-size, and performing a lookup in the reference genome can be costly due to its size. Instead, we leverage
-the \texttt{mismatchingPositions} field in our schema to embed information about the reference in each read. This
-optimization allows us to avoid broadcasting the reference, and provides O(1) lookup.
-\item Shared-memory genomics applications tend to be impacted significantly by false sharing of data
-structures~\cite{zaharia11}. Instead of having data structures that are modified in parallel, we
-restructure our algorithms so that we only touch data structures from a single thread, and then merge
-structures in a reduce phase. The elimination of sharing improves the performance of covariate calculation during
-BQSR and the target generation phase of local realignment.
-\item In a na\"{i}ve implementation, the local realignment and duplicate marking tasks can suffer from
-stragglers. The stragglers occur due to a large amount of reads that either do not associate to a realignment
-target, or that are unaligned. We pay special attention to these cases by manually randomizing the
-partitioning for these reads. This resolves load imbalance and mitigates stragglers.
-\item For the Flagstat command, we are able to project a limited subset of fields. Flagstat touches fewer
-than 10 fields, which account for less than 10\% of space on disk. We discuss the performance
-implications of this further in~\S\ref{sec:column-store-perf}.
-\end{enumerate}
-
-These techniques allow us to achieve a $>50\times$ performance improvement over current tools, and
-scalability beyond 128 machines. We perform a detailed performance review
-in~\S\ref{sec:genomics-performance}.
+\section{Storing Genomic Data}
+\label{sec:schema-design}
 
 \section{Read Preprocessing Algorithms}
-We have focused on implementing the four most-commonly used pre-processing stages, as well as
-\texttt{flagstat}, a command that is used at the end of pre-processing for validating the quality of an
-aligned/pre-processed sample. In the remainder of this section, we describe the stages that we have implemented,
-and the techniques we have used to improve performance and accuracy.
+\label{sec:read-preprocessing}
+
+In \texttt{ADAM}, we have implemented the three most-commonly used pre-processing stages from the
+\texttt{GATK} pipeline~\cite{depristo11}. In this section, we describe the stages that we have
+implemented, and the techniques we have used to improve performance and accuracy when running on
+a distributed system. These pre-processing stages include:
 
 \begin{enumerate}
-\item \textbf{Sorting:} This phase sorts all reads by the position of the start of their alignment. The implementation
-of this algorithm is trivial, as Spark provides a sort primitive~\cite{zaharia10}; we solely need to define an
-ordering for genomic coordinates, which is well defined.\footnote{In practice, an explicit sort is unnecessary when
-using the rest of our MapReduce-based pipeline. We have included sort to enable the use of legacy tools that
-require sorted input.}
 \item \textbf{Duplicate Removal:} During the process of preparing DNA for sequencing, reads are duplicated by
 errors during the sample preparation and polymerase chain reaction stages. Detection of duplicate reads
 requires matching all reads by their position and orientation after read alignment. Reads with identical position
@@ -823,6 +767,79 @@ def sweepReadOverReferenceForQuality (
 If the consensus with the lowest mismatch quality score has a log-odds ratio~(LOD) that is greater than $5.0$ with respect to the reference, we realign the reads.
 This is done by recomputing the cigar and MDTag for each new alignment. Realigned reads have their mapping quality score increased by 10 in the Phred scale.
 
+\subsubsection{Convex-Hull Finding}
+\label{sec:convex-hull}
+
+A frequent pattern in our application is identifying the maximal convex hulls across sets of regions. For
+a set $R$ of regions, we define a maximal convex hull as the largest region $\hat{r}$ that satisfies the
+following properties:
+
+\begin{align}
+\label{eqn:convexity-constraint}
+\hat{r} &= \cup_{r_i \in \hat{R}} r_i \\
+\hat{r} \cap r_i &\ne \emptyset, \forall r_i \in \hat{R} \\
+\hat{R} &\subset R
+\end{align}
+
+In our problem, we seek to find all of the maximal convex hulls, given a set of regions. For genomics, the
+convexity constraint described by \eqref{eqn:convexity-constraint} is trivial to check: specifically, the
+genome is assembled out of reference contigs\footnote{\emph{Contig} is short for \emph{contiguous
+sequence}. In alignment based pipelines, reference contigs are  used to describe the sequence of each
+chromosome.} that define disparate 1-D coordinate spaces. If two regions exist on different contigs, they
+are known not to overlap. If two regions are on a single contig, we simply check to see if they overlap
+on that contig's 1-D coordinate plane.
+
+Given this realization, we can define the data-parallel algorithm~\ref{alg:parallel-convex-hull} to find the
+maximal convex hulls that describe a genomic dataset.
+
+\begin{algorithm}
+\caption{Find Convex Hulls in Parallel}
+\label{alg:parallel-convex-hull}
+\begin{algorithmic}
+\STATE $data \leftarrow$ input dataset
+\STATE $regions \leftarrow data$.map($data \Rightarrow $generateTarget($data$))
+\STATE $regions \leftarrow regions$.sort()
+\STATE $hulls \leftarrow regions$.fold($r_1, r_2 \Rightarrow$ mergeTargetSets($r_1, r_2$))
+\RETURN $hulls$
+\end{algorithmic}
+\end{algorithm}
+
+The \texttt{generateTarget} function projects each datapoint into a Red-Black tree which contains a
+single region. The performance of the fold depends on the efficiency of the merge function. We achieve
+efficient merges with the tail-call recursive \texttt{mergeTargetSets} function which is described in
+algorithm~\ref{alg:join-targets}.
+
+\begin{algorithm}
+\caption{Merge Hull Sets}
+\label{alg:join-targets}
+\begin{algorithmic}
+\STATE $first \leftarrow$ first target set to merge
+\STATE $second \leftarrow$ second target set to merge
+\REQUIRE $first$ and $second$ are sorted
+\IF{$first = \emptyset \wedge second = \emptyset$}
+\RETURN $\emptyset$
+\ELSIF{$first = \emptyset$}
+\RETURN $second$
+\ELSIF{$second = \emptyset$}
+\RETURN $first$
+\ELSE
+\IF{last($first$) $\cap$ head($second$) $= \emptyset$}
+\RETURN $first$ + $second$
+\ELSE
+\STATE $mergeItem \leftarrow$ (last($first$) $\cup$ head($second$))
+\STATE $mergeSet \leftarrow$ allButLast($first$) $\cup mergeItem$
+\STATE $trimSecond \leftarrow$ allButFirst($second$)
+\RETURN mergeTargetSets($mergeSet$, $trimSecond$)
+\ENDIF
+\ENDIF
+\end{algorithmic}
+\end{algorithm}
+
+For a region join~(see~\S\ref{sec:coordinate-system-joins}), we would use the maximal convex hull
+set to define partitioning for the join. Alternatively, for INDEL
+realignment~(see~\S\ref{sec:genomics-pipeline}), we use this set as an index for mapping reads directly
+to targets.
+
 \subsection{Duplicate Marking Implementation}
 \label{sec:duplicate-marking-implementation}
 
@@ -900,7 +917,11 @@ are marked duplicates.
 
 \chapter{Variant Calling via Reassembly Using \texttt{avocado}}
 
+\section{Modular Approaches for Variant Calling}
+\label{sec:variant-calling}
+
 \section{Reference Threaded \emph{de Bruijn} Graphs}
+\label{sec:reference-threaded}
 
 The local assembler in \texttt{avocado} is a de bruijn graph based assembler. The assembler creates
 a ``reference threaded'' assembly. In this approach, we label $k$-mers that appear in the
@@ -1162,6 +1183,165 @@ reassembly; for \emph{de novo} assembly, we may be able to define this by findin
 \section{Proofs of Allele Canonicality}
 \label{sec:canonical-proofs}
 
+To construct an \emph{indexed de Bruijn} graph, we start with the traditional formulation of a \emph{de
+Brujin} graph for sequence assembly:
+
+\begin{defn}[de Bruijn Graph]
+\label{defn:dbg}
+A de Bruijn graph describes the observed transitions between adjacent $k$-mers in a sequence. Each
+$k$-mer $s$ represents a $k$-length string, with a $k - 1$ length prefix given by $\text{prefix}(s)$ and a
+length 1 suffix given by $\text{suffix}(s)$. We place a directed edge ($\rightarrow$) from $k$-mer $s_1$ to
+$k$-mer $s_2$ if $\text{prefix}(s_1)^{\{1, k - 2\}} + \text{suffix}(s_1) = \text{prefix}(s_2)$.
+\end{defn}
+
+Now, suppose we have $n$ sequences $\mathcal{S}_1, \dots, \mathcal{S}_n$. Let us assert that for each
+$k$-mer $s \in \mathcal{S}_i$, then the output of function $\text{index}_i(s)$ is defined. This function
+provides us with the integer position of $s$ in sequence $\mathcal{S}_i$. Further, given two $k$-mers
+$s_1, s_2 \in \mathcal{S}_i$, we can define a distance function
+$\text{distance}_i(s_1, s_2) = | \text{index}_i(s_1) - \text{index}_i(s_2) |$. To create an \emph{indexed
+de Bruijn} graph, we simply annotate each $k$-mer $s$ with the $\text{index}_i(s)$ value for all
+$\mathcal{S}_i, i \in \{1, \dots, n\}$ where $s \in \mathcal{S}_i$. This index value is trivial to log when
+creating the original \emph{de Bruijn} graph from the provided sequences.
+
+Let us require that all sequences $\mathcal{S}_1, \dots, \mathcal{S}_n$ are not repetitive, which implies
+that the resulting \emph{de Bruijn graph} is acyclic. If we select any two sequences $\mathcal{S}_i$ and
+$\mathcal{S}_j$ from $\mathcal{S}_1, \dots, \mathcal{S}_n$ that share at least two $k$-mers $s_1$ and
+$s_2$ with common ordering~($s_1 \rightarrow \dots \rightarrow s_2$ in both $\mathcal{S}_i$ and
+$\mathcal{S}_j$), the \emph{indexed de Bruijn} graph $G$ provides several guarantees:
+
+\begin{enumerate}
+\item If two sequences $\mathcal{S}_i$ and $\mathcal{S}_j$ share at least two $k$-mers $s_1$ and
+$s_2$, we can provably find the maximum edit distance $d$ of the subsequences in $\mathcal{S}_i$ and
+$\mathcal{S}_j$, and bound the cost of finding this edit distance at $\mathcal{O}(nd)$,\footnote{Here,
+$n = \max(\text{distance}_{\mathcal{S}_i}(s_1, s_2), \text{distance}_{\mathcal{S}_j}(s_1, s_2))$.}
+\item For many of the above subsequence pairs, we can bound the cost at $\mathcal{O}(n)$, \emph{and}
+provide canonical representations for the necessary edits,
+\item $\mathcal{O}(n^2)$ complexity is restricted to aligning the subsequences of $\mathcal{S}_i$ and
+$\mathcal{S}_j$ that exist \emph{before} $s_1$ or \emph{after} $s_2$.
+\end{enumerate}
+
+Let us focus on cases 1 and 2, where we are looking at the subsequences of $\mathcal{S}_i$ and
+$\mathcal{S}_j$ that are between $s_1$ and $s_2$. A trivial case arises when both $\mathcal{S}_i$ and
+$\mathcal{S}_j$ contain an identical path between $s_1$ and $s_2$ (i.e.,
+$s_1 \rightarrow s_n \rightarrow \dots \rightarrow s_{n + m} \rightarrow s_2$ and
+$s_{n + k} \in \mathcal{S}_i \wedge s_{n + k} \in \mathcal{S}_j \forall k \in \{0, \dots , m\}$). Here, the
+subsequences are clearly identical. This determination can be made trivially by walking from vertex $s_1$
+to vertex $s_2$ with $\mathcal{O}(m)$ cost.
+
+However, three distinct cases can arise whenever $\mathcal{S}_i$ and $\mathcal{S}_j$ diverge between
+$s_1$ and $s_2$. For simplicity, let us assume that both paths are independent~(see
+Definition~\ref{defn:path-independence}). These three cases correspond to there being either a canonical
+substitution edit, a canonical INDEL edit, or a non-canonical (but known distance) edit between
+$\mathcal{S}_i$ and $\mathcal{S}_j$.
+
+\begin{defn}[Path Independence]
+\label{defn:path-independence}
+Given a non-repetitive \emph{de Bruijn} graph $G$ constructed from $\mathcal{S}_i$ and $\mathcal{S}_j$, we say
+that $G$ contains independent paths between $s_1$ and $s_2$ if we can construct two subsets
+$\mathcal{S}'_i \subset \mathcal{S}_i, \mathcal{S}'_j \subset \mathcal{S}_j$ of $k$-mers where $s_{i + n}
+\in \mathcal{S}'_i \forall n \in \{0, \dots, m_i\}, s_{i + n - 1} \rightarrow s_{i + n} \forall n \in \{1, \dots, m_i\}$,
+$s_{j + n} \in \mathcal{S}'_j \forall n \in \{0, \dots, m_j\}, s_{j + n - 1} \rightarrow s_{j + n} \forall n \in \{1,
+\dots, m_j\}$, and $s_1 \rightarrow s_i, s_j; s_{i + m_i}, s_{j + m_j} \rightarrow s_2$ and $\mathcal{S}'_i
+\bigcap \mathcal{S}'_j = \emptyset$, where $m_i = \text{distance}_{\mathcal{S}_i}(s_1, s_2)$, and $m_j =
+\text{distance}_{\mathcal{S}_j}(s_1, s_2)$. This implies that the sequences $\mathcal{S}_i$ and
+$\mathcal{S}_j$ are different between $s_1, s_2$,
+\end{defn}
+
+We have a canonical substitution edit if $m_i = m_j = k$, where $k$ is the $k$-mer size. Here, we can
+prove that the edit between $\mathcal{S}_i$ and $\mathcal{S}_j$ between $s_1, s_2$ is a single base
+substitution $k$ letters \emph{after} $\text{index}(s_1)$:
+
+\begin{proof}[Proof regarding Canonical Substitution]
+\label{proof:canonical-substitution}
+Suppose we have two non-repetitive sequences, $\mathcal{S}_i'$ and $\mathcal{S}_j'$, each of length
+$2k + 1$. Let us construct a \emph{de Bruijn} graph $G$, with $k$-mer length $k$. If each sequence begins with
+$k$-mer $s_1$ and ends with $k$-mer $s_2$, then that implies that the first and last $k$ letters of
+$\mathcal{S}_i'$ and $\mathcal{S}_j'$ are identical. If both subsequences had the same character at
+position $k$, this would imply that both sequences were identical and therefore the two paths between
+$s_1, s_2$ would not be independent~(Definition~\ref{defn:path-independence}). If the two letters are
+different \emph{and} the subsequences are non-repetitive, each character is responsible for $k$
+previously unseen $k$-mers. This is the only possible explanation for the two independent $k$ length
+paths between $s_1$ and $s_2$.
+\end{proof}
+
+To visualize the graph corresponding to a substitution, take the two example sequences \texttt{CCACTGT}
+and \texttt{CCAATGT}. These two sequences differ by a \texttt{C} $\leftrightarrow$ \texttt{A} edit at
+position three. With $k$-mer length $k = 3$, this corresponds to the graph in Figure~\ref{fig:sne}.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.5\linewidth, clip=true, trim=0 39 0 39]{graphs/sne.pdf}
+\end{center}
+\caption{Subgraph Corresponding To a Single Nucleotide Edit}
+\label{fig:sne}
+\end{figure}
+
+If $m_i = k - 1, m_j \ge k$ or vice versa, we have a canonical INDEL edit (for convenience, we assume
+that $\mathcal{S}_i'$ contains the $k - 1$ length path). Here, we can prove that there is a $m_j - m_i$
+length insertion\footnote{This is equivalently a $m_j - m_i$ length deletion in $\mathcal{S}_i'$ relative to
+$\mathcal{S}_j'$.} in $\mathcal{S}_j'$ relative to $\mathcal{S}_i'$, $k - 1$ letters \emph{after}
+$\text{index}(s_1)$:
+
+\begin{lemma}[Distance between $k$ length subsequences]
+\label{lem:minimum-distance}
+\emph{Indexed de Bruijn} graphs naturally provide a distance metric for $k$ length substrings. Let us construct an
+\emph{indexed de Bruijn} graph $G$ with $k$-mers of length $k$ from a non-repetitive sequence $\mathcal{S}$.
+For any two $k$-mers $s_a, s_b \in \mathcal{S}, s_a \ne s_b$, the
+$\text{distance}_\mathcal{S}(s_a, s_b)$ metric is equal to $l_p + 1$, where $l_p$ is the length of the
+path (in $k$-mers) between $s_a$ and $s_b$. Thus, $k$-mers with overlap of $k - 1$ have an edge
+directly between each other ($l_p = 0$) and a distance metric of 1. Conversely, two $k$-mers that are
+adjacent but not overlapping in $\mathcal{S}$ have a distance metric of $k$, which implies $l_p = k - 1$.
+\end{lemma}
+
+\begin{proof}[Proof regarding Canonical INDELs]
+\label{proof:canonical-indels}
+We are given a graph $G$ which is constructed from two non-repetitive sequences $\mathcal{S}_i'$ and
+$\mathcal{S}_j'$, where the only two $k$-mers in both $\mathcal{S}_i'$ and $\mathcal{S}_j'$ are $s_1$
+and $s_2$ and both sequences provide independent paths between $s_1$ and $s_2$. By
+Lemma~\ref{lem:minimum-distance}, if the path from $s_1 \rightarrow \dots \rightarrow s_2 \in
+\mathcal{S}_i'$ has length $k - 1$, then $\mathcal{S}_i'$ is a string of length $2k$ that is formed by
+concatenating $s_1, s_2$. Now, let us suppose that the path from $s_1 \rightarrow \dots \rightarrow s_2
+\in \mathcal{S}_j'$ has length $k + l - 1$. The first $l$ $k$-mers after $s_1$ will introduce a $l$ length
+subsequence $\mathcal{L} \subset \mathcal{S}_j', \mathcal{L} \not\subset \mathcal{S}_i'$, and then the
+remaining $k - 1$ $k$-mers in the path provide a transition from $\mathcal{L}$ to $s_2$. Therefore,
+$\mathcal{S}_j'$ has length of $2k + l$, and is constructed by concatenating $s_1, \mathcal{L}, s_2$.
+This provides a canonical placement for the inserted sequence $\mathcal{L}$ in $\mathcal{S}_j'$ between
+$s_1$ and $s_2$.
+\end{proof}
+
+To visualize the graph corresponding to a canonical INDEL, take the two example sequences
+\texttt{CACTGT} and \texttt{CACCATGT}. Here, we have a \texttt{CA} insertion after position two. With
+$k$-mer length $k = 3$, this corresponds to the graph in Figure~\ref{fig:indel}.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.5\linewidth, clip=true, trim=0 39 0 39]{graphs/indel.pdf}
+\end{center}
+\caption{Subgraph Corresponding To a Canonical INDEL Edit}
+\label{fig:indel}
+\end{figure}
+
+Where we have a canonical allele, the cost of computing the edit is set by the need to walk the graph
+linearly from $s_1$ to $s_2$, and is therefore $\mathcal{O}(n)$. However, in practice, we will see
+differences that cannot be described as one of the earlier two canonical approaches. First, let us
+generalize from the two above proofs: if we have two independent paths between $s_1, s_2$ in the
+\emph{de Bruijn} graph $G$ that was constructed from $\mathcal{S}_i, \mathcal{S}_j$, we can describe
+$\mathcal{S}_i$ as a sequence created by concatenating $s_1, \mathcal{L}_i, s_2$.\footnote{This
+property holds true for $\mathcal{S}_j$ as well.} The canonical edits merely result from special cases:
+
+\begin{itemize}
+\item In a canonical substitution edit, $l_{\mathcal{L}_i} = l_{\mathcal{L}_j} = 1$.
+\item In a canonical INDEL edit, $l_{\mathcal{L}_i} = 0, l_{\mathcal{L}_j} \ge 1$.
+\end{itemize}
+
+Conceptually, a non-canonical edit occurs when two edits occur within $k$ positions of each other. In
+this case, we can trivially fall back on a $O(nm)$ local alignment algorithm~(e.g., a pairwise HMM or
+Smith-Waterman, see~\cite{durbin98,smith81}), \emph{but} we only need to locally realign
+$\mathcal{L}_i$ against $\mathcal{L}_j$, which reduces the size of the realignment problem. However, we
+can further limit this bound by limiting the maximum number of INDEL edits to $d = | l_{\mathcal{L}_i} -
+l_{\mathcal{L}_j} |$. This allows us to use an alignment algorithm that limits the number of INDEL
+edits~(e.g., Ukkonen's algorithm~\cite{ukkonen85}). By this, we can achieve $O(n(d + 1))$ cost.
+
 \chapter{Performance and Accuracy Analysis}
 
 Thus far, we have discussed ways to improve the performance of scientific workloads that are
@@ -1189,36 +1369,36 @@ the process Amazon uses to charge customers.
 \begin{center}
 \begin{tabular}{ l c c c }
 \hline
-\multicolumn{4}{c}{\bf \textit{Sort}} \\
-\bf Software & \bf EC2 profile & \bf Time & \bf Cost \\
+\multicolumn{4}{c}{\textbf{\textit{Sort}}} \\
+\textbf{Software} & \textbf{EC2 profile} & \textbf{Time} & \textbf{Cost} \\
 \hline
 Picard & 1 \texttt{hs1.8xlarge} & 17h 44m & \$81.57 \\
 ADAM & 1 \texttt{hs1.8xlarge} & 8h 56m & \$41.09 \\
 ADAM & 128 \texttt{m2.4xlarge} & 9m & \$31.49 \\
 \hline
-\multicolumn{4}{c}{\bf \textit{Mark Duplicates}} \\
-\bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
+\multicolumn{4}{c}{\textbf{\textit{Mark Duplicates}}} \\
+\textbf{Software} & \textbf{EC2 profile} & \textbf{Time} & \textbf{Cost} \\
 \hline
 Picard & 1 \texttt{hs1.8xlarge} & 20h 22m & \$93.68 \\
 ADAM & 1 \texttt{hs1.8xlarge} & 9h & \$41.40 \\
 ADAM & 128 \texttt{m2.4xlarge} & 19m & \$64.48 \\ 
 \hline
-\multicolumn{4}{c}{\bf \textit{BQSR}} \\
-\bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
+\multicolumn{4}{c}{\textbf{\textit{BQSR}}} \\
+\textbf{Software} & \textbf{EC2 profile} & \textbf{Time} & \textbf{Cost} \\
 \hline
 GATK & 1 \texttt{hs1.8xlarge} & 31h 18m & \$143.98 \\
 ADAM & 1 \texttt{hs1.8xlarge} & 34h & \$156.40 \\
 ADAM & 128 \texttt{m2.4xlarge} & 54m & \$188.93 \\
 \hline
-\multicolumn{4}{c}{\bf \textit{INDEL Realignment}} \\
-\bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
+\multicolumn{4}{c}{\textbf{\textit{INDEL Realignment}}} \\
+\textbf{Software} & \textbf{EC2 profile} & \textbf{Time} & \textbf{Cost} \\
 \hline
 GATK & 1 \texttt{hs1.8xlarge} & 42h 49m & \$196.88 \\
 ADAM & 1 \texttt{hs1.8xlarge} & 12h 58m & \$82.80 \\
 ADAM & 128 \texttt{m2.4xlarge} & 24m & \$83.97 \\
 \hline
-\multicolumn{4}{c}{\bf \textit{Flagstat}} \\
-\bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
+\multicolumn{4}{c}{\textbf{\textit{Flagstat}}} \\
+\textbf{Software} & \textbf{EC2 profile} & \textbf{Time} & \textbf{Cost} \\
 \hline
 SAMtools & 1 \texttt{hs1.8xlarge} & 25m 24s & \$1.95 \\
 ADAM & 1 \texttt{hs1.8xlarge} & 7m 4s & \$1.95 \\
@@ -1240,7 +1420,7 @@ chosen to represent a workstation. Network bandwidth is constant across all inst
 \begin{center}
 \begin{tabular}{ l c l }
 \hline
-\bf Machine & \bf Cost & \bf Description \\
+\textbf{Machine} & \textbf{Cost} & \textbf{Description} \\
 \hline
 \hline
 \texttt{hs1.8xlarge} & \$4.60/hr & 16 proc, 117GiB RAM, 24$\times$ HDD \\
@@ -1327,49 +1507,21 @@ achieve significant compression of the sequenced bases.
 \begin{center}
 \begin{tabular}{ l c c }
 \hline
-\multicolumn{3}{c}{\bf \texttt{NA12878}} \\
-\bf Format & \bf Size & \bf Compression \\
+\multicolumn{3}{c}{\textbf{\texttt{NA12878}}} \\
+\textbf{Format} & \textbf{Size} & \textbf{Compression} \\
 \hline
 \hline
 BAM & 234 GB & --- \\
 CRAM & 112 GB & 2.08$\times$ \\
 Parquet & 185 GB & 1.26$\times$ \\
 \hline
-\multicolumn{3}{c}{\bf \texttt{HG00096}} \\
-\bf Format & \bf Size & \bf Compression \\
+\multicolumn{3}{c}{\textbf{\texttt{HG00096}}} \\
+\textbf{Format} & \textbf{Size} & \textbf{Compression} \\
 \hline
 \hline
 BAM & 14.5 GB & --- \\
 CRAM & 3.6 GB & 4.83$\times$ \\
 Parquet & 11.4 GB & 1.27$\times$ \\
-\hline
-\end{tabular}
-\end{center}
-\end{table}
-
-We achieve greater compression on the astronomy datasets. We compare against the legacy FITS~\cite{wells81}
-format in Table~\ref{tab:astro-compression}. We measure the aggregate compression of the image files provided
-as input to our system, and the compression of our pipeline output.
-
-\begin{table}[h]
-\caption{Astronomy Data Compression}
-\label{tab:astro-compression}
-\begin{center}
-\begin{tabular}{ l c c }
-\hline
-\multicolumn{3}{c}{\bf Input Dataset} \\
-\bf Format & \bf Size & \bf Compression \\
-\hline
-\hline
-FITS & 1.5 GB & --- \\
-Parquet & 0.55 GB & 2.75$\times$ \\
-\hline
-\multicolumn{3}{c}{\bf Output Dataset} \\
-\bf Format & \bf Size & \bf Compression \\
-\hline
-\hline
-FITS & 1.2 GB & --- \\
-Parquet & 0.88 GB & 1.35$\times$ \\
 \hline
 \end{tabular}
 \end{center}
