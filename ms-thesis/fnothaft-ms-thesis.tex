@@ -73,7 +73,7 @@ to discover genomic variants.
 
 \tableofcontents
 
-\chapter{Genome Processing Pipelines}
+\chapter{Variant Identification Pipelines for Genomic Data}
 
 \section{Introduction}
 \label{sec:introduction}
@@ -138,9 +138,9 @@ We introduce the stack model in figure~\ref{fig:stack-model} as a way to decompo
 
 \begin{figure}[h]
 \begin{center}
-\includegraphics[width=0.25\linewidth]{stack-model.pdf}
+\includegraphics[width=0.75\linewidth]{expanded-stack-2.pdf}
 \end{center}
-\caption{A Stack Model for Scientific Computing}
+\caption{A Stack Model for Genomic Analyses}
 \label{fig:stack-model}
 \end{figure}
 
@@ -297,9 +297,10 @@ several other ways:
 \item Current algorithms require the reference genome to be present on all nodes. This assembly is then
 used to look up the reference sequence that overlaps all reads. The reference genome is several
 gigabytes in size, and performing a lookup in the reference genome can be costly due to its size. Instead,
-we leverage the \texttt{mismatchingPositions} field in our schema to embed information about the
-reference in each read. This optimization allows us to avoid broadcasting the reference, and provides
-O(1) lookup.
+wherever possible, we leverage the \texttt{mismatchingPositions} field in our schema to embed
+information about the reference in each read. This optimization allows us to avoid broadcasting the
+reference, and provides O(1) lookup. When this is not possible, we make use of a ``region join'' primitive,
+which enables us to make use of the reference genome with \emph{minimal} duplication.
 \item Shared-memory genomics applications tend to be impacted significantly by false sharing of data
 structures~\cite{zaharia11}. Instead of having data structures that are modified in parallel, we
 restructure our algorithms so that we only touch data structures from a single thread, and then merge
@@ -317,91 +318,6 @@ implications of this further in~\S\ref{sec:column-store-perf}.
 These techniques allow us to achieve a $>50\times$ performance improvement over current tools, and
 scalability beyond 128 machines. We perform a detailed performance review
 in~\S\ref{sec:genomics-performance}.
-
-\section{Layering}
-\label{sec:layering}
-
-The processing patterns being applied to scientific data shift widely as the data itself ages. Because of
-this change, we want to design a scientific data processing system that is flexible enough to
-accommodate our different use cases. At the same time, we want to ensure that the components in the
-system are well isolated so that we avoid bleeding functionality across the stack. If we bleed functionality
-across layers in the stack, we make it more difficult to adapt our stack to different applications.
-Additionally, as we discuss in~\S\ref{sec:genomics-pipeline}, improper separation of concerns can
-actually lead to errors in our application.
-
-These concerns are very similar to the factors that led to the development of the Open Systems
-Interconnection~(OSI) model and Internet Protocol~(IP) stack for networking
-services~\cite{zimmermann80}. The networking stack models were designed to allow the mixing and
-matching of different protocols, all of which existed at different functional levels. The success of the
-networking stack model can largely be attributed to the ``narrow waist'' of the stack, which simplified the
-integration of a new protocol or technology by ensuring that the protocol only needed to implement a
-single interface to be compatible with the rest of the stack.
-
-Unlike conventional scientific systems that leverage custom data formats like BAM/SAM~\cite{li09},
-or CRAM~\cite{fritz11}, we believe that the use of an explicit schema for data interchange is critical.
-In our stack model shown in Figure~\ref{fig:stack-model}, the schema becomes the ``narrow waist''
-of the stack. Most importantly, placing the schema as the narrow waist enforces a strict separation
-between data storage/access and data processing. Additionally, this enables literate programming
-techniques which can clarify the data model and access patterns. The seven layers of our stack model
-are decomposed as follows, and are numbered in ascending order from bottom to top:
-
-\begin{enumerate}
-\item \textbf{Physical Storage:} This layer coordinates data writes to physical media.
-\item \textbf{Data Distribution:} This layer manages access, replication, and distribution of the files that have
-been written to storage media.
-\item \textbf{Materialized Data:} This layer encodes the patterns for how data is encoded and stored. This
-layer determines I/O bandwidth and compression.
-\item \textbf{Data Schema:} This layer specifies the representation of data, and forms the narrow waist of
-the stack that separates access from execution.
-\item \textbf{Evidence Access:} This layer provides us with primitives for processing data, and allows us to
-transform data into different views and traversals.
-\item \textbf{Presentation:} This layer enhances the data schema with convenience methods for performing
-common tasks and accessing common derived fields from a single element.
-\item \textbf{Application:} At this level, we can use our evidence access and presentation layers to compose
-the algorithms to perform our desired analysis.
-\end{enumerate}
-
-A well defined software stack has several other significant advantages. By limiting application
-interactions with layers lower than the presentation layer, application developers are given a clear and
-consistent view of the data they are processing, and this view of the data is independent of whether the
-data is local or distributed across a cluster or cloud. By separating the API from the data access layer,
-we improve flexibility. With careful design in the data format and data access layers, we can seamlessly
-support conventional whole file access patterns, while also allowing easy access to small slices of files.
-By treating the compute substrate and storage as separate layers, we also drastically increase
-the portability of the APIs that we implement.
-
-As we discuss in more detail in~\S\ref{sec:genomics-pipeline}, current scientific systems bleed
-functionality between stack layers. An exemplar is the SAM/BAM and CRAM formats, which expect data
-to be sorted by genomic coordinate. This modifies the layout of data on disk~(level 3, Materialized Data)
-and constrains how applications traverse datasets~(level 5, Evidence Access). Beyond
-constraining applications, this leads to bugs in applications that are difficult to detect.\footnote{The
-current best-practice implementations of the BQSR and Duplicate Marking algorithms both fail in certain
-corner-case alignments. These errors are caused because of the limitation on traversing reads in sorted
-order.} These views of evidence should be implemented at the evidence access layer instead of in the
-layout of data on disk. This enforces independence of anything below the schema.
-
-The idea of decomposing scientific applications into a stack model is not new; Bafna et al~\cite{bafna13}
-made a similar suggestion in 2013. We borrow some vocabulary from Bafna et al, but our approach is
-differentiated in several critical ways:
-
-\begin{itemize}
-\item Bafna et al consider the stack model specifically in the context of data management systems for
-genomics; as a result, they bake current technologies and design patterns into the stack. In our opinion,
-a stack design should serve to abstract layers from methodologies/implementations. If not, future
-technology trends may obsolete a layer of the stack and render the stack irrelevant.
-\item Bafna et al define a binary data format as the narrow waist in their stack, instead of a schema.
-While these two seem interchangeable, they are not in practice. A schema is a higher level of abstraction
-that encourages the use of literate programming techniques and allows for data serialization techniques
-to be changed as long as the same schema is still provided.
-\item Notably, Bafna et al use this stack model to motivate GQL~\cite{kozanitis14}. While a query system
-should provide a way to process and transform data, Bafna et al instead move this system down to the
-data materialization layer. We feel that this inverts the semantics that a user of the system would prefer
-and makes the system less general.
-\end{itemize}
-
-By using Parquet as a storage format, we are able to process genomic data using many Hadoop-based
-systems. We implement high performance batch and interactive processing with Spark, and can delegate
-to systems like Impala and Spark-SQL for warehousing.
 
 \section{Related Work}
 \label{sec:related-work}
@@ -472,25 +388,164 @@ several important issues seen by traditional variant callers~(reference bias, st
 \section{Distributed Architectures for Genomics}
 \label{sec:distributed-architectures}
 
-As discussed in~\S\ref{sec:introduction}, several 
+Due to both the growing volume of genomic sequencing data and the large size of these datasets,
+sequencing centers face the increasingly difficult task of turning around genomic data analyses in a
+reasonable timeframe~\cite{schadt10, stein10}. While the per-run latency of current genomic pipelines
+such as the \texttt{GATK} can be improved by manually partitioning the input dataset and distributing
+work, native support for distributed computing is not provided. As a stopgap solution, projects like
+\texttt{Cloudburst}~\cite{schatz09} and \texttt{Crossbow}~\cite{langmead09} have ported individual
+analytics tools to run on top of Hadoop. While this approach has served well for proofs of concept,
+it provides poor abstractions for application developers and makes it difficult to create novel distributed
+genomic analyses, and does little to attack sources of inefficiency or incorrectness in distributed
+genomics pipelines.
 
-\texttt{ADAM} provides an API for storing and processing genomic data in a distributed system using
-Apache Spark~\cite{zaharia12}, Avro~\cite{avro}, and Parquet~\cite{parquet}. At a core level,
-\texttt{ADAM} couples with Apache Spark to implement an API for expressing common genomic patterns
-on a distributed system. This provides several important advantages over current frameworks, such as
-the \texttt{walker} interface in the \texttt{GATK}:
+To address these problems, we need to reconsider how to build software for processing genomic data.
+Modern genome analysis pipelines are built around monolithic architectures and flat file formats.
+These architectures are designed to efficiently run current algorithms on single node processing
+systems, but impose significant restrictions. These restrictions include:
 
 \begin{itemize}
-\item \texttt{ADAM} leverages the full Spark API, which is a more flexible and all-encompassing API than
-the map-reduce style API provided by the \texttt{GATK},
-\item Current genomics APIs generally enforce limitations on the layout of data on disk. We provide a
-data independent API, which eliminates errors that occur when processing chimeric reads.
-\item By building on top of efficient distributed computing technologies, \texttt{ADAM} is able to scale out
-horizontally to more than 128 compute nodes.
+\item These implementations are locked to a single node processing model. Even the \texttt{GATK}'s
+``map-reduce'' styled \texttt{walker} API~\cite{mckenna10} is limited to natively support processing on
+a single node. While these jobs can be manually partitioned and run in a distributed setting, manual
+partitioning can lead to imbalance in work distribution and makes it difficult to run algorithms that
+require aggregating data across all partitions, and lacks the fault tolerance provided by modern
+distributed systems such as Hadoop or Spark~\cite{zaharia12}.
+\item Most of these implementations \emph{assume} invariants about the sorted order of records on
+disk. This ``stack smashing'' (specifically, the layout of data is used to ``accelerate'' a processing stage)
+can lead to bugs when data does not cleanly map to the assumed sort order. Additionally, since these
+sort order invariants are rarely explicit and vary from tool to tool, pipelines assembled from disparate
+tools can be brittle.
+\item Additionally, while these invariants are intended to improve performance, it is not clear that these
+invariants \emph{actually} improve performance. There are two common sort invariants used in genomics:
+sort by reference position, and sort by read name. Changing between these two sort orders entails
+a full shuffle and resort of the dataset. Additionally, a sort is required after alignment to establish a sort order.
 \end{itemize}
 
-\section{Storing Genomic Data}
+As noted above, current implementations are locked to a single node model. Projects like
+\texttt{Hadoop-BAM}~\cite{niemenmaa12}, \texttt{SeqPig}~\cite{schumacher14}, and \texttt{BioPig}~\cite{biopig}
+have attempted to build a distributed processing environment on top of current single node genomics APIs.
+However, several problems must be solved in order to make distributed processing of genomic data productive:
+
+\begin{itemize}
+\item Current genomics data formats rely on a centralized header for storing experiment metadata. Since the
+metadata is centralized, it must be replicated to all machines.
+\item A simple map-reduce or SQL-like API is insufficient for implementing genomic analyses. Rather, to enhance
+bioinformatician productivity, we need to define APIs that allow developers to conveniently express algorithms.
+\end{itemize}
+
+In \texttt{ADAM}, we have taken a more aggressive approach to the design of APIs for processing genomic data
+in a distributed system. Although modern genomics pipelines are built as monolithic applications, we have
+chosen a layered decomposition for \texttt{ADAM}, that uses a schema as a ``narrow waist''. Instead of using
+a flat file format, as is traditional in genomics, we are using this schema with Parquet~(a commodity columnar
+store,~\cite{parquet}) to store genomic data in a way that both allows efficient distributed read/write and that
+achieves high compression. On top of this, we have added primitives that implement common genomic traversals
+in a distributed manner. We have then used \texttt{ADAM} to implement common preprocessing stages from
+commonly used genomics pipelines. \texttt{ADAM}'s preprocessing stages are between 1-5$\times$ faster than the
+equivalent \texttt{GATK} preprocessing stages, and achieve linear scaling out to 128 nodes.
+
+\section{Layering}
+\label{sec:layering}
+
+The processing patterns being applied to scientific data shift widely as the data itself ages. Because of
+this change, we want to design a scientific data processing system that is flexible enough to
+accommodate our different use cases. At the same time, we want to ensure that the components in the
+system are well isolated so that we avoid bleeding functionality across the stack. If we bleed functionality
+across layers in the stack, we make it more difficult to adapt our stack to different applications.
+Additionally, as we discuss in~\S\ref{sec:genomics-pipeline}, improper separation of concerns can
+actually lead to errors in our application.
+
+These concerns are very similar to the factors that led to the development of the Open Systems
+Interconnection~(OSI) model and Internet Protocol~(IP) stack for networking
+services~\cite{zimmermann80}. The networking stack models were designed to allow the mixing and
+matching of different protocols, all of which existed at different functional levels. The success of the
+networking stack model can largely be attributed to the ``narrow waist'' of the stack, which simplified the
+integration of a new protocol or technology by ensuring that the protocol only needed to implement a
+single interface to be compatible with the rest of the stack.
+
+Unlike conventional scientific systems that leverage custom data formats like \linebreak BAM/SAM~\cite{li09},
+or CRAM~\cite{fritz11}, we believe that the use of an explicit schema for data interchange is critical.
+In our stack model shown in Figure~\ref{fig:stack-model}, the schema becomes the ``narrow waist''
+of the stack. Most importantly, placing the schema as the narrow waist enforces a strict separation
+between data storage/access and data processing. Additionally, this enables literate programming
+techniques which can clarify the data model and access patterns. The seven layers of our stack model
+are decomposed as follows, and are numbered in ascending order from bottom to top:
+
+\begin{enumerate}
+\item \textbf{Physical Storage:} This layer coordinates data writes to physical media.
+\item \textbf{Data Distribution:} This layer manages access, replication, and distribution of the files that have
+been written to storage media.
+\item \textbf{Materialized Data:} This layer encodes the patterns for how data is encoded and stored. This
+layer determines I/O bandwidth and compression.
+\item \textbf{Data Schema:} This layer specifies the representation of data, and forms the narrow waist of
+the stack that separates access from execution.
+\item \textbf{Evidence Access:} This layer provides us with primitives for processing data, and allows us to
+transform data into different views and traversals.
+\item \textbf{Presentation:} This layer enhances the data schema with convenience methods for performing
+common tasks and accessing common derived fields from a single element.
+\item \textbf{Application:} At this level, we can use our evidence access and presentation layers to compose
+the algorithms to perform our desired analysis.
+\end{enumerate}
+
+A well defined software stack has several other significant advantages. By limiting application
+interactions with layers lower than the presentation layer, application developers are given a clear and
+consistent view of the data they are processing, and this view of the data is independent of whether the
+data is local or distributed across a cluster or cloud. By separating the API from the data access layer,
+we improve flexibility. With careful design in the data format and data access layers, we can seamlessly
+support conventional whole file access patterns, while also allowing easy access to small slices of files.
+By treating the compute substrate and storage as separate layers, we also drastically increase
+the portability of the APIs that we implement.
+
+As we discuss in more detail in~\S\ref{sec:genomics-pipeline}, current scientific systems bleed
+functionality between stack layers. An exemplar is the SAM/BAM and CRAM formats, which expect data
+to be sorted by genomic coordinate. This modifies the layout of data on disk~(level 3, Materialized Data)
+and constrains how applications traverse datasets~(level 5, Evidence Access). Beyond
+constraining applications, this leads to bugs in applications that are difficult to detect.\footnote{The
+current best-practice implementations of the BQSR and Duplicate Marking algorithms both fail when
+processing certain corner-case alignments. These errors are caused because of the requirement to
+traversing reads in sorted order.} These views of evidence should be implemented at the evidence
+access layer instead of in the layout of data on disk. This enforces independence of anything below the
+schema.
+
+The idea of decomposing scientific applications into a stack model is not new; Bafna et al~\cite{bafna13}
+made a similar suggestion in 2013. We borrow some vocabulary from Bafna et al, but our approach is
+differentiated in several critical ways:
+
+\begin{itemize}
+\item Bafna et al consider the stack model specifically in the context of data management systems for
+genomics; as a result, they bake current technologies and design patterns into the stack. In our opinion,
+a stack design should serve to abstract layers from methodologies/implementations. If not, future
+technology trends may obsolete a layer of the stack and render the stack irrelevant.
+\item Bafna et al define a binary data format as the narrow waist in their stack, instead of a schema.
+While these two seem interchangeable, they are not in practice. A schema is a higher level of abstraction
+that encourages the use of literate programming techniques and allows for data serialization techniques
+to be changed as long as the same schema is still provided.
+\item Notably, Bafna et al use this stack model to motivate GQL~\cite{kozanitis14}. While a query system
+should provide a way to process and transform data, Bafna et al instead move this system down to the
+data materialization layer. We feel that this inverts the semantics that a user of the system would prefer
+and makes the system less general.
+\end{itemize}
+
+Deep stacks like the OSI stack~\cite{zimmermann80} are generally simplified for practical use. Conceptually,
+the stack we propose is no exception. In practice, we combine layers one and two, and layers five and six.
+There are several reasons for this. First, in Hadoop-based systems, the system does not have practical visibility
+below layer two, thus there is no reason to split layers one and two except as a philosophical exercise.
+Layers five and six are commingled because some of the enriched presentation objects are used to
+implement functionality in the evidence access layer. This normally happens when a key is needed, such as
+when repartitioning the dataset, or when reducing or grouping values.
+
+\section{Data Storage for Genomic Data}
 \label{sec:schema-design}
+
+\texttt{ADAM} relies on Apache Avro~\cite{avro} as a schema description and serialization format, and
+AParquet~\cite{parquet} to 
+
+We made several key choices when designing the schemas used in \texttt{ADAM}. First, the schemas are fully
+denormalized, which reduces the cost of metadata access and simplifies metadata distribution. We are able to
+get these benefits without greatly increasing the cost of memory access because our backing store~(Parquet)
+makes use of run length and dictionary encoding, which allows for a single object to be allocated for highly repetitive
+elements on read. Another key design choice was to require that all fields in the schema are nullable; by enforcing
+this requirement, we enable arbitrary user specified projections.
 
 \section{Read Preprocessing Algorithms}
 \label{sec:read-preprocessing}
@@ -531,12 +586,7 @@ that lead to the incorrect assignment of base quality scores. In this step, we l
 sequenced with an \emph{error covariate}. For each covariate, we count the total number of bases that we saw,
 as well as the total number of bases within the covariate that do not match the reference genome. From this data, 
 we apply a correction by estimating the error probability for each set of covariates under a beta-binomial model
-with uniform prior:
-
-\begin{equation}
-\label{eqn:bqsrerr}
-\mathbf{E}(P_{err}|{cov}) = \frac{\texttt{\#errors}(cov) + 1}{\texttt{\#observations}(cov) + 2}
-\end{equation}
+with uniform prior.
 
 We have validated the concordance of our BQSR implementation against the GATK. Across both tools, only 5000
 of the $\sim$180B bases~($<0.0001\%$) in the high-coverage NA12878 genome dataset differ. After investigating
@@ -544,235 +594,105 @@ this discrepancy, we have determined that this is due to an error in the GATK, w
 mishandled if the two reads in the pair overlap.
 \end{enumerate}
 
+In the rest of this section, we discuss the high level implementations of these algorithms.
+
 \subsection{BQSR Implementation}
 \label{sec:bqsr-implementation}
 
-Base Quality Score Recalibration is an important early data-normalization step in the bioinformatics pipeline, and after alignment
-it is the next most costliest step. Since quality score recalibration can vastly improve the accuracy of variant calls~---~particularly for
-pileup-based callers like the UnifiedGenotyper or Samtools mpileup. Because of this, it is likely to remain a part of bioinformatics pipelines.
+Base quality score recalibration seeks to identify and correct correlated errors in base quality score estimates.
+At a high level, this is done by associating sequenced bases with possible error covariates, and estimating the
+true error rate of this covariate. Once the true error rate of all covariates has been estimated, we then apply
+the corrected covariate.
 
-BQSR is also an interesting algorithm in that it doesn't neatly fit into the framework of map reduce (the design philosophy of the GATK).
-Instead it is an embarrassingly parallelizable aggregate. The ADAM implementation is:
+Our system is generic and places no limitation on the number or type of covariates that can be applied. A covariate
+describes a parameter space where variation in the covariate parameter may be correlated with a sequencing
+error. We provide two common covariates that map to common sequencing errors~\cite{nakamura11}:
 
-\begin{lstlisting}
-def computeTable(rdd: Records, dbsnp: Mask) :
-  RecalTable = {
-  
-  rdd.aggregate(new RecalTable)(
-    (table, read) => { table + read },
-    (table, table) => { table ++ table })
-}
-\end{lstlisting}
+\begin{itemize}
+\item \emph{CycleCovariate}: This covariate expresses which cycle the base was sequenced in. Read errors are
+known to occur most frequently at the start or end of reads.
+\item \emph{DinucCovariate}: This covariate covers biases due to the sequence context surrounding a site. The 2-mer
+ending at the sequenced base is used as the covariate parameter value.
+\end{itemize}
 
-The ADAM implementation of BQSR utilizes the MD field to identify bases in the read that mismatch the reference. This enables
-base quality score recalibration to be entirely reference-free, avoiding the need to have a central Fasta store for the human
-reference. However, dbSNP is still needed to mask out positions that are polymorphic (otherwise errors due to real variation will
-severely bias the error rate estimates).
+To generate the covariate observation table, we aggregate together the number of observed and error bases per
+covariate. This process is demonstrated in Algorithms~\ref{alg:emit-observations} and \ref{alg:create-table}.
+
+\begin{algorithm}
+\caption{Emit Observed Covariates}
+\label{alg:emit-observations}
+\begin{algorithmic}
+\STATE $read \leftarrow$ the read to observe
+\STATE $covariates \leftarrow$ covariates to use for recalibration
+\STATE $sites \leftarrow$ sites of known variation
+\STATE $observations \leftarrow \emptyset$
+\FOR{$base \in read$}
+\STATE $covariate \leftarrow$ identifyCovariate($base$)
+\IF{isUnknownSNP($base, sites$)}
+\STATE $observation \leftarrow$ Observation($1, 1$)
+\ELSE
+\STATE $observation \leftarrow$ Observation($1, 0$)
+\ENDIF
+\STATE $observations$.append($(covariate, observation)$)
+\ENDFOR
+\RETURN $observations$
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{Create Covariate Table}
+\label{alg:create-table}
+\begin{algorithmic}
+\STATE $reads \leftarrow$ input dataset
+\STATE $covariates \leftarrow$ covariates to use for recalibration
+\STATE $sites \leftarrow$ known variant sites
+\STATE $sites$.broadcast()
+\STATE $observations \leftarrow reads$.map($read \rightarrow$ emitObservations($read, covariates, sites$))
+\STATE $table \leftarrow$ $observations$.aggregate(CovariateTable(), mergeCovariates)
+\RETURN $table$
+\end{algorithmic}
+\end{algorithm}
+
+In Algorithm~\ref{alg:emit-observations}, the \texttt{Observation} class stores the number of bases seen
+and the number of errors seen. For example, \texttt{Observation(1, 1)} creates an \texttt{Observation} object
+that has seen one base, which was an erroneous base.
+
+Once we have computed the observations that correspond to each covariate, we estimate the observed base
+quality using equation~\eqref{eqn:bqsr-err}. This represents a Bayesian model of the mismatch probability with
+Binomial likelihood and a Beta(1, 1) prior.
+
+\begin{equation}
+\label{eqn:bqsr-err}
+\mathbf{E}(P_{err}|{cov}) = \frac{\texttt{\#errors}(cov) + 1}{\texttt{\#observations}(cov) + 2}
+\end{equation}
+
+After these probabilities are estimated, we go back across the input read dataset and reconstruct the quality
+scores of the read by using the covariate assigned to the read to look into the covariate table.
 
 \subsection{Indel Realignment Implementation}
 \label{sec:indel-realignment-implementation}
 
-Indel realignment is implemented as a two step process. In the first step, we identify regions that have evidence of an insertion or
-deletion. After these regions are identified, we generate candidate haplotypes, and realign reads to minimize the overall quantity
-of mismatches in the region. The quality of mismatches near an indel serves as a good proxy for the local quality of an alignment.
-This is due to the nature of indel alignment errors: when an indel is misaligned, this causes a temporary shift in the read sequence
-against the reference sequence. This shift manifests as a run of several bases with mismatches due to their incorrect alignment.
+Although global alignment will frequently succeed at aligning reads to the proper region of the genome, the local
+alignment of the read may be incorrect. Specifically, the error models used by aligners may penalize local alignments
+containing INDELs more than a local alignment that converts the alignment to a series of mismatches. To correct
+for this, we perform local realignment of the reads against consensus sequences. This is implemented as a three step
+process. In the first step, we identify candidate sites that have evidence of an insertion or deletion. We then compute
+the convex hull of these candidate sites, to determine the windows we need to realign over. After these regions are
+identified, we generate candidate haplotype sequences, and realign reads to minimize the overall quantity of mismatches
+in the region.
 
 \subsubsection{Realignment Target Identification}
 \label{sec:realignment-target-identification}
 
-Realignment target identification is done by converting our reads into reference oriented ``rods''\footnote{Also known as pileups: a
-group of bases that are all aligned to a specific locus on the reference.}. At each locus where there is evidence of an insertion or a
-deletion, we create a \emph{target} marker. We also create a target if there is evidence of a mismatch. These targets contain the indel
-range or mismatch positions on the reference, and the range on the reference covered by reads that overlap these sites.
-
-After an initial set of targets are placed, we merge targets together. This is necessary, as during the read realignment process, all
-reads can only be realigned once. This necessitates that all reads are members of either one or zero realignment targets. Practically,
-this means that over the set of all realignment targets, no two targets overlap.
-
-The core of our target identification algorithm can be found below.
-
-\begin{lstlisting}
-def findTargets (reads: RDD[ADAMRecord]):
-    TreeSet[IndelRealignmentTarget] = {
-
-  // convert reads to rods
-  val processor = new Read2PileupProcessor
-  val rods: RDD[Seq[ADAMPileup]] = reads.flatMap(
-      processor.readToPileups(_))
-    .groupBy(_.getPosition).map(_._2)
-
-  // map and merge targets
-  val targetSet = rods.map(
-      IndelRealignmentTarget(_))
-    .filter(!_.isEmpty)
-    .keyBy(_.getReadRange.start)
-    .sortByKey()
-    .map(new TreeSet()(TargetOrdering) + _._2)
-    .fold(new TreeSet()(TargetOrdering))(
-      joinTargets)
-
-  targetSet
-}
-\end{lstlisting}
-
-To generate the initial unmerged set of targets, we rely on the ADAM toolkit's pileup generation utilities~(see~\-S\ref{sec:reference-oriented-storage}).
-We generate realignment targets for all pileups, even if they do not have indel or mismatch evidence. We eliminate pileups that do not contain indels
-or mismatches with a filtering stage that eliminates empty targets. To merge overlapping targets, we map all of the targets into a sorted set. This set
-is implemented using Red-Black trees. This allows for efficient merges, which are implemented with the tail-call recursive \emph{joinTargets} function:
-
-\begin{lstlisting}
-@tailrec def joinTargets (                                                                                                                                                               
-  first: TreeSet[IndelRealignmentTarget],                                                                                                                                                                
-  second: TreeSet[IndelRealignmentTarget]):
-    TreeSet[IndelRealignmentTarget] = {
-
-  if (!TargetOrdering.overlap(first.last,
-      second.head)) {
-    first.union(second)
-  } else {
-    joinTargets (first - first.last +
-      first.last.merge(second.head),
-      second - second.head)
-  }
-}
-\end{lstlisting}
-
-As we are performing a fold on an RDD which is sorted by the starting position of the target on the reference sequence, we know a priori that the elements
-in the ``first'' set will always be ordered earlier relative to the elements in the ``second'' set. However, there can still be overlap between the two sets, as this
-ordering does not account for the end positions of the targets. If there is overlap between the last target in the ``first'' set and the first target in the ``second''
-set, we merge these two elements, and try to merge the two sets again.
-
-\subsubsection{Candidate Generation and Realignment}
-\label{sec:candidate-generation-realignment}
-
-Candidate generation is a several step process:
-
-\begin{enumerate}
-\item Realignment targets must ``collect'' the reads that they contain.
-\item For each realignment group, we must generate a new set of candidate haplotype alignments.
-\item Then, these candidate alignments must be tested and compared to the current reference haplotype.
-\item If a candidate haplotype is sufficiently better than the reference, reads are realigned.
-\end{enumerate}
-
-The mapping of reads to realignment targets is done through a tail recursive function that performs a binary search across the sorted set of indel alignment targets:
-
-\begin{lstlisting}
-@tailrec def mapToTarget (read: ADAMRecord,                                                                                                                                                        
-  targets: TreeSet[IndelRealignmentTarget]):
-    IndelRealignmentTarget = {
-
-  if (targets.size == 1) {
-    if (TargetOrdering.equals (targets.head, read)) {
-      targets.head
-    } else {
-      IndelRealignmentTarget.emptyTarget
-    }
-  } else {
-    val (head, tail) = targets.splitAt(
-      targets.size / 2)
-    val reducedSet = if (TargetOrdering.lt(
-        tail.head, read)) {
-      head
-    } else {
-      tail
-    }
-    mapToTarget (read, reducedSet)
-  }
-}
-\end{lstlisting}
-
-This function is applied as a groupBy against all reads. This means that the function is mapped to the RDD that contains all reads. A new RDD is generated where all
-reads that returned the same indel realignment target are grouped together into a list.
-
-Once all reads are grouped, we identify new candidate alignments. However, before we do this, we left align all indels. For many reads that show evidence of a single
-indel, this can eliminate mismatches that occur after the indel. This involves shifting the indel location to the ``left''\footnote{To a lower position against the reference
-sequence.} by the length of the indel. After this, if the read still shows mismatches, we generate a new consensus alignment. This is done with the
-\emph{generateAlternateConsensus} function, which distills the indel evidence out from the read.
-
-\begin{lstlisting}
-def generateAlternateConsensus (sequence: String,
-  start: Long, cigar: Cigar): Option[Consensus] = {
-  var readPos = 0
-  var referencePos = start
-
-  if (cigar.getCigarElements.filter(elem =>
-        elem.getOperator == CigarOperator.I ||
-        elem.getOperator == CigarOperator.D
-      ).length == 1) {
-    cigar.getCigarElements.foreach(cigarElement =>
-      { cigarElement.getOperator match {
-        case CigarOperator.I => return Some(
-          new Consensus(sequence.substring(readPos,
-            readPos + cigarElement.getLength),
-            referencePos to referencePos))
-        case CigarOperator.D => return Some(
-          new Consensus("",
-          referencePos until (referencePos +
-            cigarElement.getLength)))
-        case _ => {
-          if (cigarElement.getOperator
-                .consumesReadBases &&
-              cigarElement.getOperator
-                .consumesReferenceBases
-              ) {
-            readPos += cigarElement.getLength
-            referencePos += cigarElement.getLength
-          } else {
-            return None
-          }
-        }
-      }
-    })
-    None
-  } else {
-    None
-  }
-}
-\end{lstlisting}
-
-From these consensuses, we generate new haplotypes by inserting the indel consensus into the reference sequence. The quality of each haplotype is measured
-by sliding each read across the new haplotype, using \emph{mismatch quality}. Mismatch quality is defined for a given alignment by the sum of the quality scores
-of all bases that mismatch against the current alignment. While sliding each read across the new haplotype, we aggregate the mismatch quality scores. We take
-the minimum of all of these scores and the mismatch quality of the original alignment. This sweep is performed using the \emph{sweepReadOverReferenceForQuality}
-function:
-
-\begin{lstlisting}
-def sweepReadOverReferenceForQuality (
-    read: String,reference: String,
-    qualities: Seq[Int]): (Int, Int) = {
-  var qualityScores = List[(Int, Int)]()
-
-  for (i <- 0 until (reference.length -
-      read.length)) {
-    qualityScores = (
-      sumMismatchQualityIgnoreCigar(
-        read,
-        reference.substring(i, i + read.length),
-          qualities),
-        i) :: qualityScores
-  }
-
-  qualityScores.reduce ((p1: (Int, Int),
-      p2: (Int, Int)) => {
-    if (p1._1 < p2._1) {
-      p1
-    } else {
-      p2
-    }
-  })
-}
-\end{lstlisting}
-
-If the consensus with the lowest mismatch quality score has a log-odds ratio~(LOD) that is greater than $5.0$ with respect to the reference, we realign the reads.
-This is done by recomputing the cigar and MDTag for each new alignment. Realigned reads have their mapping quality score increased by 10 in the Phred scale.
+To identify target regions for realignment, we simply map across all the reads. If a read contains INDEL evidence,
+we then emit a region corresponding to the region covered by that read.
 
 \subsubsection{Convex-Hull Finding}
 \label{sec:convex-hull}
 
-A frequent pattern in our application is identifying the maximal convex hulls across sets of regions. For
-a set $R$ of regions, we define a maximal convex hull as the largest region $\hat{r}$ that satisfies the
-following properties:
+Once we have identified the target realignment regions, we must then find the maximal convex hulls
+across the set of regions. For a set $R$ of regions, we define a maximal convex hull as the largest
+region $\hat{r}$ that satisfies the following properties:
 
 \begin{align}
 \label{eqn:convexity-constraint}
@@ -782,7 +702,7 @@ following properties:
 \end{align}
 
 In our problem, we seek to find all of the maximal convex hulls, given a set of regions. For genomics, the
-convexity constraint described by \eqref{eqn:convexity-constraint} is trivial to check: specifically, the
+convexity constraint described by equation \eqref{eqn:convexity-constraint} is trivial to check: specifically, the
 genome is assembled out of reference contigs\footnote{\emph{Contig} is short for \emph{contiguous
 sequence}. In alignment based pipelines, reference contigs are  used to describe the sequence of each
 chromosome.} that define disparate 1-D coordinate spaces. If two regions exist on different contigs, they
@@ -835,353 +755,187 @@ algorithm~\ref{alg:join-targets}.
 \end{algorithmic}
 \end{algorithm}
 
-For a region join~(see~\S\ref{sec:coordinate-system-joins}), we would use the maximal convex hull
-set to define partitioning for the join. Alternatively, for INDEL
-realignment~(see~\S\ref{sec:genomics-pipeline}), we use this set as an index for mapping reads directly
-to targets.
+The set returned by this function is used as an index for mapping reads directly to realignment targets.
+
+\subsubsection{Candidate Generation and Realignment}
+\label{sec:candidate-generation-realignment}
+
+Once we have generated the target set, we map across all the reads and check to see if the read overlaps
+a realignment target. We then group together all reads that map to a given realignment target; reads that
+don't map to a target are randomly assigned to a ``null'' target. We do not attempt realignment for reads mapped
+to null targets.
+
+To process non-null targets, we must first generate candidate haplotypes to realign against. We support several
+processes for generating these consensus sequences:
+
+\begin{itemize}
+\item \emph{Use known INDELs}: Here, we use known variants that were provided by the user to generate
+consensus sequences. These are typically derived from a source of common variants such as dbSNP.
+\item \emph{Generate consensuses from reads}: In this process, we take all INDELs that are contained in
+the alignment of a read in this target region.
+\item \emph{Generate consensuses using Smith-Waterman}: With this method, we take all reads that were
+aligned in the region and perform an exact Smith-Waterman alignment against the reference in this site. We
+then take the INDELs that were observed in these realignments as possible consensuses. 
+\end{itemize}
+
+From these consensuses, we generate new haplotypes by inserting the INDEL consensus into the reference
+sequence of the region. Per haplotype, we then take each read and compute the quality score weighted Hamming
+edit distance of the read placed at each site in the consensus sequence. We then take the minimum quality
+score weighted edit versus the consensus sequence and the reference genome. We aggregate these scores
+together for all reads against this consensus sequence. Mathematically, this is described in~\eqref{eqn:realignment},
+given a consensus sequence $c$, a reference sequence $R$, and a set of reads $\mathbf{r}$.
+
+\begin{align}
+\label{eqn:realignment}
+q_{i, j} &= \sum_{k = 0}^{l_{r_i}} Q_k I[r_I(k) = c(j + k)] \forall r_i \in \mathbf{R}, j \in \{0, \dots, l_c - l_{r_i}\}  \\
+q_{i, R} &= \sum_{k = 0}^{l_{r_i}} Q_k I[r_I(k) = c(j + k)] \forall r_i \in \mathbf{R}, j = \text{pos}(r_i | R) \\
+q_i &= \min(q_{i, R}, \min_{j \in \{0, \dots, l_c - l_{r_i}\}} q_{i, j}) \\
+q_c &= \sum_{r_i \in \mathbf{r}} q_i
+\end{align}
+
+In~\eqref{eqn:realignment}, $s(i)$ denotes the base at position $i$ of sequence $s$, and $l_s$ denotes the
+length of sequence $s$. We pick the consensus sequence that minimizes the $q_c$ value. If the chosen
+consensus has a log-odds ratio~(LOD) that is greater than $5.0$ with respect to the reference, we realign the
+reads. This is done by recomputing the cigar and MDTag for each new alignment. Realigned reads have their
+mapping quality score increased by 10 in the Phred scale.
 
 \subsection{Duplicate Marking Implementation}
 \label{sec:duplicate-marking-implementation}
 
-The following ADAM code, reformatted for this report, expresses the algorithm succinctly in 42 lines of Scala code.
-
-\begin{lstlisting}
-for (((leftPos, library), readsByLeftPos) <- 
-    rdd.adamSingleReadBuckets()
-       .keyBy(ReferencePositionPair(_))
-       .groupBy(leftPositionAndLibrary);
-
-buckets <- {
-
-leftPos match {
- // These are all unmapped reads. 
- // There is no way to determine if
- // they are duplicates
- case None =>
-    markReads(readsByLeftPos.unzip._2,
-      areDups = false)
- // These reads have their left position mapped
- case Some(leftPosWithOrientation) =>
-   // Group the reads by their right position
-   val readsByRightPos = readsByLeftPos.groupBy(
-     rightPosition)
-   // Find any reads with no right position
-   val fragments = readsByRightPos.get(None)
-   // Check if we have any pairs
-   // (reads with a right position)
-   val hasPairs = readsByRightPos.keys
-     .exists(_.isDefined)
-   if (hasPairs) {
-     // Since we have pairs,
-     // mark all fragments as duplicates
-     val processedFrags = if (fragments.isDefined
-     ) {
-       markReads(fragments.get.unzip._2,
-         areDups = true)
-     } else {
-       Seq.empty
-     }
-     val processedPairs = 
-         for (buckets <- (readsByRightPos - None)
-           .values;
-             processedPair <- 
-                scoreAndMarkReads(buckets.unzip._2)) 
-        yield processedPair
-     processedPairs ++ processedFrags
-   } else if (fragments.isDefined) {
-     // No pairs. Score the fragments.
-     scoreAndMarkReads(fragments.get.unzip._2)
-   } else {
-     Seq.empty
-   }
-};
-read <- buckets.allReads) yield read
-\end{lstlisting}
-
-For lines 1-4, all reads with the same record group name and read name are collected 
-into buckets. These buckets contain the read and optional mate or secondary alignments.
-Each read bucket is then keyed by 5 $'$ position and orientation and grouped together by
-left (lowest coordinate) position, orientation and library name.
-
-For lines 8-41, we processed each read bucket with a common left 5$'$ position. Unmapped
-reads are never marked duplicate as their position is not known. Mapped reads with a common
-left position are separated into paired reads and fragments. Fragments, in this context,
-are reads that have no mate or should have a mate but it doesn't exist.
-
-If there are pairs in a group, all fragments are marked duplicates and the paired reads are grouped
-by their right 5$'$ position. All paired reads that have a common right and left 5$'$
-position are scored and all but the highest scoring read is marked a duplicate.
-
-If there are no pairs in a group, all fragments are scored and all but the highest scoring fragment
-are marked duplicates.
+Reads may be duplicated during sequencing, either due to clonal duplication via PCR before sequencing, or
+due to optical duplication while on the sequencer. To identify duplicated reads, we apply a heuristic algorithm
+that looks at read fragments that have a consistent mapping signature. First, we bucket together reads that
+are from the same sequenced fragment by grouping reads together on the basis of read name and record group.
+Per read bucket, we then identify the 5' mapping positions of the primarily aligned reads.
+We mark as duplicates all read pairs that have the same pair alignment locations, and all unpaired reads that
+map to the same sites. Only the highest scoring read/read pair is kept, where the score is the sum of all quality
+scores in the read that are greater than 15.
 
 \chapter{Variant Calling via Reassembly Using \texttt{avocado}}
 
 \section{Modular Approaches for Variant Calling}
 \label{sec:variant-calling}
 
-\section{Reference Threaded \emph{de Bruijn} Graphs}
+\section{Efficient Reassembly via Indexed \emph{de Bruijn} Graphs}
 \label{sec:reference-threaded}
 
-The local assembler in \texttt{avocado} is a de bruijn graph based assembler. The assembler creates
-a ``reference threaded'' assembly. In this approach, we label $k$-mers that appear in the
-reference genome with their reference position. The advantage of this approach is that we can
-determine whether a $k$-mer in the graph can be mapped to the reference genome or if it
-represents a divergence from the reference (an alternate allele). Additionally, for bubbles
-off of reference arcs, we can identify the exact allele represented by the bubble without
-needing to enumerate haplotypes which we then align against the reference sequence. This
-approach has the following benefits:
+The accuracy of insertion and deletion~(INDEL) variant discovery has been improved by the development
+of variant callers that couple local reassembly with haplotype-based statistical models to recover INDELs
+that were locally misaligned~\cite{albers11}. Reassembly is a critical component of several prominent variant
+callers such as the Genome
+Analysis Toolkit's~(GATK) \texttt{HaplotypeCaller}~\cite{depristo11}, \texttt{Scalpel}~\cite{narzisi14}, and
+\texttt{Platypus}~\cite{rimmer14}. Although haplotype-based methods have enabled more accurate INDEL
+and single nucleotide polymorphism~(SNP) calls~\cite{bao14}, this accuracy comes at the cost of
+end-to-end runtime~\cite{talwalkar14}. Several recent projects have been focused on improving
+reassembly cost either by limiting the percentage of the genome that is reassembled~\cite{bloniarz14} or
+by improving the performance of algorithms of the core algorithms used in local
+reassembly~\cite{rimmer14}.
 
-\begin{itemize}
-\item For a region that contains $n$ variants, we only need to evaluate $n$ variant arcs, as
-opposed to $n^2$ variant haplotypes.
-\item We can emit statistics for computing genotype likelihoods directly from the de bruijn
-graph. This is more efficient than emitting all haplotypes, scoring haplotype pairs, and
-then realigning reads to the top scoring haplotype pair.
-\end{itemize}
+The performance issues seen in haplotype reassembly approaches derives from the high asymptotic
+complexity of reassembly algorithms. Although specific implementations may vary slightly, a typical
+local reassembler performs the following steps:
+
+\begin{enumerate}
+\item A \emph{de Bruijn} graph is constructed from the reads aligned to a region of the reference genome,
+\item All valid paths~(\emph{haplotypes}) between the start and end of the graph are enumerated,
+\item Each read is realigned to each haplotype, typically using a pair Hidden Markov Model~(HMM,
+see~\cite{durbin98}),
+\item A statistical model uses the read$\leftrightarrow$haplotype alignments to choose the haplotype pair
+that most likely represents the variants hypothesized to exist in the region, 
+\item The alignments of the reads to the chosen haplotype pair are used to generate statistics that are
+then used for genotyping.
+\end{enumerate}
+
+In this paper, we focus on steps one through three of the local reassembly problem, as there is wide
+variation in the algorithms used in stages four and five~(see~\S\ref{sec:background}). Stage one (graph
+creation) has approximately $\mathcal{O}(r l_r)$ time complexity, and stage two (graph elaboration) has
+$\mathcal{O}(h \max(l_h))$ time complexity.
+The asymptotic time cost bound of local reassembly comes from stage three, where cost is $\mathcal{O}(h r l_r
+\max(l_h))$, where $h$ is the number of haplotypes tested in this region\footnote{The number of
+haplotypes tested may be lower than the number of haplotypes reassembled. Several tools
+(see~\cite{depristo11,garrison12}) allow users to limit the number of haplotypes evaluated to improve
+performance.}, $r$ is the number of reads aligned to this region, $l_r$ is the read length\footnote{For
+simplicity, we assume constant read length. This is a reasonable assumption as many of the variant
+callers discussed target Illumina reads that have constant length.}, and $\min(l_h)$ is the length of the
+shortest haplotype that we are evaluating. This complexity comes from realigning $r$ reads to $h$
+haplotypes, where realignment has complexity $\mathcal{O}(l_r l_h)$. We ignore the storage complexity of
+reassembly here, but provide an extended
+discussion of \emph{de Bruijin} graph complexity in~\S\ref{sec:background}.
+
+In this paper, we introduce the \emph{indexed de Bruijn} graph and demonstrate how it can be used to
+reduce the asymptotic complexity of reassembly. An \emph{indexed de Bruijn} graph is identical to a
+traditional \emph{de Bruijn} graph, with one modification: when we create the graph, we annotate each
+$k$-mer with the index position of that $k$-mer in the sequence it was observed in. This simple addition
+enables the use of the \emph{indexed de Bruijn} graph for $\Omega(n)$ local sequence alignment with
+canonical edit representations for most edits. This structure can be used for both sequence alignment and
+assembly, and achieves a more efficient approach for variant discovery via local reassembly.
+
+Current variant calling pipelines depend heavily on realignment based approaches for accurate
+genotyping~\cite{li14}. Although there are several approaches that do not make explicit use of reassembly,
+all realignment based variant callers use an algorithmic structure similar to the one described
+in~\S\ref{sec:introduction}. In non-assembly approaches like \texttt{FreeBayes}~\cite{garrison12}, stages
+one and two are replaced with a single step where the variants observed in the reads aligned to a given
+haplotyping region are filtered for quality and integrated directly into the reference haplotype in that region.
+In both approaches, local alignment errors~(errors in alignment \emph{within} this region) are corrected
+by using a statistical model to identify the most likely location that the read could have come from, given
+the other reads seen in this area.
+
+Although the model used for choosing the best haplotype pair to finalize realignments to varies between
+methods~(e.g., the GATK's \texttt{IndelRealigner} uses a simple log-odds model~\cite{depristo11}, while
+methods like \texttt{FreeBayes}~\cite{garrison12} and \texttt{Platypus}~\cite{rimmer14} make use of richer
+Bayesian models), these methods require an all-pairs alignment of reads to candidate
+haplotypes. This leads to the runtime complexity bound of $\mathcal{O}(h r l_r \min(l_h))$ given
+in~\S\ref{sec:introduction}, as we must realign $r$ reads to $h$ haplotypes, where the cost of realigning
+one read to one haplotype is $\mathcal{O}(l_r \max(l_h))$, where $l_r$ is the read length~(assumed to be
+constant for Illumina sequencing data) and $\max(l_h)$ is the length of the longest haplotype. Typically,
+the data structures used for realignment~($\mathcal{O}(l_r \max(l_h))$ storage cost) can be reused.
+These methods typically retain \emph{only} the best local realignment per read per haplotype, thus
+bounding storage cost at $\mathcal{O}(h r)$.
+
+For non-reassembly based approaches, the cost of generating candidate haplotypes is $\mathcal{O}(r)$,
+as each read must be scanned for variants, using the pre-existing alignment. These variants are typically
+extracted from the CIGAR string, but may need to be normalized~\cite{li14}. \emph{de Bruijn} graph based 
+reassembly methods have similar $\mathcal{O}(r)$ time complexity for building the \emph{de Bruijn}
+graph as each read must be sequentially broken into $k$-mers, but these methods have a different
+storage cost. Specifically, storage cost for a \emph{de Bruijn} graph is similar to $\mathcal{O}(k
+(l_{\text{ref}} + l_{\text{variants}} + l_{\text{errors}}))$, where $l_{\text{ref}}$ is the length of the reference
+haplotype in this region, $l_{\text{variants}}$ is the length of true variant sequence in this region, 
+$l_{\text{errors}}$ is the length of erroneous sequence in this region, and $k$ is the $k$-mer size. In
+practice, we can approximate both errors and variants as being random, which gives $\mathcal{O}(k
+l_{\text{ref}})$ storage complexity. From this graph, we must enumerate the haplotypes present in the
+graph. Starting from the first $k$-mer in the reference sequence for this region, we perform a depth-first
+search to identify all paths to the last $k$-mer in the reference sequence. Assuming that the graph is
+acyclic~(a common restriction for local assembly, see~\S\ref{sec:limits-repeated-sequences}), we can
+bound the best case cost of this search at $\Omega(h \min l_h)$.
+
+The number of haplotypes evaluated, $h$, is an important contributor to the algorithmic complexity of
+reassembly pipelines, as it sets the storage and time complexity of the realignment scoring phase, the
+time complexity of the haplotype enumeration phase, and is related to the storage complexity of the
+\emph{de Bruijn} graph. The best study of the complexity of assembly techniques was done by Kingsford
+et al.~\cite{kingsford10}, but is focused on \emph{de novo} assembly and pays special attention to
+resolving repeat structure. In the local realignment case, the number of haplotypes identified is determined
+by the number of putative variants seen. We can na\"{i}vely model this cost with \eqref{eq:haplotypes},
+where $f_v$ is the frequency with which variants occur, $\epsilon$ is the rate at which bases are
+sequenced erroneously, and $c$ is the coverage (read depth) of the region.
+
+\begin{align}
+\label{eq:haplotypes}
+h \sim f_v l_{\text{ref}} + \epsilon l_{\text{ref}} c
+\end{align}
+
+This model is na\"{i}ve, as the coverage depth and rate of variation varies across sequenced datasets,
+especially for targeted sequencing runs~\cite{fang14}. Additionally, while the $\epsilon$ term models the
+total number of sequence errors, this is not completely correlated with the number of \emph{unique}
+sequencing errors, as sequencing errors are correlated with sequence context~\cite{depristo11}. Many
+current tools allow users to limit the total number of evaluated haplotypes, or apply strategies to minimize
+the number of haplotypes considered, such as filtering observed variants that are likely to be sequencing
+errors~\cite{garrison12}, restricting realignment to INDELs~(\texttt{IndelRealigner},~\cite{depristo11}), or
+by trimming paths from the assembly graph. Additionally, in an \emph{de Bruijn} graph, errors in the
+first $k$ or last $k$ bases of a read will manifest as spurs~(see~\S\ref{sec:spurs}) and will not contribute paths through the graph. We provide~\eqref{eq:haplotypes} solely as a motivating
+approximation, and hope to study these characteristics in more detail in future work.
 
 \subsection{Formulation}
-
-First, we start with the traditional formulation of a \emph{de bruijn} graph for sequence assembly:
-
-\begin{itemize}
-\item Each $k$-mer $s$ represents a $k$-length string, with a $k - 1$ length prefix given by
-$\text{prefix}(s)$ and a length 1 suffix given by $\text{suffix}(s)$.
-\item We place a directed edge ($\rightarrow$) from $k$-mer $s_1$ to $k$-mer $s_2$ if
-$\text{prefix}(s_1)^{\{1, k - 2\}} + \text{suffix}(s_1) = \text{prefix}(s_2)$.
-\end{itemize}
-
-Additionally, we add the following:
-
-\begin{itemize}
-\item There is a set $\mathcal{R}$ which contains all of the $k$-mers that are in the reference
-genome that covers a certain region.
-\item If $k$-mer $s \in \mathcal{R}$, then the output of function $\text{refPos}(s)$ is defined.
-This function provides us with the integer position of $s$ in the reference genome.
-\item For two $k$-mers $s_1, s_2 \in \mathcal{R}$, we can define a distance function
-$\text{distance}(s_1, s_2) = | \text{refPos}(s_1) - \text{refPos}(s_2) |$.
-\end{itemize}
-
-As stated above, this condition assumes that there is a 1-dimensional reference (e.g., a single
-assembled reference). In reality, genomic assemblies provide a 2-dimensional space, where the
-second dimension is defined by the chromosome that we are on. In practice, we will reassemble
-reads from a region which is restricted to a single chromosome.
-
-To discover alternate alleles from this graph without performing a search for all haplotypes,
-we need to address the $k$-mers that are not in $\mathcal{R}$. These can be processed with
-path-based methods. First, let us classify paths into two types:
-
-\begin{itemize}
-\item \textbf{Spurs:} A spur is a set $S$ of $n$ $k$-mers $\{s_1, \dots, s_n\}$ where either $s_1$ or
-$s_n \in \mathcal{R}$ and all other $k$-mers are $\not\in \mathcal{R}$, and where
-$s_i \rightarrow s_{i + 1} \forall i \in \{1, \dots, n - 1\}$. If $s_1 \in \mathcal{R}$,
-then $s_n$ must not have a successor. Alternatively, if $s_n \in \mathcal{R}$, than $s_1$ is
-required to not have a predecessor.
-\item \textbf{Bubbles:} A bubble is a set $S$ of $n$ $k$-mers $\{s_1, \dots, s_n\}$ where both
-$s_1$ and $s_n \in \mathcal{R}$ and all other $k$-mers are $\not\in \mathcal{R}$, and where
-$s_i \rightarrow s_{i + 1} \forall i \in \{1, \dots, n - 1\}$.
-\end{itemize}
-
-Currently, we do not process spurs. Spurs typically result from sequencing errors near the
-start or end of a read. Additionally, given a spur, we cannot put a constraint on what sort of
-edit it may be from the reference.
-
-However, it is easy to define constraints for bubbles so that we can determine what variant
-has been seen at that site. For many variants, we can even canonically determine the variant.
-First, let us make three definitions:
-
-\begin{itemize}
-\item The \emph{bubble length} is the number of non-reference $k$-mers that appear in the bubble.
-\item The \emph{gap length} is the distance between $s_1$ and $s_n$ in the reference genome. Formally,
-$l_{\text{gap}} = \text{distance}(s_1, s_n)$.
-\item The \emph{allele length} is the absolute difference between the bubble length and the gap length.
-\end{itemize}
-
-With these definitions, we can define the allelic composition of bubbles as follows:
-
-\begin{itemize}
-\item A bubble contains a single/multiple nucleotide variant (S/MNV) if $l_{\text{allele}} = 0$.
-\item A bubble contains a canonical insert if $l_{\text{bubble}} = l_{\text{gap}} + l_{\text{allele}}$.
-\item A bubble contains a canonical deletion if $l_{\text{bubble}} < k$, where $k$ is the $k$-mer size,
-and $\text{distance}(s_1, s_n) > 0$.
-\item If a bubble does not meet any of the above constraints, it is a non-canonical indel.
-\end{itemize}
-
-We discuss how to process these alleles in \S\ref{sec:reassembly-implementation}. It
-is also worth noting that this approach can be used for detecting structural variants. A simple
-extension involves jointly processing multiple reference regions (e.g., $\mathcal{R}_1$ and
-$\mathcal{R}_2$). If $s_1$ and $s_n$ are members of different reference sets, then this bubble
-identifies a possible structural variant breakpoint. While this section has just provided intuition about the
-canonical representation of alleles from a de bruijn graph, we provide full proofs
-in~\S\ref{sec:canonical-proofs} at the end of this chapter.
-
-\subsection{Reassembly Implementation}
-\label{sec:reassembly-implementation}
-
-Reassembly is performed as a two step process. In the first step, we build a reference threaded
-de bruijn graph using the sequence of reference region $\mathcal{R}$ and the reads from sample $n$.
-Once we have built a reference threaded de bruijn graph, we then elaborate the graph and identify
-the allelic content of all bubbles.
-
-\subsubsection{Graph Construction}
-\label{sec:graph-construction}
-
-A reference threaded de bruijn graph is constructed per sample. We start by extracting the
-reference $k$-mers. This algorithm---\texttt{addReferenceKmers}---is tail recursive.
-
-\begin{algorithm}
-\caption{Incorporate Reference \emph{k}-mers: \texttt{addReferenceKmers(iter, pos, lastKmer, kmerMap)}}
-\label{alg:build-reference-kmers}
-\begin{algorithmic}
-\STATE $iter \leftarrow$ iterator across $k$-mer strings from the reference
-\STATE $pos \leftarrow$ current reference position
-\STATE $lastKmer \leftarrow$ the last $k$-mer seen
-\STATE $kmerMap \leftarrow$ a map from $k$-mer strings $\rightarrow$ objects
-\IF{$iter \ne \emptyset$}
-\STATE $ks \leftarrow iter$.next
-\IF{$lastKmer \ne \emptyset$}
-\STATE $newKmer \leftarrow $ \texttt{Kmer(} $ks$, $pos$, $predecessors = \{lastKmer\}$\texttt{)}
-\STATE $lastKmer$.$successors \leftarrow lastKmer$.$successors + newKmer$
-\ELSE
-\STATE $newKmer \leftarrow $ \texttt{Kmer(} $ks$, $pos$\texttt{)}
-\ENDIF
-\STATE $newPos \leftarrow pos + 1$
-\STATE $kmerMap \leftarrow kmerMap + (ks, newKmer)$
-\STATE \texttt{addReferenceKmers(} $iter$, $newPos$, $newKmer$, $kmerMap$\texttt{)}
-\ENDIF
-\end{algorithmic}
-\end{algorithm}
-
-We use a similar algorithm for processing the $k$-mers from the read dataset. However, this
-algorithm filters out $k$-mers that contain \texttt{N}s, checks to see whether the $k$-mer
-sequence has been seen before, and also stores information about the mapping quality, base
-quality, and read strand.
-
-\subsubsection{Graph Elaboration}
-\label{sec:graph-elaboration}
-
-To elaborate the graph (the \texttt{toObservations} class method of a \texttt{KmerGraph}), we rely on a
-tail-recursive state machine that pushes state onto a stack at branch points. Our machine
-has the following states:
-
-\begin{itemize}
-\item \texttt{R}, \texttt{Reference}: We are on a run of $k$-mers that are mapped to a position in $\mathcal{R}$.
-\item \texttt{A}, \texttt{Allele}: We are on a run of $k$-mers that have diverged off of the reference. We have a
-divergence start point, but have not connected back to the reference yet. This could be either
-a bubble or a spur. 
-\item \texttt{C}, \texttt{ClosedAllele}: We were on a run of $k$-mers that had diverged off of the reference, but
-have just reconnected back to the reference and now know the start and end positions of the bubble,
-as well as the alleleic content of the bubble.
-\end{itemize}
-
-The following state transitions are allowed:
-
-\begin{itemize}
-\item \texttt{R} $\rightarrow$ \texttt{R}: We are continuing along a reference run.
-\item \texttt{R} $\rightarrow$ \texttt{A}: We were at a reference mapped $k$-mer, and have seen a branch to a
-non-reference $k$-mer.
-\item \texttt{A} $\rightarrow$ \texttt{A}: We are continuing along a non-reference run.
-\item \texttt{A} $\rightarrow$ \texttt{C}: We were on a non-reference run, and have just connected back to a
-reference $k$-mer.
-\item \texttt{C} $\rightarrow$ \texttt{R}: We have just closed out an allele, and are back at a reference position.
-\end{itemize}
-
-We initialize the state machine to `R` with the first $k$-mer from $\mathcal{R}$. Per $k$-mer,
-we evaluate the state transition per successor $k$-mer. If the successor set contains a single
-$k$-mer, we continue to that state. If the successor set contains multiple $k$-mers, we choose
-a successor state to transition to, and push the branch context of all other successor states
-onto our stack. If the successor set is empty, we pop a branch context off of the stack, and
-switch to that context. We stop once we reach a $k$-mer whose successor set is empty, and our
-branch context stack is empty.
-
-The implementation of the \texttt{R} and \texttt{A} states are trivial and largely amount to bookkeeping.
-The \texttt{C} state though, is more complex. First, let us discuss how to canonicalize the canonical
-alleles:
-
-\begin{itemize}
-\item For a canonical S/MNV bubble, the SNV sites can be determined by calculating the Hamming distance
-of the bubble sequence versus the reference sequence. Evidence for SNVs exist at any site
-where an edit is made.
-\item For a canonical insert, sequence is inserted $k - 1$ bases from the bubble start. There will be
-$l_{\text{allele}}$ bases inserted. We can derive the inserted bases by computing the bubble
-sequence and trimming the first $k - 1$ bases.
-\item For a canonical deletion, we guarantee that the bubble sequence is derived from the start and
-end of the reference sequences that the bubble overlaps. To canonicalize this, we can perform
-a greedy match of the bubble sequence, where we match bases to the front of the deletion until
-we see a mismatch, and then align all remaining bases to the end of the deletion.
-\end{itemize}
-
-For a complex variant, we take the bubble sequence and align it against the reference sequence
-from the bubble gap using a pairwise HMM~\cite{durbin98}. From the HMM alignment, we
-emit observations according to the observed alignment states. The HMM uses an infinite padding
-penalty to ensure that the ends of the sequences are matched.
-
-\section{Statistical Models for Genotyping}
-\label{sec:statistical-genotyping}
-
-Given a set of observed alleles and reads spanning these alleles, we can put together a graph. Each
-allele is given a node. We connect two nodes with an edge if and only if a read is observed to cover both
-nodes. In Figure~\ref{fig:alleles}, we present a sequence where the reference is
-\texttt{ACCCTATCGCTCACA}. Evidence of a \texttt{C} $\rightarrow$ \texttt{G} single nucleotide
-polymorphism~(SNP) is present at position 3, and evidence of a deletion of bases 8--9 (\texttt{GC}) is
-present.
-
-\begin{figure}[h]
-\begin{center}
-\includegraphics[width=0.4\linewidth]{graphs/alleles.pdf}
-\end{center}
-\caption{Allele Graph}
-\label{fig:alleles}
-\end{figure}
-
-Between two nodes, we can define a conditional probability $P(x = X | y = Y)$, which is the probability that
-node $x$ has copy number $X$ and node $y$ has copy number $Y$:
-
-\begin{equation}
-\label{eq:cond-prob}
-P(x = X | y = Y) = \frac{1}{Y^k}\prod_{i = 1}^{j} ( X P_i + (Y - X) (1 - P_i)) \prod_{i = j + 1}^{k} ((Y - X) P_i + X P_i )
-\end{equation}
-
-In equation~\eqref{eq:cond-prob}, we have the following terms:
-
-\begin{table}[h]
-\begin{center}
-\caption{Equation~\eqref{eq:cond-prob} Terms}
-\label{tab:cond-prob-terms}
-\begin{tabular}{| c | l |}
-\hline
-Term & Definition \\
-\hline
-\hline
-$X$ & The copy number of the $x$ allele. \\
-$Y$ & The copy number of the $y$ allele. \\
-$k$ & The number of reads in the $y$ allele that span \emph{any} allele in the $x$ direction. \\
-$i$ & Reads $\in k$ that support a transition from $y \rightarrow x$. \\
-$j$ & Reads $\in k$ that do \emph{not} support a transition from $y \rightarrow x$. \\
-$P_i$ & The probability that read $i$ supports a transition from $y \rightarrow x$. \\
-\hline
-\end{tabular}
-\end{center}
-\end{table}
-
-While equation~\eqref{eq:cond-prob} is useful, it only covers a single, uninteresting scenario. Specifically, it does not cover the case
-where we have a fork in the graph. In this case, we can define a further equation:
-
-\begin{equation}
-\label{eq:multi-cond}
-P(x = X | y_1 = Y_1, \dots, y_n = Y_n) = \sum_{X_1 + \dots + X_n = X, X_i \ge 0} P(X_1, \dots, X_n | \frac{Y_1}{\sum Y}, \dots, \frac{Y_n}{\sum Y}) \prod_{i = 1}^{n} P(x = X | y_i = Y_i)
-\end{equation}
-
-where $P(X_1, \dots, X_n | \frac{Y_1}{\sum Y}, \dots, \frac{Y_n}{\sum Y})$ is multinomial.
-
-With equation~\eqref{eq:multi-cond} defined, we can calculate full conditional probabilities for all nodes in the graph. Once we've done
-this, we can marginalize out all the conditional probabilities by running elimination from the root of the graph. We do make a single
-assertion here: specifically, we assume that all spurs are trimmed from the allele graph, and we have a clearly defined ``root'' for the
-graph. This may be easy to provide in a local assembly scenario, where we have a clearly defined start to the active region for
-reassembly; for \emph{de novo} assembly, we may be able to define this by finding a cut of the graph that minimizes a certain function.
-
-\section{Proofs of Allele Canonicality}
-\label{sec:canonical-proofs}
+\label{sec:formulation}
 
 To construct an \emph{indexed de Bruijn} graph, we start with the traditional formulation of a \emph{de
 Brujin} graph for sequence assembly:
@@ -1341,6 +1095,185 @@ $\mathcal{L}_i$ against $\mathcal{L}_j$, which reduces the size of the realignme
 can further limit this bound by limiting the maximum number of INDEL edits to $d = | l_{\mathcal{L}_i} -
 l_{\mathcal{L}_j} |$. This allows us to use an alignment algorithm that limits the number of INDEL
 edits~(e.g., Ukkonen's algorithm~\cite{ukkonen85}). By this, we can achieve $O(n(d + 1))$ cost.
+
+\subsection{Specialization for Local Reassembly}
+\label{sec:local-reassembly}
+
+As stated in~\S\ref{sec:formulation}, we have assumed that we want to find the edits between two or
+more \emph{known} sequences. However, when performing local reassembly for variant discovery/calling,
+our goal is to identify all possible variants and to associate probabilities to observations that contain these
+variants. This hypothesized variants are generated by examining the reads aligned to the reference
+at/near a given site.
+
+However, we can adopt a ``pooled'' model that uses the \emph{indexed de Bruijn} graph to discover alternate
+alleles without performing a search for all haplotypes. Here, we extract a substring $\mathcal{R}$ from a
+reference assembly, corresponding to the subsection of that reference that we would like to reassemble.
+Then, we create a pooled ``sequence'' $\mathcal{P}$, that is generated from the $k$-mers present in
+the reads aligned to $\mathcal{R}$. However, since $\mathcal{P}$ is a composite of the pooled reads, we
+cannot assign indices to $k$-mers in $\mathcal{P}$. Instead, we will rely wholly on the path length
+properties demonstrated in~\S\ref{sec:formulation} and the indices of $k$-mers in $\mathcal{R}$ to
+discover and anchor alleles. First, let us classify paths where $\mathcal{R}$ and $\mathcal{P}$ diverge
+into two types:
+
+\begin{itemize}
+\item \textbf{Spurs:} A spur is a set $S$ of $n$ $k$-mers $\{s_1, \dots, s_n\}$ where either $s_1$ or
+$s_n \in \mathcal{R}, \mathcal{P}$ and all other $k$-mers are $\not\in \mathcal{R}, \in \mathcal{P}$,
+and where $s_i \rightarrow s_{i + 1} \forall i \in \{1, \dots, n - 1\}$. If $s_1 \in \mathcal{R}$, then $s_n$ must 
+not have a successor. Alternatively, if $s_n \in \mathcal{R}$, than $s_1$ is required to not have a
+predecessor.
+\item \textbf{Bubbles:} A bubble is a set $S$ of $n$ $k$-mers $\{s_1, \dots, s_n\}$ where both $s_1$ and
+$s_n \in \mathcal{R}, \mathcal{P}$ and all other $k$-mers are $\not\in \mathcal{R}, \in \mathcal{P}$, and
+where $s_i \rightarrow s_{i + 1} \forall i \in \{1, \dots, n - 1\}$.
+\end{itemize}
+
+Currently, we disregard spurs. Spurs typically result from sequencing errors near the start or end of a
+read. Additionally, given a spur, we cannot put a constraint on what sort of edit it may be from the
+reference, which increases the computational complexity of processing the spur. We concede that this
+may not be the best approach, and have included a longer discussion of the accuracy impact of this
+decision, as well as options for processing spurs with an \emph{indexed de Bruijn} graph in~\S\ref{sec:spurs}.
+
+We can elaborate the graph and identify variants by walking the graph from the first $k$-mer in
+$\mathcal{R}$. Although haplotype elaboration algorithms have $\Omega(h \min l_h)$ cost~(see~\S\ref{sec:background}) where
+$\min l_h$ is the length of the shortest haplotype and $h$ is the number of haplotypes described by the graph, we can limit our graph traversal
+to have $\mathcal{O}(n)$ runtime cost where $n = V(G)$ by introducing a tail-recursive finite state machine~(FSM). Whenever we
+reach a branch point in the graph, our FSM will push state onto a stack, which allows us---with a few
+exceptions---to avoid making multiple traversals through a single $k$-mer in the graph. Our FSM has
+the following states:
+
+\begin{itemize}
+\item \texttt{R}, \texttt{Reference}: We are on a run of $k$-mers that are in $\mathcal{R}$.
+\item \texttt{A}, \texttt{Allele}: We are on a run of $k$-mers that have diverged off of the reference. We
+have a divergence start point, but have not connected back to the reference yet. This could be either
+a bubble or a spur. 
+\item \texttt{C}, \texttt{ClosedAllele}: We were on a run of $k$-mers that had diverged off of the reference,
+but have just reconnected back to the reference and now know the start and end positions~(in
+$\mathcal{R}$) of the bubble, as well as the non-reference sequence and length of the bubble.
+\end{itemize}
+
+We allow the FSM to make the following state transitions, which are depicted in Figure~\ref{fig:fsm}:
+
+\begin{itemize}
+\item \texttt{R} $\rightarrow$ \texttt{R}: We are continuing along a reference run.
+\item \texttt{R} $\rightarrow$ \texttt{A}: We were at a $k$-mer $\in \mathcal{R}$, and have seen a branch
+to a $k$-mer $\not\in \mathcal{R}$.
+\item \texttt{A} $\rightarrow$ \texttt{A}: We are continuing along a non-reference run.
+\item \texttt{A} $\rightarrow$ \texttt{C}: We were on a non-reference run, and have just connected back to
+a reference $k$-mer.
+\item \texttt{C} $\rightarrow$ \texttt{R}: We have just closed out an allele, and are back at a $k$-mer
+$\in \mathcal{R}$.
+\end{itemize}
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.5\linewidth, clip=true, trim=0 39 0 39]{graphs/fsm.pdf}
+\end{center}
+\caption{Finite State Machine for Pooled vs. Reference Assembly}
+\label{fig:fsm}
+\end{figure}
+
+We initialize the state machine to \texttt{R}, and start processing with the first $k$-mer from $\mathcal{R}$.
+Per $k$-mer, we evaluate the possible state transitions of each successor $k$-mer. If the set of successor
+$k$-mers contains a single $k$-mer, we continue to that state. If the successor set contains multiple
+$k$-mers, we choose a successor state to transition to, and push the branch context of all other
+successor states onto our stack. If the successor set is empty, we pop a branch context off of the stack,
+and switch to that context. We stop once we reach a $k$-mer whose successor set is empty, \emph{and}
+our branch context stack is empty.
+
+The implementation of the \texttt{R} and \texttt{A} states largely amount to bookkeeping. In the \texttt{R}
+state, we must track the current position in $\mathcal{R}$, and in \texttt{A}, we must record where we
+branched off of $\mathcal{R}$, and $\mathcal{L}'$, the bases we have seen since we
+branched\footnote{Although we are processing $k$-mers, we only need to reconstruct the sequence that
+the $k$-mers are describing by taking the first base from each successive $k$-mer.} off of $\mathcal{R}$.
+If we are in the \texttt{A} state and walk to a $k$-mer $\in \mathcal{R}$, we then transition into the
+\texttt{C} state. Using the positions of our branch point and the current $k$-mer in $\mathcal{R}$, we are
+able to calculate the length of the reference path via Lemma~\ref{lem:minimum-distance}, while the length
+of the non-reference path is given by $l_{\mathcal{L}'}$. The edited sequence $\mathcal{L}$ present
+between the branch point and the current $k$-mer is given by trimming the first $k - 1$ bases from
+$\mathcal{L}'$. If we have a non-canonical edit, or a deletion in $\mathcal{P}$ relative to $\mathcal{R}$,
+we can look these bases up by indexing into $\mathcal{R}$.
+
+To improve computational efficiency, we should emit statistics for genotyping \emph{while} traversing the graph. By doing 
+this, we can eliminate the need for realignment in haplotype reassembly. Since we have constructed a
+graph where every $k$-mer is anchored to a reference position or to a position in a variant, or is in a spur,
+if we log several statistics when processing reads from $\mathcal{P}$, we can directly emit the probability
+observations that support a reference base or a variant allele. Although the relevant statistics vary
+between different variant calling/genotyping algorithms, common statistics include base and mapping
+quality, as well as strand of the observation. Additionally, genotyping algorithms that incorporate phasing
+may want to identify observations that came from the same allele. These statistics can be logged when
+chopping the reads in $\mathcal{P}$ into $k$-mers at a low cost.
+
+As noted earlier in this section, we normally do \emph{not} need to retrace through any $k$-mers in the
+graph when processing the graph. However, we may need to retrace $k$-mers if we have overlapping
+variants. For example, take the reference string \texttt{ACTGCCGTCT}, the SNV \texttt{ACTGCAGTCT},
+and the complex variant \texttt{ACTGCAAGTCT}\footnote{At \texttt{CCG}, we have inserted an \texttt{A}
+between the two \texttt{C}s, and changed the second \texttt{C} $\rightarrow$ \texttt{A}. Alternatively, this
+can be described as a deletion of the second \texttt{C} and an insertion of \texttt{AA} between
+\texttt{CG}.}. For $k = 4$, both variants share the 4-mer \texttt{AGTC}, but both take independent paths
+from the reference 4-mer \texttt{CTGC} to \texttt{AGTC}. In this case, we need to walk \texttt{AGTC} twice.
+
+\section{Statistical Models for Genotyping}
+\label{sec:statistical-genotyping}
+
+Given a set of observed alleles and reads spanning these alleles, we can put together a graph. Each
+allele is given a node. We connect two nodes with an edge if and only if a read is observed to cover both
+nodes. In Figure~\ref{fig:alleles}, we present a sequence where the reference is
+\texttt{ACCCTATCGCTCACA}. Evidence of a \texttt{C} $\rightarrow$ \texttt{G} single nucleotide
+polymorphism~(SNP) is present at position 3, and evidence of a deletion of bases 8--9 (\texttt{GC}) is
+present.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.4\linewidth]{graphs/alleles.pdf}
+\end{center}
+\caption{Allele Graph}
+\label{fig:alleles}
+\end{figure}
+
+Between two nodes, we can define a conditional probability $P(x = X | y = Y)$, which is the probability that
+node $x$ has copy number $X$ and node $y$ has copy number $Y$:
+
+\begin{equation}
+\label{eq:cond-prob}
+P(x = X | y = Y) = \frac{1}{Y^k}\prod_{i = 1}^{j} ( X P_i + (Y - X) (1 - P_i)) \prod_{i = j + 1}^{k} ((Y - X) P_i + X P_i )
+\end{equation}
+
+In equation~\eqref{eq:cond-prob}, we have the following terms:
+
+\begin{table}[h]
+\begin{center}
+\caption{Equation~\eqref{eq:cond-prob} Terms}
+\label{tab:cond-prob-terms}
+\begin{tabular}{| c | l |}
+\hline
+Term & Definition \\
+\hline
+\hline
+$X$ & The copy number of the $x$ allele. \\
+$Y$ & The copy number of the $y$ allele. \\
+$k$ & The number of reads in the $y$ allele that span \emph{any} allele in the $x$ direction. \\
+$i$ & Reads $\in k$ that support a transition from $y \rightarrow x$. \\
+$j$ & Reads $\in k$ that do \emph{not} support a transition from $y \rightarrow x$. \\
+$P_i$ & The probability that read $i$ supports a transition from $y \rightarrow x$. \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+While equation~\eqref{eq:cond-prob} is useful, it only covers a single, uninteresting scenario. Specifically, it does not cover the case
+where we have a fork in the graph. In this case, we can define a further equation:
+
+\begin{equation}
+\label{eq:multi-cond}
+P(x = X | y_1 = Y_1, \dots, y_n = Y_n) = \sum_{X_1 + \dots + X_n = X, X_i \ge 0} P(X_1, \dots, X_n | \frac{Y_1}{\sum Y}, \dots, \frac{Y_n}{\sum Y}) \prod_{i = 1}^{n} P(x = X | y_i = Y_i)
+\end{equation}
+
+where $P(X_1, \dots, X_n | \frac{Y_1}{\sum Y}, \dots, \frac{Y_n}{\sum Y})$ is multinomial.
+
+With equation~\eqref{eq:multi-cond} defined, we can calculate full conditional probabilities for all nodes in the graph. Once we've done
+this, we can marginalize out all the conditional probabilities by running elimination from the root of the graph. We do make a single
+assertion here: specifically, we assume that all spurs are trimmed from the allele graph, and we have a clearly defined ``root'' for the
+graph. This may be easy to provide in a local assembly scenario, where we have a clearly defined start to the active region for
+reassembly; for \emph{de novo} assembly, we may be able to define this by finding a cut of the graph that minimizes a certain function.
 
 \chapter{Performance and Accuracy Analysis}
 
@@ -1602,6 +1535,11 @@ performance improvement when running a predicate that filters 50\% of records. T
 to overhead from predicate pushdown; we must first deserialize a column, process the filter, and then read all
 records who passed the pushdown filter. If we did not perform this step, we could do a straight scan over all of
 the data in each partition.
+
+\section{Variant Calling Performance}
+\label{sec:variant-calling-performance}
+
+Analysis of \texttt{avocado} to be added at a later date.
 
 \chapter{Conclusion}
 
