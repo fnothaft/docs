@@ -117,7 +117,7 @@ neuroscience. We can attack the problem caused by exponential data growth by app
 techniques from current analytics systems to accelerate scientific processing pipelines.
 
 In this paper, we demonstrate \texttt{ADAM}, an example genomics pipeline that leverages open-source MapReduce
-and columnar storage techniques to achieve a 22--$130\times$ speedup over current genomics
+and columnar storage techniques to achieve speedups unto $49\times$ over current genomics
 pipelines, while reducing cost by 50\%. \linebreak From building this system, we were able to distill a set of
 techniques for implementing scientific analyses efficiently using commodity ``big data'' systems. To demonstrate the
 generality of our architecture, we then implement a scalable astronomy image processing system which achieves
@@ -164,7 +164,7 @@ current implementations incur significant overheads imposed by the legacy format
 codebases that they use.
 
 In this paper, we demonstrate \texttt{ADAM}, a genomic data processing system built using Apache Avro, Parquet, and
-Spark~\cite{avro, parquet, zaharia10}, that achieves a 50$\times$ increase in throughput over the current best
+Spark~\cite{avro, parquet, zaharia10}, that achieves a 49$\times$ increase in throughput over the current best
 practice pipeline, while reducing analysis cost by 50\%~\cite{massie13}. In the process of creating this
 system, we developed a ``narrow waisted'' layering model for building similar scientific analysis systems.
 This narrow waisted stack is inspired by the OSI model for networked systems~\cite{zimmermann80}, and we
@@ -546,7 +546,7 @@ Current benchmark suites have measured this pipeline as taking between 90 and 13
 end-to-end~\cite{talwalkar14}. Recent projects have achieved 5--$10\times$ improvements in alignment
 and variant calling performance~\cite{rimmer14, zaharia11}, which makes the pre-processing stages
 the performance bottleneck. Our experimental results have corroborated this, as the four pre-processing stages
-take over 110 hours to run on a clinical quality human genome when run on an Amazon EC2 \texttt{cr1.8xlarge}
+take approximately 35 hours to run on a clinical quality human genome when run on an Amazon EC2 \texttt{i2.8xlarge}
 machine. We have focused on implementing the four most-commonly used pre-processing stages, as well as
 \texttt{flagstat}, a command used for validating the quality of an aligned sample. In the remainder of this section,
 we describe the stages that we have implemented, and the techniques we have used to improve performance and
@@ -623,8 +623,8 @@ than 10 fields, which account for less than 10\% of space on disk. We discuss th
 implications of this further in~\S\ref{sec:column-store-perf}.
 \end{enumerate}
 
-These techniques allow us to achieve a $>50\times$ performance improvement over current tools, and
-scalability beyond 128 machines. We perform a detailed performance review
+These techniques allow us to achieve an approximately $50\times$ performance improvement over current
+tools, and scalability beyond 128 machines. We perform a detailed performance review
 in~\S\ref{sec:genomics-performance}.
 
 \subsection{Astronomy Image Processing}
@@ -700,8 +700,7 @@ might assess the validity of a variant by the quality characteristics of all rea
 To support these algorithms, we provide a ``region'' or ``spatial'' join primitive. The algorithm used is described
 in algorithm~\ref{alg:region-join} and takes as input two sets (RDDs, see Zaharia et al~\cite{zaharia12}) of
 \texttt{ReferenceRegions}, a data structure that represents intervals along the 1-D genomics coordinate
-space. It produces, as output, the set of all \texttt{ReferenceRegion} pairs where a region from the first RDD
-overlaps with a region from the second RDD.
+space. It produces the set of all overlapping \texttt{ReferenceRegion} pairs.
 
 \begin{algorithm}
 \caption{Partition And Join Regions}
@@ -771,72 +770,82 @@ Additionally, both systems achieve 25-50\% compression over current file formats
 Table~\ref{tab:overview} previews our performance versus current systems. The tests in this table are run on the
 high coverage \texttt{NA12878} full genome BAM file that is available from the 1000 Genomes
 project. These tests have been run on the EC2 cloud, using the instance types listed in
-Table~\ref{tab:machines}. We compute the cost of running each experiment by multiplying the number of instances
-used by the total wall time for the run and by the cost of running a single instance of that type for an hour, which is
-the process Amazon uses to charge customers.
+Table~\ref{tab:machines}. We evaluated \texttt{ADAM} against the \texttt{GATK}~\cite{depristo11},
+\texttt{SAMtools}~\cite{li11}, \texttt{Picard}~\cite{picard}, and \texttt{SAMBAMBA}~\cite{sambamba}. We evaluated
+the performance of BQSR, INDEL realignment~(IR), duplicate marking~(DM), sort, and flagstat~(FS). Blank
+entries~(---) indicate that a tool did not implement that feature. For the \texttt{ADAM} runs, we present
+speedup relative to the fastest legacy tool.
 
 \begin{table}[h]
 \caption{Summary Performance on NA12878}
 \label{tab:overview}
 \begin{center}
-\begin{tabular}{ l c c c }
+\begin{tabular}{ l c c c c c c }
 \hline
-\multicolumn{4}{c}{\bf \textit{Sort}} \\
-\bf Software & \bf EC2 profile & \bf Time & \bf Cost \\
+\bf Tool & \bf EC2 & \bf BQSR & \bf IR & \bf DM & \bf Sort & \bf FS \\
 \hline
-Picard & 1 \texttt{hs1.8xlarge} & 17h 44m & \$81.57 \\
-ADAM & 1 \texttt{hs1.8xlarge} & 8h 56m & \$41.09 \\
-ADAM & 128 \texttt{m2.4xlarge} & 9m & \$31.49 \\
+\cite{depristo11} & 1$\dagger$ & \bf 1283m & \bf 658m & --- & --- & --- \\
+\cite{li11} & 1$\dagger$ & --- & --- & 509m & 203m & 54m41 \\
+\cite{picard} & 1$\dagger$ & --- & --- & 160m & 562m & --- \\
+\cite{sambamba} & 1$\dagger$ & --- & --- & \bf 44m50 & \bf 83m & \bf 6m11 \\
 \hline
-\multicolumn{4}{c}{\bf \textit{Mark Duplicates}} \\
-\bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
+\texttt{ADAM} & 1$\dagger$ & 1602m & 509m & 419m & 108m & 2m17 \\
+ & & 0.80$\times$ & 1.29$\times$ & 0.10$\times$ & 0.76$\times$ & 2.7$\times$ \\
 \hline
-Picard & 1 \texttt{hs1.8xlarge} & 20h 22m & \$93.68 \\
-ADAM & 1 \texttt{hs1.8xlarge} & 9h & \$41.40 \\
-ADAM & 128 \texttt{m2.4xlarge} & 19m & \$64.48 \\ 
+\texttt{ADAM} & 128$\star$ & 25m59 & 26m59 & 18m19 & 10m31 & 1m20 \\
+ & & 49$\times$ & 24$\times$ & 2.4$\times$ & 7.9$\times$ & 4.3$\times$ \\
 \hline
-\multicolumn{4}{c}{\bf \textit{BQSR}} \\
-\bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
-\hline
-GATK & 1 \texttt{hs1.8xlarge} & 31h 18m & \$143.98 \\
-ADAM & 1 \texttt{hs1.8xlarge} & 34h & \$156.40 \\
-ADAM & 128 \texttt{m2.4xlarge} & 54m & \$188.93 \\
-\hline
-\multicolumn{4}{c}{\bf \textit{INDEL Realignment}} \\
-\bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
-\hline
-GATK & 1 \texttt{hs1.8xlarge} & 42h 49m & \$196.88 \\
-ADAM & 1 \texttt{hs1.8xlarge} & 12h 58m & \$82.80 \\
-ADAM & 128 \texttt{m2.4xlarge} & 24m & \$83.97 \\
-\hline
-\multicolumn{4}{c}{\bf \textit{Flagstat}} \\
-\bf Software & \bf EC2 profile & \bf Time & \bf Cost  \\
-\hline
-SAMtools & 1 \texttt{hs1.8xlarge} & 25m 24s & \$1.95 \\
-ADAM & 1 \texttt{hs1.8xlarge} & 7m 4s & \$1.95 \\
-ADAM & 128 \texttt{cr1.8xlarge} & 1m 53s & \$5.35 \\
-\hline
+\texttt{ADAM} & 64$\star$ &  &  & 24m23 & 18m56 & 0m49 \\
+ & & & & 1.8$\times$ & 4.3$\times$ & 7.5$\times$ \\
 \end{tabular}
 \end{center}
 \end{table}
 
-Table~\ref{tab:machines} describes the instance types. Memory capacity is reported in Gibibytes~(GiB).
+We compute the cost of running each experiment by multiplying the number of instances
+used by the total wall time for the run and by the cost of running a single instance of that type for an hour, which is
+the process Amazon uses to charge customers. This data is shown in Table~\ref{tab:overview}. Although \texttt{ADAM}
+is more expensive than the best legacy tool (\texttt{SAMBAMBA}~\cite{sambamba}), \texttt{ADAM} is less expensive
+for all other stages. In total, using \texttt{ADAM} reduces the end-to-end analysis cost by 47\% over a pipeline
+constructed out of solely legacy tools.
+
+\begin{table}[h]
+\caption{Cost on NA12878}
+\label{tab:overview}
+\begin{center}
+\begin{tabular}{ l | c c | c c }
+\hline
+\bf Stage & \multicolumn{2}{c}{\bf Legacy} & \multicolumn{2}{c}{\bf \texttt{ADAM}} \\
+ & \bf Tool & \bf Cost & \bf EC2 & \bf Cost \\
+\hline
+\bf BQSR & \cite{depristo11} & \$132.57 & 128$\star$ & \bf \$38.80 \\
+\bf IR & \cite{depristo11} & \$67.99 & 128$\star$ & \bf \$40.29 \\
+\bf DM & \cite{sambamba} & \bf \$4.63 & 64$\star$ & \$18.21 \\
+\bf Sort & \cite{sambamba} & \bf \$8.57 & 64$\star$ & \$14.13 \\
+\bf FS & \cite{sambamba} & \$0.63 & 1$\dagger$ & \bf \$0.24 \\
+\hline
+\bf Total & & \$214.39 & & \$111.67 \\
+\end{tabular}
+\end{center}
+\end{table}
+
+Table~\ref{tab:machines} describes the instance types. Memory capacity is reported in Gibibytes~(GiB),
+and the cost reported is the cost of one hour on one machine.
 Storage capacities are not reported in this table because disk
 capacity does not impact performance, but the number and type of storage drives is reported because
-aggregate disk bandwidth does impact performance. In our tests, the \texttt{hs1.8xlarge} instance is
+aggregate disk bandwidth does impact performance. In our tests, the \texttt{i2.8xlarge} instance is
 chosen to represent a workstation. Network bandwidth is constant across all instances.
 
 \begin{table}[h]
 \caption{AWS Machine Types}
 \label{tab:machines}
 \begin{center}
-\begin{tabular}{ l c l }
+\begin{tabular}{ c l c l }
 \hline
-\bf Machine & \bf Cost & \bf Description \\
+ & \bf Machine & \bf Cost & \bf Description \\
 \hline
 \hline
-\texttt{hs1.8xlarge} & \$4.60/hr & 16 proc, 117GiB RAM, 24$\times$ HDD \\
-\texttt{m2.4xlarge} & \$1.64/hr & 8 proc, 68.4GiB RAM, 2$\times$ HDD \\
+$\dagger$ & \texttt{i2.8xlarge} & \$6.20 & 32 proc, 244G RAM, 8 SDD \\
+$\star$ & \texttt{r3.2xlarge} & \$0.70 & 8 proc, 61G RAM, 1 SDD \\
 \hline
 \end{tabular}
 \end{center}
@@ -857,7 +866,7 @@ coverage genome.
 \end{figure}
 
 When testing on NA12878, we achieve linear speedup out through 1024 cores; this represents 128
-\texttt{m2.4xlarge} nodes. In this test, our performance is limited by several factors:
+\texttt{r3.2xlarge} nodes. In this test, our performance is limited by several factors:
 
 \begin{itemize}
 \item Although columnar stores have very high read performance, their write performance is low. Our
@@ -869,10 +878,11 @@ both the \texttt{Mark Duplicates} and \texttt{INDEL Realignment} code to elimina
 rebalancing reads that are unmapped/do not map to a target across partitions.
 \end{itemize}
 
-We do note that the performance of \texttt{flagstat} degrades going from 32 to 128 \texttt{m2.4xlarge} nodes.
-It is worth noting that \texttt{flagstat} executes in one minute on 32 nodes. By increasing the number of machines
+We do note that the performance of \texttt{flagstat} degrades going from 64 to 128 \texttt{r3.2xlarge} nodes.
+\texttt{flagstat} executes in two minutes on a single node. By increasing the number of machines
 we use to execute this query, we increase scheduling overhead, which leads to degraded
-performance.
+performance. When running on the 128 machine cluster, approximately 75\% of the runtime was spent
+scheduling and broadcasting the task to be run.
 
 \subsection{Astronomy Workloads}
 \label{sec:astro-workloads}
@@ -1087,12 +1097,10 @@ Similar to what we propose, the \texttt{Thunder} system was developed as a novel
 processing terabytes of neuroscience imaging data~\cite{freeman14}. \texttt{Thunder} performs a largely statistical
 workload, and the significant tasks in terms of execution time are clustering and regression. The system is
 constructed using Spark and Python and is designed to process datasets larger than 4 TB, and leverages
-significant functionality from the MLI/MLLib libraries~\cite{sparks13}. Similar to our system, they are able to use
-Spark's in-memory caching to amortize load time across several pipeline stages. Additionally, they use Spark's
+significant functionality from the MLI/MLLib libraries~\cite{sparks13}. \texttt{Thunder} uses Spark's
 filtering primitives to allow scientists to cut problems into subproblems. This is a common trend across scientific
 analyses, and is one of the reasons that we advocate for the use of a columnar store with efficient predicate
-pushdown. \texttt{Thunder} is an example pipeline that demonstrates the power of using horizontally scalable
-systems to enable novel scientific analyses.
+pushdown.
 
 There has also been significant work to optimize MapReduce systems for processing geospatial data. Significant
 projects include \texttt{SpatialHadoop}~\cite{eldawy15} and \texttt{Hadoop-GIS}~\cite{aji13}. These projects have
@@ -1104,23 +1112,20 @@ Our genomics work leverages columnar storage to improve performance and compress
 with special emphasis on repetitive fields that can be run length encoded~(RLE). While this improves
 disk performance, it has the side effect of making data consume significantly more space in memory
 than on disk. We are currently investigating techniques that leverage the immutability of data in our
-applications to reduce memory consumption. We have changed Parquet and Avro's deserialization codec
-to reuse allocated objects. For every value that is RLE'd, we only allocate the value once in memory. We
-then share the value across all records which contained that value. This is especially important since we
-maintain a lot of string metadata which is RLE'd on disk.
+applications to reduce memory consumption and have modified Parquet's deserialization codec. For
+every value that is RLE'd, we allocate the value once in memory and share the value across all records which
+contained that value. This is especially important since we maintain string metadata that is RLE'd on disk.
 
 It is worth noting that there are many significant scientific applications (such as genome
 assembly) that are expressed as traversal over graphs. Recent work by Simpson et al~(\texttt{ABySS},
 \cite{simpson09}) and Georganas et al~\cite{georganas14} has focused on using MPI
 or Unified Parallel C~(UPC) to implement their own distributed graph traversal. Both systems
-find that synchronization via message passing is a significant cost; specifically, the ABySS assembler
-experiences scaling problems because it thrashes portions of the graph across nodes during traversal.
+find that synchronization via message passing is a significant cost.
 By building our system using Spark, we are able to leverage the GraphX processing library~\cite{gonzalez14,
 xin13}. We are in the process of developing a genome assembler using this library system, and
 believe that we can achieve improved performance through careful graph partitioning. This partitioning involves
 algorithmic changes to the graph creation and traversal phases to bypass ``knotted'' sections of the
-graph that correspond to highly repetitive areas of the genome, which cause the major performance
-issues in MPI based assemblers.
+graph that correspond to highly repetitive areas of the genome.
 
 In this paper, we focus on the \texttt{GATK}~\cite{depristo11} as an example of a genome processing pipeline that
 needs to be distributed in order to improve analysis latency and throughput. While the \texttt{GATK} is widely used,
@@ -1142,12 +1147,12 @@ the open source Avro, Parquet, and Spark systems~\cite{avro, parquet, zaharia10}
 characteristics across scientific systems, like the need to run queries that touch slices of datasets and the need
 for fast access to metadata. We then enforced data independence through a layering model that uses a schema
 as the ``narrow waist'' of the stack, and used optimizations to make common, coordinate-based processing
-fast. By using Parquet, a modern columnar store, we use predicates and projections to minimize I/O, and are able
-to denormalize our schemas to improve the performance of accessing metadata.
+fast. By using Parquet, a modern columnar store, we use predicates and projections to minimize I/O, and
+denormalize our schemas to improve the performance of accessing metadata.
 
 By rethinking the architecture of scientific data management systems, we have been able to achieve
-22--$131\times$ performance improvements over conventional genomics processing systems, along with linear
-strong scaling and a $2\times$ cost improvement. On the astronomy workload, we achieve speedup between
+2--$49\times$ performance improvements over conventional genomics processing systems, along with linear
+strong scaling and a 47\% cost improvement. On the astronomy workload, we achieve speedup between
 2.8--$8.9\times$ speedup over the current best MPI-based solution at various scales. By applying our techniques
 to both astronomy and genomics, we have demonstrated that the techniques are applicable to both traditional
 matrix-based scientific computing, as well as novel scientific areas that have less structured data.

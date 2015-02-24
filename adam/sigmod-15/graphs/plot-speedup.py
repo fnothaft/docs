@@ -19,10 +19,10 @@ def plot (n, st, mt, label_name, pattern):
 
 def label(name, t):
     locs,labels = xticks()
-    xn = ["16", "32", "64", "128", "256", "512", "1024"]
+    xn = ["32", "64", "128", "256", "512", "1024"]
     xticks(locs, xn)
 
-    yn = ["1/2", "1", "2", "4", "8", "16", "32", "64", "128"]
+    yn = ["1/16", "1/8", "1/4", "1/2", "1", "2", "4", "8", "16", "32", "64"]
     locs,labels = yticks()
     yticks(locs, yn)
 
@@ -33,26 +33,26 @@ def label(name, t):
     grid (True)
     savefig (name)
 
-n = [16, 1024]
+n = [32, 1024]
 
-flagstat_n = [16, 256, 512, 1024]
-flagstat = [(7.0 + 4.0 / 60.0) / 60.0, 1.0 / 60.0, 1.25 / 60.0, 1.9 / 60.0]
-markdup_n = [16, 512, 1024]
-markdup = [9.0, 160.75 / 60.0, 19.0 / 60.0]
-bqsr_n = [16, 256, 512, 1024]
-bqsr = [34.0, 2.0 + 0.7 / 60.0, 73.0 / 60.0, 54.0 / 60.0]
-ir_n = [16, 256, 512, 1024]
-ir = [12.96, 100.0 / 60.0, 46.5 / 60.0, 24.0 / 60.0]
-sort_n = [16, 256, 512, 1024]
-sort = [9.0, 32.0 / 60.0, 19.6 / 60.0, 9.4 / 60.0]
+flagstat_n = [32, 512, 1024]
+flagstat = [2.0 + 17.0 / 60.0, 49.0 / 60.0, 1.0 + 20.0 / 60.0]
+markdup_n = [32, 512, 1024]
+markdup = [419, 24.0 + 23.0 / 60.0, 18.0 + 19.0 / 60.0]
+bqsr_n = [32, 1024]
+bqsr = [1602.0, 25.0 + 59.0 / 60.0]
+ir_n = [32, 1024]
+ir = [509.0, 26.0 + 59.0 / 60.0]
+sort_n = [32, 512, 1024]
+sort = [108.0, 18.0 + 56.0 / 60.0, 10.0 + 31.0 / 60.0]
 
 setup(n)
 
-plot(flagstat_n, 25.5 / 60.0, flagstat, 'Flagstat', 'r+--')
-plot(markdup_n, 20.0 + 22 / 60.0, markdup, 'Mark Duplicates', 'bx-')
-plot(bqsr_n, 12.9 + 18.4, bqsr, 'BQSR', 'mo-.')
-plot(ir_n, 42.8, ir, 'INDEL Realignment', 'c.--')
-plot(sort_n, 17.75, sort, 'Sort', 'y*-')
+plot(flagstat_n, 6.0 + 11.0 / 60.0, flagstat, 'Flagstat', 'r+--')
+plot(markdup_n, 44.0 + 50.0 / 60.0, markdup, 'Mark Duplicates', 'bx-')
+plot(bqsr_n, 1283.0, bqsr, 'BQSR', 'mo-.')
+plot(ir_n, 658.0, ir, 'INDEL Realignment', 'c.--')
+plot(sort_n, 83.0, sort, 'Sort', 'y*-')
 
 label("speedup_na12878.pdf",
       "Speedup on NA12878 (High Coverage)")
