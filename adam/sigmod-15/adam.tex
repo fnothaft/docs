@@ -119,7 +119,7 @@ techniques from current analytics systems to accelerate scientific processing pi
 
 In this paper, we demonstrate \texttt{ADAM}, an example genomics pipeline that leverages open-source MapReduce
 and columnar storage techniques to achieve speedups unto $49\times$ over current genomics
-pipelines, while reducing cost by 50\%. \linebreak From building this system, we were able to distill a set of
+pipelines, while reducing cost by 64\%. \linebreak From building this system, we were able to distill a set of
 techniques for implementing scientific analyses efficiently using commodity ``big data'' systems. To demonstrate the
 generality of our architecture, we then implement a scalable astronomy image processing system which achieves
 a 2.8--$8.9\times$ improvement over the state-of-the-art MPI-based system.
@@ -795,14 +795,14 @@ speedup relative to the fastest legacy tool.
 \texttt{ADAM} & 1$\dagger$ & 1602m & 366m & 143m & 108m & 2m17 \\
  & & $\sfrac{1}{1.25}\times$ & 1.7$\times$ & $\sfrac{1}{3.8}\times$ & $\sfrac{1}{1.3}\times$ & 2.7$\times$ \\
 \hline
-\texttt{ADAM} & 32$\star$ & 74m &  &  & 39m23 & 0m43 \\
- & & 17$\times$ & & & 2.1$\times$ & 8.6$\times$ \\
+\texttt{ADAM} & 32$\star$ & 74m & 64m & 34m56 & 39m23 & 0m43 \\
+ & & 17$\times$ & 10$\times$ & 1.2$\times$ & 2.1$\times$ & 8.6$\times$ \\
 \hline
-\texttt{ADAM} & 64$\star$ & 41m52 &  & 24m23 & 18m56 & 0m49 \\
- & & 30$\times$ & & 1.8$\times$ & 4.3$\times$ & 7.5$\times$ \\
+\texttt{ADAM} & 64$\star$ & 41m52 & 35m39 & 21m35 & 18m56 & 0m49 \\
+ & & 30$\times$ & 18$\times$ & 2.0$\times$ & 4.3$\times$ & 7.5$\times$ \\
 \hline
-\texttt{ADAM} & 128$\star$ & 25m59 & 26m59 & 18m19 & 10m31 & 1m20 \\
- & & 49$\times$ & 24$\times$ & 2.4$\times$ & 7.9$\times$ & 4.3$\times$ \\
+\texttt{ADAM} & 128$\star$ & 25m59 & 20m27 & 15m27 & 10m31 & 1m20 \\
+ & & 49$\times$ & 32$\times$ & 2.9$\times$ & 7.9$\times$ & 4.3$\times$ \\
 \end{tabular}
 \end{center}
 \end{table}
@@ -810,9 +810,9 @@ speedup relative to the fastest legacy tool.
 We compute the cost of running each experiment by multiplying the number of instances
 used by the total wall time for the run by the cost of running a single instance of that type for an hour, which is
 the process Amazon uses to charge customers. This data is shown in Table~\ref{tab:cost}. Although \texttt{ADAM}
-is more expensive than the best legacy tool (\texttt{SAMBAMBA}~\cite{sambamba}), \texttt{ADAM} is less expensive
-for all other stages. In total, using \texttt{ADAM} reduces the end-to-end analysis cost by 47\% over a pipeline
-constructed out of solely legacy tools.
+is more expensive than the best legacy tool (\texttt{SAMBAMBA}~\cite{sambamba}) for sorting and duplicate marking,
+\texttt{ADAM} is less expensive for all other stages. In total, using \texttt{ADAM} reduces the end-to-end analysis cost
+by 64\% over a pipeline constructed out of solely legacy tools.
 
 \begin{table}[h]
 \caption{Cost on NA12878}
@@ -823,13 +823,13 @@ constructed out of solely legacy tools.
 \bf Stage & \multicolumn{2}{c}{\bf Legacy} & \multicolumn{2}{c}{\bf \texttt{ADAM}} \\
  & \bf Tool & \bf Cost & \bf EC2 & \bf Cost \\
 \hline
-\bf BQSR & \cite{depristo11} & \$132.57 & 128$\star$ & \bf \$38.80 \\
-\bf IR & \cite{depristo11} & \$67.99 & 128$\star$ & \bf \$40.29 \\
-\bf DM & \cite{sambamba} & \bf \$4.63 & 64$\star$ & \$18.21 \\
+\bf BQSR & \cite{depristo11} & \$132.57 & 32$\star$ & \bf \$27.62 \\
+\bf IR & \cite{depristo11} & \$67.99 & 32$\star$ & \bf \$23.89 \\
+\bf DM & \cite{sambamba} & \bf \$4.63 & 32$\star$ & \$13.04 \\
 \bf Sort & \cite{sambamba} & \bf \$8.57 & 64$\star$ & \$14.13 \\
 \bf FS & \cite{sambamba} & \$0.63 & 1$\dagger$ & \bf \$0.24 \\
 \hline
-\bf Total & & \$214.39 & & \$111.67 \\
+\bf Total & & \$214.39 & & \$78.92 \\
 \end{tabular}
 \end{center}
 \end{table}
@@ -871,7 +871,7 @@ coverage genome.
 \label{fig:speedup}
 \end{figure}
 
-When testing on NA12878, we achieve linear speedup out through 1024 cores; this represents 128
+When testing on NA12878, we achieve near-linear speedup out through 1024 cores; this represents 128
 \texttt{r3.2xlarge} nodes. In this test, our performance is limited by several factors:
 
 \begin{itemize}
