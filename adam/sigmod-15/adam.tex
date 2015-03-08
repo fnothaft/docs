@@ -381,7 +381,7 @@ data materialization layer. We feel that this approach inverts the semantics tha
 Our stack enables us to serve the use cases we outline in~\S\ref{sec:workloads}. By using
 \texttt{Parquet} as a storage format, we are able to process the data in many \texttt{Hadoop}-based systems. We
 implement high performance batch and interactive processing with \linebreak \texttt{Spark}, and can delegate to
-systems like \texttt{Impala} and \texttt{Spark-SQL} for data warehousing.
+systems like \texttt{Impala}~\cite{kornacker15} and \texttt{Spark-SQL} for data warehousing.
 
 \subsection{Workloads}
 \label{sec:workloads}
@@ -1192,15 +1192,6 @@ serialization framework.
 The schema used for storing genomic short read data is described below:
 
 \begin{lstlisting}
-record Contig {
-  string contigName;
-  long contigLength;
-  string contigMD5;
-  string referenceURL;
-  string assembly;
-  string species;
-}
-
 record AlignmentRecord {
   /** Alignment position and quality */
   Contig contig;
