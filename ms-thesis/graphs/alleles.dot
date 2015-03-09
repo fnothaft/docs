@@ -1,0 +1,8 @@
+digraph alleles {
+
+  rankdir = "LR" ;
+
+  AAC -> C -> TATC -> GC -> TCACA ;
+  AAC -> G -> TATC -> TCACA ;
+
+}

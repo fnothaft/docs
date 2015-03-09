@@ -423,7 +423,7 @@ a full shuffle and resort of the dataset. Additionally, a sort is required after
 \end{itemize}
 
 As noted above, current implementations are locked to a single node model. Projects like
-\texttt{Hadoop-BAM}~\cite{niemenmaa12}, \texttt{SeqPig}~\cite{schumacher14}, and \texttt{BioPig}~\cite{biopig}
+\texttt{Hadoop-BAM}~\cite{niemenmaa12}, \texttt{SeqPig}~\cite{schumacher14}, and \texttt{BioPig}~\cite{nordberg13}
 have attempted to build a distributed processing environment on top of current single node genomics APIs.
 However, several problems must be solved in order to make distributed processing of genomic data productive:
 
@@ -463,7 +463,7 @@ networking stack model can largely be attributed to the ``narrow waist'' of the 
 integration of a new protocol or technology by ensuring that the protocol only needed to implement a
 single interface to be compatible with the rest of the stack.
 
-Unlike conventional scientific systems that leverage custom data formats like \linebreak BAM/SAM~\cite{li09},
+Unlike conventional scientific systems that leverage custom data formats like BAM/SAM~\cite{li09},
 or CRAM~\cite{fritz11}, we believe that the use of an explicit schema for data interchange is critical.
 In our stack model shown in Figure~\ref{fig:stack-model}, the schema becomes the ``narrow waist''
 of the stack. Most importantly, placing the schema as the narrow waist enforces a strict separation
@@ -537,15 +537,211 @@ when repartitioning the dataset, or when reducing or grouping values.
 \section{Data Storage for Genomic Data}
 \label{sec:schema-design}
 
-\texttt{ADAM} relies on Apache Avro~\cite{avro} as a schema description and serialization format, and
-AParquet~\cite{parquet} to 
+A common criticism of bioinformatics as a field surrounds the proliferation of file formats. Short read data alone is
+stored in four common formats: \texttt{FASTQ}~\cite{cock10}, \texttt{SAM}/\texttt{BAM}~\cite{li09}, and
+\texttt{CRAM}~\cite{fritz11}. While these formats all represent different layouts of data on disk, they tend to be
+logically harmonious. Due to this logical congruency of the different formats, we chose to build \texttt{ADAM}
+on top of a logical schema, instead of a binary format on disk. While we do use Apache \texttt{Parquet}~\cite{parquet} to
+materialize data on disk, the Apache \texttt{Avro}~\cite{avro} schema is used as a narrow waist in the system,
+that enables ``legacy'' formats to be processed identically to data stored in \texttt{Parquet}.
 
-We made several key choices when designing the schemas used in \texttt{ADAM}. First, the schemas are fully
+We made several high level choices when designing the schemas used in \texttt{ADAM}. First, the schemas are fully
 denormalized, which reduces the cost of metadata access and simplifies metadata distribution. We are able to
-get these benefits without greatly increasing the cost of memory access because our backing store~(Parquet)
+get these benefits without greatly increasing the cost of memory access because our backing store~(\texttt{Parquet})
 makes use of run length and dictionary encoding, which allows for a single object to be allocated for highly repetitive
 elements on read. Another key design choice was to require that all fields in the schema are nullable; by enforcing
-this requirement, we enable arbitrary user specified projections.
+this requirement, we enable arbitrary user specified projections. Arbitrary projections can be used to accelerate
+common sequence quality control algorithms such as Flagstat~\cite{massie13, nothaft15}.
+
+We have reproduced the schemas used to describe reads, variants, and genotypes below. \texttt{ADAM} also
+contains schemas for describing assembled contigs, genomic features, and variant annotations, but we have
+not included them in this section.
+
+\begin{lstlisting}[caption=\texttt{ADAM} read schema]
+record AlignmentRecord {
+  /** Alignment position and quality */
+  Contig contig;
+  long start;
+  long oldPosition;
+  long end;
+
+  /** read ID, sequence, and quality */
+  string readName;
+  string sequence;
+  string qual;
+  
+  /** alignment details */
+  string cigar;
+  string oldCigar;
+  int mapq;
+  int basesTrimmedFromStart;
+  int basesTrimmedFromEnd;
+  boolean readNegativeStrand;
+  boolean mateNegativeStrand;
+  boolean primaryAlignment;
+  boolean secondaryAlignment;
+  boolean supplementaryAlignment;
+  string mismatchingPositions;
+  string origQual;
+
+  /** Read status flags */
+  boolean readPaired;
+  boolean properPair;
+  boolean readMapped;
+  boolean mateMapped;
+  boolean firstOfPair;
+  boolean secondOfPair;
+  boolean failedVendorQualityChecks;
+  boolean duplicateRead;
+
+  /** optional attributes */
+  string attributes;
+
+  /** record group metadata */
+  string recordGroupName;
+  string recordGroupSequencingCenter;
+  string recordGroupDescription;
+  long recordGroupRunDateEpoch;
+  string recordGroupFlowOrder;
+  string recordGroupKeySequence;
+  string recordGroupLibrary;
+  int recordGroupPredictedMedianInsertSize;
+  string recordGroupPlatform;
+  string recordGroupPlatformUnit;
+  string recordGroupSample;
+
+  /** Mate pair alignment information */
+  long mateAlignmentStart;
+  long mateAlignmentEnd;
+  Contig mateContig;
+}
+\end{lstlisting}
+
+Our read schema maps closely to the logical layout of data presented by \texttt{SAM} and \texttt{BAM}.
+The main modifications relate to how we represent metadata, which has been denormalized across the record.
+All of the metadata from the sequencing run and prior processing steps are packed into the record
+group metadata fields. The program information describes the processing lineage of the sample and
+is expected to be uniform across all records, thus it compresses extremely well. The record group
+information is not guaranteed to be uniform across all records, but there are a limited number number
+of record groups per sequencing dataset. This
+metadata is string heavy, which makes proper deserialization from disk important. Although the
+information consumes less than 5\% of space on disk, a poor deserializer implementation may replicate
+a string per field per record, which greatly increases the amount of memory allocated and the garbage
+collection~(GC) load.
+
+\begin{lstlisting}[caption=\texttt{ADAM} variant and genotype schemas]
+enum StructuralVariantType {
+  DELETION,
+  INSERTION,
+  INVERSION,
+  MOBILE_INSERTION,
+  MOBILE_DELETION,
+  DUPLICATION,
+  TANDEM_DUPLICATION
+}
+
+record StructuralVariant {
+  StructuralVariantType type;
+  string assembly;
+
+  boolean precise;
+  int startWindow;
+  int endWindow;
+}
+
+record Variant {
+  Contig contig;
+  long start;
+  long end;
+
+  string referenceAllele;
+  string alternateAllele;
+  StructuralVariant svAllele;
+
+  boolean isSomatic;
+}
+
+enum GenotypeAllele {
+  Ref,
+  Alt,
+  OtherAlt,
+  NoCall
+}
+
+record VariantCallingAnnotations {
+  float variantCallErrorProbability;
+
+  array<string> variantFilters;
+
+  int readDepth;
+  boolean downsampled;
+  float baseQRankSum;
+  float clippingRankSum;
+  float fisherStrandBiasPValue = null;
+  float haplotypeScore;
+  float inbreedingCoefficient;
+  float rmsMapQ;
+  int mapq0Reads;
+  float mqRankSum;
+  float variantQualityByDepth;
+  float readPositionRankSum;
+
+  array<int> genotypePriors;
+  array<int> genotypePosteriors;
+
+  float vqslod;
+  string culprit;
+  boolean usedForNegativeTrainingSet;
+  boolean usedForPositiveTrainingSet;
+
+  map<string> attributes;
+}
+
+record Genotype {
+  Variant variant;
+  VariantCallingAnnotations variantCallingAnnotations;
+
+  string sampleId;
+  string sampleDescription;
+  string processingDescription;
+
+  array<GenotypeAllele> alleles;
+
+  float expectedAlleleDosage;
+  int referenceReadDepth;
+  int alternateReadDepth;
+  int readDepth;
+  int minReadDepth;
+  int genotypeQuality;
+  array<int> genotypeLikelihoods;
+  array<int> nonReferenceLikelihoods;
+  array<int> strandBiasComponents;
+
+  boolean splitFromMultiAllelic;
+
+  boolean isPhased;
+  int phaseSetId;
+  int phaseQuality;
+}
+\end{lstlisting}
+
+The variant and genotype schemas present a larger departure from the representation used by the Variant Call
+Format~(\texttt{VCF}). The most noticeable difference is that we have migrated away from \texttt{VCF}'s variant oriented
+representation, to a matrix representation. Instead of the variant record serving to group together genotypes, the
+variant record is embedded within the genotype. Thus, a record represents the genotype assigned to a sample,
+as opposed to a \texttt{VCF} row, where all individuals are collected together. The second major modification that we
+make is to assume a biallelic representation. This differs from \texttt{VCF}, which allows multiallelic records. By limiting
+ourselves to a biallelic representation, we are able to clarify the meaning of many of the variant calling annotations. If a
+site contains a multiallelic variant (e.g., in \texttt{VCF} parlance this could be a \texttt{1/2} genotype), we split the
+variant into two or more biallelic records. The sufficient statistics for each allele should then be computed under
+a reference model similar to the model used in genome \texttt{VCF}s. If the sample does contain a multiallelic variant at
+the given site, this multiallelic variant is represented by referencing to another record via the \texttt{OtherAlt}
+enumeration.
+
+These representations achieve high compression versus the legacy formats. We provide a detailed breakdown of
+compression in more in~\S\ref{sec:compression}. \texttt{ADAM} data stored in \texttt{Parquet} achieves an
+approximately 25\% improvement in file size over compressed \texttt{BAM} for read data, and a 66\% improvement
+over \texttt{GZIP}ped \texttt{VCF} for variant data.
 
 \section{Read Preprocessing Algorithms}
 \label{sec:read-preprocessing}
@@ -815,6 +1011,31 @@ scores in the read that are greater than 15.
 
 \section{Modular Approaches for Variant Calling}
 \label{sec:variant-calling}
+
+In this chapter, we present \texttt{avocado}, a variant caller built on top of \texttt{ADAM}. \texttt{avocado} has
+been designed to enable users to run an end-to-end variant caller that makes use of the \texttt{ADAM}
+preprocessing stages described in~\S\ref{sec:read-preprocessing} along with state-of-the art variant calling
+methods, without needing to spill to disk. \texttt{avocado}'s general pipeline structure is shown in
+Figure~\ref{fig:avocado-architecture}.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.8\linewidth]{avocado-architecture.pdf}
+\end{center}
+\caption{The architecture of the \texttt{avocado} pipeline}
+\label{fig:avocado-architecture}
+\end{figure}
+
+In \texttt{avocado}, we support both read and reassembly based variant discovery, along with multiple statistical
+methods for genotyping. Although the methods described in this thesis target human germline variant calling,
+\texttt{avocado}'s local reassembly methods have been implemented so that they can support somatic variant
+calling, and variant calling on polyploid genomes.
+
+In this chapter, we first talk about \texttt{avocado}'s novel local reassembler, which is able to reduce the computational
+complexity of local reassembly. This algorithmic reformulation also enables the reassembly of pooled/somatic and
+polyploid samples, as it makes no assumptions about path count through the assembly graph. We then cover the
+statistical models used for genotyping in \texttt{avocado}. A performance evaluation of \texttt{avocado} is provided
+in~\S\ref{sec:variant-calling-performance}.
 
 \section{Efficient Reassembly via Indexed \emph{de Bruijn} Graphs}
 \label{sec:reference-threaded}
@@ -1214,9 +1435,132 @@ from the reference 4-mer \texttt{CTGC} to \texttt{AGTC}. In this case, we need t
 \section{Statistical Models for Genotyping}
 \label{sec:statistical-genotyping}
 
-Given a set of observed alleles and reads spanning these alleles, we can put together a graph. Each
-allele is given a node. We connect two nodes with an edge if and only if a read is observed to cover both
-nodes. In Figure~\ref{fig:alleles}, we present a sequence where the reference is
+\texttt{avocado} supports two germline genotyping models. The first model is a traditional genotyping model
+based off of the biallelic genotyping model from \texttt{samtools}~\cite{li11snp}. The second model is a novel
+monoallelic model that is built on top of an \emph{allele graph}. The biallelic model assumes per site independence,
+while the monoallelic model is a haplotyping model that jointly scores sites within a single region. Both models
+can be incorporated into a joint variant calling approach, where we integrate over multiple samples to update the
+probabilities of a genotype call.
+
+\subsection{Biallelic Genotyping Model}
+\label{sec:biallelic-genotyping}
+
+The biallelic genotyping model in \texttt{avocado} is derived closely from the biallelic genotyping model used in the
+\texttt{samtools mpileup} variant caller~\cite{li11snp}. However, we make several modifications. First, we apply
+a windowing approach to unify ``complex'' events. Second, we operate solely in log space. This is done in order to
+avoid the underflow issues discussed in \S2.3.6 of Li 2011~\cite{li11snp}.
+
+\subsubsection{Windowing Algorithm}
+\label{sec:windowing}
+
+The site independence assumption in \texttt{samtools mpileup} serves as a simplification for the statistical approaches
+that follow, but can be a source of error in the presence of INDELs and other complex events. As asserted earlier in
+this section, we believe that we can arrive at a canonical INDEL alignment via local reassembly. This canonicalization
+should resolve issues due to read evidence for an INDEL allele being misaligned across multiple reads. However,
+even after realignment, we cannot guarantee that we have observed the same alleles across \emph{all} samples, nor
+can we guarantee that all alleles are at a single site on the reference genome. This is trivial to note: all deletions cover
+a \emph{region} of the reference genome, not a single site. As such, grouping together alleles by start position is not
+sufficient for correctness. While performing a coordinate space self-join---as supported in \texttt{ADAM}---would be
+sufficient for \emph{correctness}, it would not be performant due to the number of observations being scored in a large
+dataset. Instead, we apply the sweeping window approach given in Algorithm~\ref{alg:window-observations}.
+
+\begin{algorithm}
+\caption{Open Windows for Site Observations}
+\label{alg:window-observations}
+\begin{algorithmic}
+\STATE $observations \leftarrow$ the set of allele observations
+\STATE $contigs \leftarrow$ a description of the reference genome assembly
+\STATE $observations \leftarrow observations$.repartitionAndSortWithinPartition($contigs$)
+\STATE $sites \leftarrow \emptyset$
+\FOR{$partition \in observations$}
+\STATE $windowStart \leftarrow partition$.head.start
+\STATE $windowEnd \leftarrow partition$.head.end
+\STATE $site \leftarrow \emptyset$
+\FOR{$observation \in partition$}
+\IF{$windowEnd <= observation$.start}
+\STATE $site = \{observation\}$)
+\ELSE
+\STATE $window \leftarrow [windowStart, windowEnd)$
+\STATE $sites$.append($(window, site)$)
+\STATE $site$.append($observation$)
+\ENDIF
+\ENDFOR
+\IF{$sites \ne \emptyset$}
+\STATE $window \leftarrow [windowStart, windowEnd)$
+\STATE $sites$.append($(window, site)$)
+\ENDIF
+\ENDFOR
+\RETURN $sites$
+\end{algorithmic}
+\end{algorithm}
+
+This algorithm maintains an open window that it uses to group together all observations that are in the window. It is
+worth noting that this is different from a self-join or a groupBy. Specifically, we group all observations into the smallest
+possible region that could fully contain those observations. If multiple observations from the same read are grouped
+together, we then combine the statistics from those observations, weighted by the number of bases from the read
+contributing to each respective observation.
+
+\subsubsection{Statistical Model}
+\label{sec:genotyping-model}
+
+The biallelic genotyping model in \texttt{avocado} is derived directly from \texttt{mpileup}~\cite{li11snp}, except with a
+translation to log space. We calculate log likelihoods from the site observations, and use the major allele
+frequency~(MAF)\footnote{The frequency of the reference allele as observed at this site across all samples.} as a prior
+when normalizing. We use equation~\eqref{eq:likelihood} to calculate the log likelihood of the genotype state at a site.
+Terms used in the equation are defined in Table~\ref{tab:likelihood-terms}.
+
+\begin{align}
+\label{eq:likelihood}
+l(g) &= -k \log m + \sum_{i = 1}^{j} \log(\epsilon_i (m - g) + (1 - \epsilon_i) g) + \sum_{i = j + 1}^{k} \log(\epsilon_i g + (1 - \epsilon_i) (m - g))
+\end{align}
+
+\begin{table}[h]
+\begin{center}
+\caption{Equation~\eqref{eq:likelihood} Terms}
+\label{tab:likelihood-terms}
+\begin{tabular}{| c | l |}
+\hline
+Term & Definition \\
+\hline
+\hline
+$m$ & The copy number of the site. \\
+$g$ & The \emph{genotype state}, or number of reference alleles. \\
+$j$ & Reads $\in k$ that support the reference allele. \\
+$k$ & The total number of reads at the site \\
+$\epsilon_i$ & The probability that observation $i$ was in error. \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+We estimate the MAF via expectation-maximization. Our update equation for $n$ samples is given in
+Equation~\ref{eq:em}. $c_s$ represents the contribution of sample $s$ to the MAF, and $p_s(g l_{\text{MAF}})$ is the
+probability of genotype state $g$ for sample $s$, given $l_{\text{MAF}}$. The MAF is treated as a binomial prior.
+
+\begin{align}
+\label{eq:em}
+l_{\text{MAF}} &= s(c_1, \dots, c_n) \\
+c_s &= s(n_{s, i}, \dots) - s(d_{s, i}, \dots), i \in \{0, \dots, g\} \\
+n_{s, i} &= p_s(i | l_{\text{MAF}}) + \log i \\
+d_{s, i} &= p_s(i | l_{\text{MAF}}) \\
+\label{eq:log-sum}
+s(l_1, l_2) &= l_1 + \log(1 + e^\frac{l_2}{l_1}) \\
+\label{eq:log-recursive-sum}
+s(l_1, l_2, \dots , l_n) &= s(l_1, s(l_2, s( \dots s(l_{n - 1}, l_n)))) \\
+\end{align}
+
+We use Equation~\eqref{eq:log-sum} is a numerically stable algorithm for adding two log values to each other and
+returning a log result. This equation is from Durbin et al~\cite{durbin98}. To sum together an array of log values, we
+compose Equation~\eqref{eq:log-sum} recursively into Equation~\eqref{eq:log-recursive-sum}. In practice, to improve
+numerical stability we sort the array before performing the recursive sum.
+
+\subsection{Monoallelic Genotyping Model}
+\label{sec:monoallelic-genotyping}
+
+In an alternative formulation, we can consider the observed alleles as a directed graph. We refer to this as an
+\emph{allele graph}, and this serves as a basis on which we can apply probabilistic graphical modeling techniques.
+To construct the graph, each allele is given a node. We connect two nodes with an edge if and only if a read is observed
+to cover both nodes. In Figure~\ref{fig:alleles}, we present a sequence where the reference is
 \texttt{ACCCTATCGCTCACA}. Evidence of a \texttt{C} $\rightarrow$ \texttt{G} single nucleotide
 polymorphism~(SNP) is present at position 3, and evidence of a deletion of bases 8--9 (\texttt{GC}) is
 present.
@@ -1232,10 +1576,10 @@ present.
 Between two nodes, we can define a conditional probability $P(x = X | y = Y)$, which is the probability that
 node $x$ has copy number $X$ and node $y$ has copy number $Y$:
 
-\begin{equation}
+\begin{align}
 \label{eq:cond-prob}
 P(x = X | y = Y) = \frac{1}{Y^k}\prod_{i = 1}^{j} ( X P_i + (Y - X) (1 - P_i)) \prod_{i = j + 1}^{k} ((Y - X) P_i + X P_i )
-\end{equation}
+\end{align}
 
 In equation~\eqref{eq:cond-prob}, we have the following terms:
 
@@ -1259,21 +1603,22 @@ $P_i$ & The probability that read $i$ supports a transition from $y \rightarrow 
 \end{center}
 \end{table}
 
-While equation~\eqref{eq:cond-prob} is useful, it only covers a single, uninteresting scenario. Specifically, it does not cover the case
-where we have a fork in the graph. In this case, we can define a further equation:
+While equation~\eqref{eq:cond-prob} is useful, it only covers a single, uninteresting scenario. Specifically, it does not
+cover the case where we have a fork in the graph. In this case, we can define a further equation:
 
-\begin{equation}
+\begin{align}
 \label{eq:multi-cond}
 P(x = X | y_1 = Y_1, \dots, y_n = Y_n) = \sum_{X_1 + \dots + X_n = X, X_i \ge 0} P(X_1, \dots, X_n | \frac{Y_1}{\sum Y}, \dots, \frac{Y_n}{\sum Y}) \prod_{i = 1}^{n} P(x = X | y_i = Y_i)
-\end{equation}
+\end{align}
 
 where $P(X_1, \dots, X_n | \frac{Y_1}{\sum Y}, \dots, \frac{Y_n}{\sum Y})$ is multinomial.
 
-With equation~\eqref{eq:multi-cond} defined, we can calculate full conditional probabilities for all nodes in the graph. Once we've done
-this, we can marginalize out all the conditional probabilities by running elimination from the root of the graph. We do make a single
-assertion here: specifically, we assume that all spurs are trimmed from the allele graph, and we have a clearly defined ``root'' for the
-graph. This may be easy to provide in a local assembly scenario, where we have a clearly defined start to the active region for
-reassembly; for \emph{de novo} assembly, we may be able to define this by finding a cut of the graph that minimizes a certain function.
+With equation~\eqref{eq:multi-cond} defined, we can calculate full conditional probabilities for all nodes in the graph. Once
+we've done this, we can marginalize out all the conditional probabilities by running belief propagation from the root of the
+graph~\cite{pearl86}. We do make a single assertion here: specifically, we assume that all spurs are trimmed from the
+allele graph, and we have a clearly defined ``root'' for the graph. This is easy to provide in our local assembly scenario,
+where we have a clearly defined start to the active region for reassembly; for \emph{de novo} assembly, we may be able to
+define this by finding a cut of the graph that minimizes a certain function. 
 
 \chapter{Performance and Accuracy Analysis}
 

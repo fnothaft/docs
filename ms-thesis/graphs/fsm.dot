@@ -1,0 +1,7 @@
+digraph fsm {
+  R -> R [label = "Continuing on reference"];
+  R -> A [label = "Branching to alt off reference"];
+  A -> A [label = "Alt hasn't rejoined reference"];
+  A -> C [label = "Alt is rejoining reference"];
+  C -> R [label = "Back on reference from alt"];
+}
