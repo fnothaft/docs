@@ -26,7 +26,21 @@
 %
 % For tracking purposes - this is V3.1SP - APRIL 2009
 
-\documentclass{acm_proc_article-sp}
+\documentclass{sig-alternate}
+
+\newfont{\mycrnotice}{ptmr8t at 7pt}
+\newfont{\myconfname}{ptmri8t at 7pt}
+\let\crnotice\mycrnotice%
+\let\confname\myconfname%
+
+\permission{Permission to make digital or hard copies of part or all of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page. Copyrights for third-party components of this work must be honored. For all other uses, contact the Owner/Author. \\ Copyright is held by the owner/author(s).}
+\conferenceinfo{SIGMOD'15,}{May 31--June 4, 2015, Melbourne, Victoria, Australia.} 
+\copyrightetc{ACM \the\acmcopyr}
+\crdata{978-1-4503-2758-9/15/05. \\
+http://dx.doi.org/10.1145/2723372.2742787}
+
+\clubpenalty=10000 
+\widowpenalty = 10000
 
 \usepackage{url}
 \usepackage{algorithmic}
@@ -77,15 +91,13 @@ morestring=[b]"}
 % reasons) and the remaining two appear in the \additionalauthors section.
 %
 \numberofauthors{1} 
-\author{\alignauthor Frank~Austin~Nothaft$^{*}$, Matt~Massie$^{*}$, Timothy~Danford$^{*,\ddagger}$, Zhao~Zhang$^{*}$, Uri~Laserson$^{\circ}$, Carl~Yeksigian$^{\ddagger}$, Jey~Kottalam$^{*}$, Arun~Ahuja$^{\dagger}$, Jeff~Hammerbacher$^{\dagger, \circ}$, Michael~Linderman$^{\star}$, Michael~Franklin$^{*}$, Anthony~D.~Joseph$^{*}$, David~A.~Patterson$^{*}$ \\
-$^{*}$\affaddr{Department of Electrical Engineering and Computer Sciences, University of California, Berkeley} \\
-$^{\circ}$\affaddr{Cloudera, San Francisco, CA} \\
-$^{\dagger}$\affaddr{Carl Icahn School of Medicine, Mount Sinai} \\
+\author{\alignauthor Frank~Austin~Nothaft$^{*}$, Matt~Massie$^{*}$, Timothy~Danford$^{*,\ddagger}$, Zhao~Zhang$^{*}$, Uri~Laserson$^{\circ}$, Carl~Yeksigian$^{\ddagger}$, Jey~Kottalam$^{*}$, Arun~Ahuja$^{\dagger}$, Jeff~Hammerbacher$^{\dagger, \circ}$, Michael~Linderman$^{\dagger}$, Michael~J.~Franklin$^{*}$, Anthony~D.~Joseph$^{*}$, David~A.~Patterson$^{*}$ \\
+$^{*}$\affaddr{AMPLab, University of California, Berkeley}, $^{\circ}$\affaddr{Cloudera, San Francisco, CA} \\
+$^{\dagger}$\affaddr{Carl Icahn School of Medicine, Mount Sinai, New York, NY},
 $^{\ddagger}$\affaddr{Genomebridge, Cambridge, MA} \\
 \email{\{fnothaft, massie, tdanford, zhaozhang, jey, franklin, adj, pattrsn\}@berkeley.edu} \\
-\email{laserson@cloudera.com}
 \email{\{arun.ahuja, jeff.hammerbacher, michael.linderman\}@mssm.edu} \\
-\email{cyeksig@genomebridge.org} \\
+\email{laserson@cloudera.com} \email{cyeksig@genomebridge.org} \\
 } 
 % You can go ahead and credit any number of authors here,
 % e.g. one 'row of three' or two rows (consisting of one row of three
@@ -114,12 +126,12 @@ lower cost. These trends are broadly impacting many scientific fields, including
 neuroscience. We can attack the problem caused by exponential data growth by applying horizontally scalable
 techniques from current analytics systems to accelerate scientific processing pipelines.
 
-In this paper, we demonstrate \texttt{ADAM}, an example genomics pipeline that leverages open-source MapReduce
-and columnar storage techniques to achieve a $28\times$ end-to-end speedup over current genomics
-pipelines, while reducing cost by 63\%. \linebreak From building this system, we were able to distill a set of
-techniques for implementing scientific analyses efficiently using commodity ``big data'' systems. To demonstrate the
-generality of our architecture, we then implement a scalable astronomy image processing system which achieves
-a 2.8--$8.9\times$ improvement over the state-of-the-art MPI-based system.
+In this paper, we describe \texttt{ADAM}, an example genomics pipeline that leverages the open-source Apache
+\texttt{Spark} and \texttt{Parquet} systems to achieve a $28\times$ speedup over current genomics
+pipelines, while reducing cost by 63\%. From building this system, we were able to distill a set of techniques for
+implementing scientific analyses efficiently using commodity ``big data'' systems. To demonstrate the generality of our
+architecture, we then implement a scalable astronomy image processing system which achieves a 2.8--$8.9\times$
+improvement over the state-of-the-art MPI-based system.
 \end{abstract}
 
 % A category with the (minimum) three required fields
@@ -163,22 +175,26 @@ codebases that they use.
 
 In this paper, we demonstrate \texttt{ADAM}~\cite{massie13}, a genomic data processing system built using Apache
 \texttt{Avro}, \texttt{Parquet}, and \texttt{Spark}~\cite{avro, parquet, zaharia10}, that achieves a 28$\times$
-increase in end-to-end throughput over the current best
+increase in read preprocessing throughput over the current best
 practice pipeline, while reducing analysis cost by 63\%. In the process of creating this
 system, we developed a ``narrow waisted'' layering model for building similar scientific analysis systems.
 This narrow waisted stack is inspired by the OSI model for networked systems~\cite{zimmermann80}, and
-uses the data schema as the narrow waist that separates data processing from data storage.
+uses the data schema as the narrow waist that separates data processing from data storage. \texttt{ADAM} additionally
+demonstrates that it is possible to achieve very high performance on scientific applications using free open source
+software~(OSS). By shifting scientific data processing away from proprietary high performance computing~(HPC)
+environment and into a commodity/OSS world, we can democratize scientific analysis.
 
 To researchers and practitioners unfamiliar with current practice in computational science, the layering-based approach
-we propose may appear sufficiently straightforward as to be uncontroversial. In practice however, it is non-trivial to build
-an end-to-end system that achieves such a decomposition. In both genomics and astronomy, data is stored in flat file
-formats that are difficult to read in parallel. These flat file formats centralize file/experiment metadata,
-which increases the cost of parallel metadata access; in~\S\ref{sec:astro-workloads}, we demonstrate that metadata
-access contention limits the scalability of current parallel astronomy pipelines. Additionally, many computational science
-tools engage in ``stack smashing'' to improve performance. In genomics, processing \linebreak pipelines impose
-invariants on the layout of data on disk, such as requiring data to be stored in a coordinate-sorted order. These
-invariants are rarely made explicit, which can lead to functional errors when composing multiple tools into a pipeline. To
-solve these problems, we use the following techniques:
+we propose may appear sufficiently straightforward as to be uncontroversial. In practice however, as discussed in the
+seminal ``end-to-end'' paper~\cite{saltzer84}, there is a common tendency to engage in ``stack smashing'' when building
+a large system to improve performance or to simplify implementation. Scientific applications are no different; in genomics,
+processing pipelines impose invariants on the layout of data on disk to improve performance, such as requiring data to be
+stored in a coordinate-sorted order. These invariants are rarely made explicit, which can lead to functional errors when
+composing multiple tools into a pipeline and necessitate slow sorting stages. In both genomics and astronomy, data is
+stored in flat file that centralize file/experiment metadata in order to improve the size of data on disk. This increases the
+cost of parallel metadata access and limits the scalability of current parallel astronomy pipelines
+(see~\S\ref{sec:astro-workloads}). In this paper, we demonstrate that scientific pipelines \emph{can} be decomposed
+without sacrificing computational cost through the use of the following techniques:
 
 \begin{enumerate}
 \item We make the schema the ``narrow waist'' of our stack and enforce data independence. We then
@@ -286,7 +302,7 @@ are not a universally great fit. Due to the semistructured nature of genomics da
 to import genomic data into array databases. Other systems like the Genome Query Language~(\texttt{GQL},
 \cite{kozanitis14}) have extended SQL to provide efficient query semantics across
 genomic coordinates. While \texttt{GQL} achieves 10$\times$ performance improvements for certain
-algorithms, SQL is not an attractive language for scientific analyses that make heavy use of user designed functions.
+algorithms, SQL is not an attractive language for scientific analyses that make heavy use of UDFs.
 
 \section{Characteristics of Scientific \\ Analysis Systems}
 \label{sec:principles}
@@ -381,7 +397,7 @@ data materialization layer. We feel that this approach inverts the semantics tha
 Our stack enables us to serve the use cases we outline in~\S\ref{sec:workloads}. By using
 \texttt{Parquet} as a storage format, we are able to process the data in many \texttt{Hadoop}-based systems. We
 implement high performance batch and interactive processing with \linebreak \texttt{Spark}, and can delegate to
-systems like \texttt{Impala}~\cite{kornacker15} and \texttt{Spark-SQL} for data warehousing.
+systems like \texttt{Impala}~\cite{kornacker15} and \texttt{Spark SQL}~\cite{armbrust15} for data warehousing.
 
 \subsection{Workloads}
 \label{sec:workloads}
@@ -699,7 +715,7 @@ in algorithm~\ref{alg:region-join} and takes as input two sets (RDDs, see Zahari
 space. It produces the set of all overlapping \texttt{ReferenceRegion} pairs.
 
 \begin{algorithm}
-\caption{Partition And Join Regions}
+\caption{Partition And Join Regions via Broadcast}
 \label{alg:region-join}
 \begin{algorithmic}
 \STATE $left \leftarrow$ input dataset; left side of join
@@ -718,10 +734,36 @@ space. It produces the set of all overlapping \texttt{ReferenceRegion} pairs.
 To find the maximal set of non-overlapping regions, we must find the convex hull of all regions emitted.
 We present a distributed algorithm for finding convex hulls in Appendix~\ref{sec:convex-hull}. The
 distributed convex hull computation problem is important because it is used both for computing regions
-for partitioning during a region join and for performing INDEL realignment. We are currently working to
-improve our algorithm so that we can eliminate a reduce phase. This optimization will allow us to improve
-performance by eliminating a synchronization phase caused by \texttt{Spark}'s Bulk Synchronous
-Parallel~(BSP) execution model.
+for partitioning during a region join and for performing INDEL realignment.
+
+While the join described above is a broadcast join, a region join can also be implemented via a straightforward
+shuffle-based approach, which is described in Algorithm~\ref{alg:shuffle-region-join}. The \texttt{partitionJoinFn}
+function maintains two iterators (one each from both the left and right collections), along with a buffer. This buffer is
+used to track all key-value pairs from the right collection iterator that \emph{could} match to a future key-value pair
+from the left collection iterator. We prune this buffer every time that we advance the left collection iterator. For
+simplicity, the description of Algorithm~\ref{alg:shuffle-region-join} ignores the complexity of processing keys that cross
+partition boundaries. In our implementation, we replicate keys that cross partition boundaries into both partitions.
+
+\begin{algorithm}
+\caption{Partition And Join Regions via Shuffle}
+\label{alg:shuffle-region-join}
+\begin{algorithmic}
+\STATE $left \leftarrow$ input dataset; left side of join
+\STATE $right \leftarrow$ input dataset; right side of join
+\STATE $partitions \leftarrow left$.getRegionHistogram()
+\STATE $left \leftarrow left$.repartitionAndSort($partitions$)
+\STATE $right \leftarrow right$.repartitionAndSort($partitions$)
+\STATE $joined \leftarrow left$.zipPartitions($right$, \texttt{partitionJoinFn})
+\RETURN $joined$
+\end{algorithmic}
+\end{algorithm}
+
+These joins serve as a core that we can use to build other abstractions with. For example, self-region joins and
+multi-region joins are common in genomics, and can be easily implemented using the above implementations.
+We are currently working to implement further parallel spatial functions such as sliding windows, using techniques
+similar to the shuffle-based join. We are working to characterize the performance differences between the two
+join strategies described above. In the future, we hope to enable the use of the region join in a SQL based system
+such as \texttt{Spark SQL}~\cite{armbrust15}.
 
 \subsection{Loading Remote Data}
 \label{sec:loading-remote-data}
@@ -872,9 +914,10 @@ When testing on NA12878, we achieve near-linear speedup out through 1024 cores; 
 
 \begin{itemize}
 \item Although columnar stores have very high read performance, they have poor write performance. Our
-tests exaggerate this penalty: a typical variant calling pipeline will consume a large read file, but then output a
+tests exaggerate the penalty of poor write performance, since we write the same amount of data as we read. In a typical
+variant calling pipeline, the input will be a large read file, but the pipeline's output will be a
 variant call file that is approximately two orders of magnitude smaller. Since the amount of data written is much smaller,
-the penalty for reduced write performance is decreased. In practice, we also use in-memory caching to chain stages
+the penalty of the reduced write performance is decreased. In practice, we also use in-memory caching to chain stages
 together. This amortizes write time across several stages of computation.
 \item Additionally, for large clusters, straggler elimination is an issue. However, we have made optimizations to
 both the duplicate marking and INDEL realignment code to eliminate stragglers by randomly
@@ -893,8 +936,8 @@ scheduling and broadcasting the task to be run.
 To evaluate the mosaicing application, we use the 2MASS data\footnote{Available from
 \url{http://irsa.ipac.caltech.edu/applications/2MASS/IM/}.} and the Montage test case of 3x3 degree
 mosaicing with Galaxy m101 as the center. The tile mosaicing phase converts 1.5~GB of input data into a
-1.2~GB aggregated output file. We compare the \texttt{Spark-mAdd} performance against the High Performance
-Computing~(HPC) styled MPI-based parallel implementation from Montage v3.3 (\texttt{MPI-mAdd}). We
+1.2~GB aggregated output file. We compare the \texttt{Spark-mAdd} performance against the HPC styled
+MPI-based parallel implementation from Montage v3.3 (\texttt{MPI-mAdd}). We
 performed the test on 1, 4, and 16 Amazon \texttt{c3.8xlarge} instances. We chose the \texttt{c3.8xlarge} instances
 for this test because they provided HPC-optimized networking, which is a prerequisite for good MPI performance.
 We use \texttt{OrangeFS} v2.8.8---a successor of \texttt{PVFS}~\cite{PVFS}---as the shared file system when running
@@ -1158,14 +1201,17 @@ denormalize our schemas to improve the performance of accessing metadata.
 By rethinking the architecture of scientific data management systems, we have been able to achieve parity on single
 node systems, while providing linear strong scaling out to 128 nodes. By making it easy to scale scientific analyses
 across multiple commodity machines, we enable the use of smaller, less expensive computers, leading to a 63\% cost
-improvement. On the astronomy workload, we achieve speedup between 2.8--$8.9\times$ speedup over the current
+improvement and a 28$\times$ improvement in read preprocessing pipeline latency. On the astronomy workload, we
+achieve speedup between 2.8--$8.9\times$ speedup over the current
 best MPI-based solution at various scales. By applying our techniques to both astronomy and genomics, we have
 demonstrated that the techniques are applicable to both traditional matrix-based scientific computing, as well as novel
 scientific areas that have less structured data.
 
 \section{Acknowledgements}
 
-This research is supported in part by NSF CISE Expeditions Award CCF-1139158, LBNL Award 7076018, and DARPA XData Award FA8750-12-2-0331, NIH BD2K Award \linebreak 1-U54HG007990-01, NIH Cancer Cloud Pilot Award \linebreak HHSN261201400006C and gifts from Amazon Web Services, Google, SAP,  The Thomas and Stacey Siebel Foundation, Adatao, Adobe, Apple, Inc., Blue Goji, Bosch, C3Energy, Cisco, Cray, Cloudera, EMC, Ericsson, Facebook, Guavus, Huawei, Intel, Microsoft, NetApp, Pivotal, Samsung, Splunk, Virdata, VMware, and Yahoo!. Author FAN is supported by a National Science Foundation Graduate Research Fellowship. Additionally, the authors would like to thank the anonymous reviewers and our shepherd, Ken Yocum, for their helpful commentary on this paper.
+This research is supported in part by NSF CISE Expeditions Award CCF-1139158, LBNL Award 7076018, and DARPA XData Award FA8750-12-2-0331, NIH BD2K Award \linebreak 1-U54HG007990-01, NIH Cancer Cloud Pilot Award \linebreak HHSN261201400006C and gifts from Amazon Web Services, Google, SAP,  The Thomas and Stacey Siebel Foundation, Adatao, Adobe, Apple, Inc., Blue Goji, Bosch, C3Energy, Cisco, Cray, Cloudera, EMC, Ericsson, Facebook, Guavus, Huawei, Intel, Microsoft, NetApp, Pivotal, Samsung, Splunk, Virdata, VMware, and Yahoo!. Author FAN is supported by a National Science Foundation Graduate Research Fellowship.
+
+We would also like to thank our colleagues who have provided feedback and engineering effort to the \texttt{ADAM} system, including Andr\'{e} Schumacher, Karen Feng, Eric Tu, Taylor Sittler, Neal Sidhwaney, Ryan Williams, Ravi Pandya, and the UCSC Genome Bioinformatics group. As \texttt{ADAM} is an open source project, we also would like to thank the community members who have contributed code and use cases to the project, and would especially like to thank Neil Ferguson, Andy Petrella, Xavier Tordior, and Michael Heuer. Additionally, the authors would like to thank the anonymous reviewers and our shepherd, Ken Yocum, for their helpful commentary on this paper.
 
 \balance
 
@@ -1258,20 +1304,15 @@ information is not guaranteed to be uniform across all records, but there are a 
 of record groups per sequencing dataset. This
 metadata is string heavy, which makes proper deserialization from disk important. Although the
 information consumes less than 5\% of space on disk, a poor deserializer implementation may replicate
-a string per field per record, which greatly increases the amount of memory allocated and the garbage
-collection~(GC) load.
+a string per field per record.
 
-In our system, we have defined common projections and predicates to operate on these records. For
+We have defined common projections and predicates to operate on these records. For
 example, tools that perform quality control for sequenced data commonly only access the read status flags.
 Additionally, it is common to run predicates on the read position,
-or whether the read is mapped or not. We have several predicates that are optimized for these queries,
-and have devised a system that allows us to apply these predicates to legacy datasets that do not support
+or whether the read is mapped or not. We have implemented code that allows us to apply these predicates to legacy
+datasets that do not support
 direct predicate pushdown. On legacy data, we only get the functionality of the predicate, not the
 performance improvement.
-
-Due to space limitations, we have only reproduced \texttt{ADAM}'s read schema here. \texttt{ADAM} also provides
-schemas for describing assembled sequences, variants, genotypes, and annotations. These schemas are
-available from our source repository.
 
 \subsection{Astronomy Schema}
 \label{sec:astronomy-schema}
@@ -1407,7 +1448,7 @@ locations on those servers:
 
 \begin{itemize}
 \item \texttt{NA12878}: \texttt{data/NA12878/high\_coverage\_alignment/}
-\item \texttt{HG00096}: \texttt{/vol1/ftp/data/HG00096/alignment/}
+\item \texttt{HG00096}: \texttt{data/HG00096/alignment/}
 \end{itemize}
 
 Our experiments were run on Amazon EC2 using either default or publicly available machine images.
