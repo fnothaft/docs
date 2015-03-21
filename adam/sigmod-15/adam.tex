@@ -143,7 +143,7 @@ Development Process Management]
 
 \terms{Design}
 
-\keywords{Analytics, MapReduce, Genomics, Scientific Computing}
+\keywords{Analytics; MapReduce; Genomics; Scientific Computing}
 
 \section{Introduction}
 \label{sec:introduction}
@@ -173,8 +173,8 @@ scientific compute/storage systems. While these systems have improved analysis c
 current implementations incur significant overheads imposed by the legacy formats and
 codebases that they use.
 
-In this paper, we demonstrate \texttt{ADAM}~\cite{massie13}, a genomic data processing system built using Apache
-\texttt{Avro}, \texttt{Parquet}, and \texttt{Spark}~\cite{avro, parquet, zaharia10}, that achieves a 28$\times$
+In this paper, we describe \texttt{ADAM}~\cite{massie13}, a genomic data processing system built using Apache
+\texttt{Avro}, \texttt{Parquet}, and \linebreak \texttt{Spark}~\cite{avro, parquet, zaharia10}, that achieves a 28$\times$
 increase in read preprocessing throughput over the current best
 practice pipeline, while reducing analysis cost by 63\%. In the process of creating this
 system, we developed a ``narrow waisted'' layering model for building similar scientific analysis systems.
@@ -191,7 +191,7 @@ a large system to improve performance or to simplify implementation. Scientific 
 processing pipelines impose invariants on the layout of data on disk to improve performance, such as requiring data to be
 stored in a coordinate-sorted order. These invariants are rarely made explicit, which can lead to functional errors when
 composing multiple tools into a pipeline and necessitate slow sorting stages. In both genomics and astronomy, data is
-stored in flat file that centralize file/experiment metadata in order to improve the size of data on disk. This increases the
+stored in flat files that centralize file/experiment metadata in order to improve the size of data on disk. This increases the
 cost of parallel metadata access and limits the scalability of current parallel astronomy pipelines
 (see~\S\ref{sec:astro-workloads}). In this paper, we demonstrate that scientific pipelines \emph{can} be decomposed
 without sacrificing computational cost through the use of the following techniques:
@@ -201,7 +201,7 @@ without sacrificing computational cost through the use of the following techniqu
 devise algorithms for making common scientific processing patterns fast (e.g., coordinate-space joins,
 see~\S\ref{sec:coordinate-system-joins}).
 \item To improve horizontal scalability, we push computation to the data. To support this, we use \texttt{Parquet}, a
-modern parallel columnar store based off of \texttt{Dremel}~\cite{melnik10}.
+modern parallel columnar store based on \texttt{Dremel}~\cite{melnik10}.
 \item We use a denormalized schema to achieve O(1) parallel access to metadata.
 \end{enumerate}
 
@@ -236,7 +236,7 @@ results. Access instructions are given in Appendices~\ref{sec:availability} and 
 \label{sec:background}
 
 Our work is at the intersection of computational science, data management, and processing
-systems. Our architectural approach is informed by recent trends in both areas. The design of
+systems. Our architectural approach is informed by recent trends in these areas. The design of
 large scale data management has changed dramatically since the papers by Dean and
 Ghemawat~\cite{dean04, dean08} that described Google's \texttt{MapReduce} system. Over a
 similar timeframe, scientific fields have taken advantage of improvements in data acquisition
@@ -282,7 +282,7 @@ computation to minimize data shuffling. While this approach does improve shuffle
 preprocessing stages cannot be transposed. For instance, reversing the order of realignment and
 base quality score recalibration~(see~\S\ref{sec:genomics-pipeline}) will change the inferred quality
 score distribution. Additionally, we believe that the shuffle traffic that Diao et al observe is an artifact
-caused by the abstraction inversion discussed in~\S\ref{sec:introduction}. As we demonstrate
+caused by the stack smashing discussed in~\S\ref{sec:introduction}. As we demonstrate
 in~\S\ref{sec:genomics-pipeline}, these penalties can be eliminated by restructuring the pre-processing
 algorithms.
 
