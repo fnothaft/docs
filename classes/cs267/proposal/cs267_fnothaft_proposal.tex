@@ -1,0 +1,81 @@
+\documentclass[11pt]{article}
+\topmargin=0.0in %length of margin at the top of the page (1 inch added by default)
+\oddsidemargin=0.0in %length of margin on sides for odd pages
+\evensidemargin=0in %length of margin on sides for even pages
+\textwidth=6.5in %How wide you want your text to be
+\marginparwidth=0.5in
+\headheight=0pt %1in margins at top and bottom (1 inch is added to this value by default)
+\headsep=0pt %Increase to increase white space in between headers and the top of the page
+\textheight=9.1in %How tall the text body is allowed to be on each page
+
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{authblk}
+\usepackage{wrapfig} % added from executive summary
+\usepackage{etaremune}
+\usepackage{hyperref}
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{listings} 
+
+\begin{document}
+
+\title{CS267 Final Project Proposal}
+\author{Frank Austin Nothaft}
+\date{}
+
+\maketitle
+
+\section{Proposal}
+
+As seen in homework \#3, genome assembly is a significant challenge. While homework \#3
+presented a de Bruijn based genome assembly method~\cite{pevzner01}, ``long read'' assemblers
+tend to use overlap-layout concensus~(OLC) based approaches~\cite{rausch09}. As my CS267 project,
+I intend to build a distributed OLC assembler using Apache Spark~\cite{zaharia10}. This
+assembler targets the PacBio sequencing platform~\cite{eid09} which produces reads of approximately
+$\sim10,000$ bases in length.
+
+\section{Components}
+
+This project involves several components:
+
+\begin{enumerate}
+\item \textbf{Read Overlapper:} I have already implemented a Spark-based overlapper. This tool uses
+a MinHash signature to compute approximate similarity of the reads~\cite{berlin14}.
+\item \textbf{Graph Reduction:} Once the reads are overlapped, we need to simplify the overlap graph
+of the reads. To do this, I propose to perform a transitive reduction to a string graph-like~\cite{myers05}
+structure. I have sketched out how to perform this transitive reduction on a message-passing graph
+API~\cite{gonzalez14} using at most two rounds of message passing.
+\item \textbf{Assembly Polishing:} Although the PacBio sequencing platform produces very long reads,
+the reads have a high error rate. Once we have reduced down to a string graph, we plan to use a statistical
+model to pick the best consensus sequence per segment in the graph. We will start with a simple model, such
+as a reference-free implementation of the model used in the samtools mpileup variant caller~\cite{li11}.
+\end{enumerate}
+
+These components will be implemented on top of the ADAM library~\cite{nothaft15}, which provides primitives for
+manipulating genomic datasets inside of Spark.
+
+\section{Evaluation}
+
+We plan to evaluate this project on both performance and accuracy. We will use some of the reference
+datasets provided by PacBio~\cite{pb-datasets}, and will run our evaluation on the Amazon EC2 cloud.
+We will evaluate:
+
+\begin{itemize}
+\item Performance:
+\begin{enumerate}
+\item Strong scaling on small and large genomes
+\item Weak scaling with increased genome size
+\item Weak scaling with increased genome coverage
+\end{enumerate}
+\item Accuracy:
+\begin{enumerate}
+\item Assembly length (N/NG50)
+\item Accuracy against known sequence, where available
+\end{enumerate}
+\end{itemize}
+
+\bibliographystyle{acm}
+\bibliography{cs267_fnothaft_proposal}
+
+\end{document}
