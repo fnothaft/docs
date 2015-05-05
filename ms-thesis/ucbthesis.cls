@@ -469,8 +469,10 @@ The \@dissertation of {\@author}, titled {\@title}, is approved:
     \hfil}%
   \leaders\hrule\hskip 0pt plus .75fill\qquad
   \raise 3pt\hbox{Date}\quad \leaders\hrule\hskip 0pt plus .25fill}
+\ifnum \@numberofmembers > 2
 \hbox to\textwidth{\hskip\@tempdima \leaders\hrule\hskip 0pt plus .75fill\qquad
   \raise 3pt\hbox{Date}\quad \leaders\hrule\hskip 0pt plus .25fill}
+\fi
 \ifnum \@numberofmembers > 3
 \hbox to\textwidth{\hskip\@tempdima \leaders\hrule\hskip 0pt plus .75fill\qquad
   \raise 3pt\hbox{Date}\quad \leaders\hrule\hskip 0pt plus .25fill}
