@@ -1,0 +1,16 @@
+digraph {
+  rankdir = LR;
+  subgraph cluster_mu_plate {
+    label = "T";
+    mu [label = "&mu;"];
+  }
+  subgraph cluster_L_plate {
+    label = "E";
+    subgraph cluster_alpha_plate {
+      label = "T";
+      alpha [label = "&alpha;"];
+    }
+    L [style = filled];
+  }
+  mu -> alpha -> L;
+}
