@@ -205,8 +205,8 @@ bottlenecked by I/O performance.
 \item The na\"{i}ve \texttt{Hadoop}-based implementations in Crossbow~\cite{langmead09} and
 Cloudburst~\cite{schatz09} use scripts to run unmodified legacy tools on top of \texttt{Hadoop}. This approach
 does achieve speedups, but it does not attack overhead. Several of the methods that they parallelize
-incur high overhead due to duplicated loading of indices (for fast aligners, loading of large indices can be
-a primary I/O bottleneck) and poor broadcasting of data.
+incur high overhead due to duplicated loading of indices\footnote{For fast aligners, loading of large indices can be
+a primary I/O bottleneck.} and poor broadcasting of data.
 \end{itemize}
 
 Recent work by Diao et al~\cite{diao15} has looked at optimizations to map-reduce systems for
@@ -277,7 +277,7 @@ may involve complex traversals of the genomic coordinate space, or may require u
 model to all or part of the dataset.
 \end{enumerate}
 
-This process is very expensive in time to run; the current best practice pipeline uses the BWA
+This process is very time consuming to run; the current best practice pipeline uses the BWA
 tool~\cite{li10} for alignment and the GATK~\cite{depristo11, mckenna10} for pre-processing, variant
 calling, and filtration. Current benchmark suites have measured this pipeline as taking between 90 and
 130 hours to run end-to-end~\cite{talwalkar14}. Recent projects have achieved 5--$10\times$
@@ -341,7 +341,7 @@ approaches for accurate genotyping~\cite{li14}. These methods take two different
 
 \begin{enumerate}
 \item \emph{Realignment-only:} Putative INDELs are extracted directly from the aligned reads, and the
-reads are locally realigned,
+reads are locally realigned.
 \item \emph{Reassembly:} The aligned reads are reassembled into haplotypes, which the reads are
 aligned against.
 \end{enumerate}
@@ -352,11 +352,11 @@ The realignment-only approach is used in \texttt{UnifiedGenotyper}\footnote{When
 algorithmic steps:
 
 \begin{enumerate}
-\item Candidate haplotypes are generated for realignment,
+\item Candidate haplotypes are generated for realignment.
 \item Each read is realigned to each haplotype, typically using a pair Hidden Markov Model~(HMM,
-see~\cite{durbin98}),
+see~\cite{durbin98}).
 \item A statistical model uses the read$\leftrightarrow$haplotype alignments to choose the haplotype pair
-that most likely represents the variants hypothesized to exist in the region, 
+that most likely represents the variants hypothesized to exist in the region.
 \item The alignments of the reads to the chosen haplotype pair are used to generate statistics that are
 then used for genotyping.
 \end{enumerate}
@@ -364,7 +364,7 @@ then used for genotyping.
 In haplotype reassembly, step 1 is broken down into two further steps:
 
 \begin{enumerate}
-\item A \emph{de Bruijn} graph is constructed from the reads aligned to a region of the reference genome,
+\item An assembly graph~(typically a \emph{de Bruijn} graph) is constructed from the reads aligned to a region of the reference genome.
 \item All valid paths between the start and end of the graph are enumerated.
 \end{enumerate}
 
@@ -419,7 +419,7 @@ sort order invariants are rarely explicit and vary from tool to tool, pipelines 
 tools can be brittle.
 \item Additionally, while these invariants are intended to improve performance, it is not clear that these
 invariants \emph{actually} improve performance. There are two common sort invariants used in genomics:
-sort by reference position, and sort by read name. Changing between these two sort orders entails
+sort by reference position and sort by read name. Changing between these two sort orders entails
 a full shuffle and resort of the dataset. Additionally, a sort is required after alignment to establish a sort order.
 \end{itemize}
 
@@ -439,7 +439,7 @@ In \texttt{ADAM}, we have taken a more aggressive approach to the design of APIs
 in a distributed system. Although modern genomics pipelines are built as monolithic applications, we have
 chosen a layered decomposition for \texttt{ADAM}, that uses a schema as a ``narrow waist''. Instead of using
 a flat file format, as is traditional in genomics, we are using this schema with \texttt{Parquet}~(a commodity columnar
-store,~\cite{parquet}) to store genomic data in a way that both allows efficient distributed read/write and that
+store~\cite{parquet}) to store genomic data in a way that both allows efficient distributed read/write and that
 achieves high compression. On top of this, we have added primitives that implement common genomic traversals
 in a distributed manner. We have then used \texttt{ADAM} to implement common preprocessing stages from
 commonly used genomics pipelines. \texttt{ADAM}'s preprocessing stages are between 1-5$\times$ faster than the
@@ -499,7 +499,7 @@ the portability of the APIs that we implement.
 
 As we discuss in more detail in~\S\ref{sec:read-preprocessing}, current scientific systems bleed
 functionality between stack layers. An exemplar is the SAM/BAM and CRAM formats, which expect data
-to be sorted by genomic coordinate. This modifies the layout of data on disk~(level 3, Materialized Data)
+to be sorted by genomic coordinate. This order modifies the layout of data on disk~(level 3, Materialized Data)
 and constrains how applications traverse datasets~(level 5, Evidence Access). Beyond
 constraining applications, this leads to bugs in applications that are difficult to detect.\footnote{The
 current best-practice implementations of the BQSR and Duplicate Marking algorithms both fail when
@@ -529,7 +529,7 @@ and makes the system less general.
 
 Deep stacks like the OSI stack~\cite{zimmermann80} are generally simplified for practical use. Conceptually,
 the stack we propose is no exception. In practice, we combine layers one and two, and layers five and six.
-There are several reasons for this. First, in \texttt{Hadoop}-based systems, the system does not have practical visibility
+There are several reasons for these mergers. First, in \texttt{Hadoop}-based systems, the system does not have practical visibility
 below layer two, thus there is no reason to split layers one and two except as a philosophical exercise.
 Layers five and six are commingled because some of the enriched presentation objects are used to
 implement functionality in the evidence access layer. This normally happens when a key is needed, such as
@@ -539,7 +539,7 @@ when repartitioning the dataset, or when reducing or grouping values.
 \label{sec:schema-design}
 
 A common criticism of bioinformatics as a field surrounds the proliferation of file formats. Short read data alone is
-stored in four common formats: \texttt{FASTQ}~\cite{cock10}, \texttt{SAM}/\texttt{BAM}~\cite{li09}, and
+stored in four common formats: \texttt{FASTQ}~\cite{cock10}, \texttt{SAM}~\cite{li09}, \texttt{BAM}, and
 \texttt{CRAM}~\cite{fritz11}. While these formats all represent different layouts of data on disk, they tend to be
 logically harmonious. Due to this logical congruency of the different formats, we chose to build \texttt{ADAM}
 on top of a logical schema, instead of a binary format on disk. While we do use Apache \texttt{Parquet}~\cite{parquet} to
@@ -772,7 +772,7 @@ on disk, we are able to properly handle chimeric read pairs.
 \item \textbf{Local Realignment:} In local realignment, we correct areas where variant alleles cause reads to be
 locally misaligned from the reference genome.\footnote{This is typically caused by the presence of
 insertion/deletion (INDEL) variants; see DePristo et al~\cite{depristo11}.} In this algorithm, we first identify regions
-as targets for realignment. In the GATK, this is done by traversing sorted read alignments. In our implementation,
+as targets for realignment. In the \texttt{GATK}, this identification is done by traversing sorted read alignments. In our implementation,
 we fold over partitions where we generate targets, and then we merge the tree of targets. This process allows us
 to eliminate the data shuffle needed to achieve the sorted ordering. As part of this fold, we must
 compute the convex hull of overlapping regions in parallel. We discuss this in more detail later in this section.
@@ -874,7 +874,7 @@ scores of the read by using the covariate assigned to the read to look into the 
 Although global alignment will frequently succeed at aligning reads to the proper region of the genome, the local
 alignment of the read may be incorrect. Specifically, the error models used by aligners may penalize local alignments
 containing INDELs more than a local alignment that converts the alignment to a series of mismatches. To correct
-for this, we perform local realignment of the reads against consensus sequences. This is implemented as a three step
+for this, we perform local realignment of the reads against consensus sequences in a three step
 process. In the first step, we identify candidate sites that have evidence of an insertion or deletion. We then compute
 the convex hull of these candidate sites, to determine the windows we need to realign over. After these regions are
 identified, we generate candidate haplotype sequences, and realign reads to minimize the overall quantity of mismatches
@@ -1641,7 +1641,7 @@ both the \texttt{Mark Duplicates} and \texttt{INDEL Realignment} code to elimina
 rebalancing reads that are unmapped/do not map to a target across partitions.
 \end{itemize}
 
-We do note that the performance of \texttt{flagstat} degrades going from 32 to 128 nodes. By increasing the
+We do note that the performance of \texttt{flagstat} degrades going from 256 to 1,024 cores. By increasing the
 number of machines we use to execute this query, we increase scheduling overhead, which leads to degraded
 performance.
 
@@ -1654,8 +1654,8 @@ perform. Additionally, column stores provide compressed storage, which allows us
 I/O bandwidth and space on disk. In this section, we'll look at the performance that our columnar store achieves
 in terms of read performance and compression. We will not look extensively at write performance; for genomic
 data, write performance is not a bottleneck because our workflow computes a \emph{summarization} of a large
-dataset. As a result, our output dataset tends to be O(100 MB) while our input dataset is in the range of
-O(10 GB)--O(100GB).
+dataset. As a result, our output dataset tends to be $\mathcal{O}$(100 MB) while our input dataset is in the range of
+$\mathcal{O}$(10 GB) to $\mathcal{O}$(100GB).
 
 \subsection{Compression}
 \label{sec:compression}
@@ -1674,7 +1674,7 @@ In Table~\ref{tab:genomic-compression}, we look at the compression we achieve on
 and \texttt{HG00096}\footnote{A link to the \texttt{NA12878} dataset was provided earlier in this paper. The
 \texttt{HG00096} dataset is available from \url{ftp.1000genomes.ebi.ac.uk} in directory 
 \texttt{/vol1/ftp/data/HG00096/alignment/}.} human genome sequencing samples. We compare against the
-GZIP compressed BAM~\cite{li09} format, and the CRAM format~\cite{fritz11}. We achieve approximately a
+GZIP compressed BAM~\cite{li09} format and the CRAM format~\cite{fritz11}. We achieve approximately a
 $1.25\times$ improvement in storage. This is not as impressive as the result achieved by the CRAM project,
 but the CRAM project applies specific compression techniques that make use of the read alignment. Specifically,
 CRAM only stores the read bases that \emph{do not} appear in the reference genome. As we only expect a
@@ -1778,7 +1778,7 @@ while predicates are assigned to rows.
 
 We achieve a $1.7\times$ speedup by moving to a projection that eliminates the deserialization of our most
 complex field~(the quality scores that consume 60\% of space on disk), while we only get a $1.3\times$
-performance improvement when running a predicate that filters 50\% of records. This can be partially attributed
+performance improvement when running a predicate that filters 50\% of records. This variation can be partially attributed
 to overhead from predicate pushdown; we must first deserialize a column, process the filter, and then read all
 records who passed the pushdown filter. If we did not perform this step, we could do a straight scan over all of
 the data in each partition.
