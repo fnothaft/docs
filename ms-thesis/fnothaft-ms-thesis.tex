@@ -69,7 +69,9 @@ genomic data. These tools suffer from limited parallelism because they were not 
 or distributed computing techniques, and are limited by asymptotically inefficient algorithms. In this thesis,
 we introduce two tools, \texttt{ADAM} and \texttt{avocado}. \texttt{ADAM} provides an efficient framework
 for performing distributed genomic analyses, and \texttt{avocado} implements efficient local reassembly
-to discover genomic variants.
+to discover genomic variants. \texttt{ADAM} presents high level APIs that allow for genomic analyses to be
+parallelized across more than 1,000 processors. Using these APIs, we are able to achieve linear speedups when
+parallelizing several common analysis stages.
 \end{abstract}
 
 \tableofcontents
