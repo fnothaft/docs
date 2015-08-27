@@ -125,7 +125,7 @@ cluster~\cite{zaharia12}.
 To expand the algorithms that could be expressed as a data-parallel computation, Blelloch introduced
 the nested data-\linebreak parallel~(NDP) model~\cite{blelloch90thesis}. In this programming model,
 users are provided the abstraction of an array whose elements are a nested level of arrays and
-data-parallel operators are applied on the nested arrays. A primary complication in the implementation
+data-parallel operators are applied across the nested arrays. A primary complication in the implementation
 of the NDP model is that the nested arrays frequently do not have uniform size. Several approaches
 have been suggested for balancing work in NDP programs, including the compile-time vectorization of
 NDP programs for execution on single-instruction multiple-data~(SIMD)
@@ -148,7 +148,7 @@ This work introduces the following contributions:
 
 \begin{enumerate}
 \item We introduce a dynamically optimized distributed method for implementing NDP algorithms that is
-amenable to ``cloud computing'' platforms.
+amenable to map-reduce platforms.
 \item We demonstrate that the current best-known \texttt{scan} algorithm has $O(\frac{n \log p}{p})$
 performance on bulk-synchronous systems, and provide a ``block-parallel'' relaxation of the \texttt{scan}
 operator that has $O(\frac{n}{p})$ performance.
