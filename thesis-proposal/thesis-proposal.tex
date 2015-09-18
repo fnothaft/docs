@@ -14,6 +14,7 @@
 \usepackage{paralist}
 \usepackage{amsmath}
 \usepackage{graphicx}
+\usepackage[font=small,labelfont=bf]{caption}
 
 \begin{document}
 
@@ -29,7 +30,8 @@ Recent improvements in DNA sequencing technologies have dropped the cost of sequ
 human genome to under \$1,000. This drastic economic change has enabled both the use of
 sequencing in clinical medicine and the genotyping of large cohorts. However, this shift
 brings new problems: the cost of analyzing genomic data is growing as quickly as the cost
-of collecting genomic data is falling.
+of collecting genomic data is falling. This trend is occurring because the decline in the
+cost of sequencing is outpacing Moore's law.
 
 Genomics is experiencing quintessential ``big data'' problems. To uncover the link between
 genomic variation and traits, we need to statistically analyze large cohorts. Because each
@@ -59,9 +61,14 @@ transcriptional regulation, we hope to better understand complex diseases like A
 
 \section{Thesis Statement}
 
-To run genotype-phenotype association analyses on large cohorts ($\mathcal{O}(>100,000)$
-individuals) requires the use of novel computational technology, and the development of
-linear time genome analysis algorithms. By coupling these analyses with advanced genomic
+Although all cancers are defined by a set of mutations that distrupt the normal function
+of the genome, these mutations often occur at low frequencies. To understand the biology
+behind these low frequency mutations, we need to run large scale ($\mathcal{O}(>100,000)$
+individuals) statistical analyses. Although the cost of genome sequencing has plummeted
+in the last fifteen years, the analysis of large cohorts is limited by the computational
+cost of analysing large quantities of genomic data. To make these analyses tractible, we
+must enable the use of novel parallel computing technology, and development more efficient
+genome analysis algorithms. By coupling these improved analyses with advanced genomic
 annotation algorithms, we can better understand the role of variants in non-coding regions
 of the genome, and their impact on diseases like AML.
 
@@ -72,16 +79,30 @@ by more than $10,000\times$~\cite{nhgri}. The rapidly declining cost of sequenci
 genome has enabled large sequencing projects like the 1,000 Genomes Project~\cite{siva08} and
 the Cancer Genome Atlas~(TCGA,~\cite{weinstein13}). As these large sequencing projects perform
 analysis that process terabytes to petabytes of genomic data, they have created a demand
-for genomic analysis tools that can efficiently process these scales of data~\cite{schadt10, stein10}.
+for genomic analysis tools that can efficiently process these scales of
+data~\cite{schadt10, stein10}. Figure~\ref{fig:sequencing-costs} juxtaposes the rapid drop
+in the cost of sequencing a single genome against the amount of data collected by each successive
+generation of sequencing projects. New DNA sequencers such as the Illumina X10 provide
+sufficient throughput such that a single hospital or research lab can generate 750GB of genomic
+data per day, or 275TB of genomic data per year~\cite{illumina-x10}.
 
-Over a similar time range, commercial needs led to the development of horizontally scalable analytics
-systems. The development and deployment of \textsc{MapReduce} at Google~\cite{dean04, dean08} spawned
-the development of a variety of distributed analytics tools and the \textsc{Hadoop} ecosystem~\cite{hadoop}.
-In turn, these systems led to other systems that provided a more fluent programming
-model~\cite{yu08} and higher performance~\cite{zaharia10}. The demand for these systems has
-been driven by the increase in the amount of data available to analysts, and has coincided with the
-development of statistical systems that are accessible to non-experts, such as
-\textsc{Scikit-learn}~\cite{pedregosa11} and \textsc{MLI}~\cite{sparks13}.
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.6\linewidth]{genome-sequencing.pdf}
+\caption{Genome sequencing costs over time, from NHGRI numbers~\cite{nhgri}, with
+data volumes of major genome sequencing projects overlaid.}
+\label{fig:sequencing-costs}
+\end{center}
+\end{figure}
+
+Over a similar time range, commercial needs led to the development of horizontally scalable
+analytics systems. The development and deployment of \textsc{MapReduce} at
+Google~\cite{dean04, dean08} spawned the development of a variety of distributed analytics tools
+and the \textsc{Hadoop} ecosystem~\cite{hadoop}. In turn, these systems led to other systems
+that provided a more fluent programming model~\cite{yu08} and higher performance~\cite{zaharia10}.
+The demand for these systems has been driven by the increase in the amount of data available to
+analysts, and has coincided with the development of statistical systems that are accessible to
+non-experts, such as \textsc{Scikit-learn}~\cite{pedregosa11} and \textsc{MLI}~\cite{sparks13}.
 
 With the rapid drop in the cost of sequencing a genome, and the accompanying growth in available data,
 there is a good opportunity to apply modern, horizontally scalable analytics systems to genomics. New
@@ -100,24 +121,70 @@ they use.
 
 Additionally, although these experiments have provided us with a large set of data about
 human variation, several large questions remain. One large question pertains to the role of
-variation that occurs outside of the coding portions of the human genome. While these variants
-do not impact protein structure, variants in regulatory regions can impact the rate of
-transcription of nearby genes~\cite{levo14, weingarten14}. Variation in regulatory regions
-is critical to understanding diseases that are likely to have genomic drivers, but where few
-variants occur in coding sections of the genome, such as AML~\cite{cancer13}. While we can
-use the aforementioned statistical techniques to identify correlative links between these variants
-and the diseases we would like to study, these statistical techniques do not explain the
-underlying disease biology, and cannot be used to determine causation.
+variation that occurs outside of the coding portions of the human genome. Although the human
+genome is more than three billion bases long, the portion of the genome that codes for proteins
+(the exome) is only approximately 1\% of the genome. Although we can predict how modifications
+to DNA sequence inside of the exome will modify the structure and composition of
+proteins~\cite{mclaren10}, no such rules exist for the remaining 99\% of the genome. However,
+81\% of the sequence outside of the exome is responsible for regulating the rate at which
+a gene in the exome is translated into a protein~\cite{gerstein12}. This estimate was derived
+by identifying the positions where transcription factors~(TFs\footnote{Transcription factors are
+proteins whose function is to bind to DNA and control the rate at which DNA is transcribed into
+RNA. This RNA can then be translated into a protein.}) attach to the genome. As we show in
+Figure~\ref{fig:tfbs}, sequence variants that occur in regulatory regions can modify the rate
+at which nearby genes are transcribed and translated into proteins~\cite{levo14, weingarten14}.
 
-To do this, we build upon projects such as ENCODE~\cite{gerstein12} that have profiled the
-interaction of regulatory elements with genomic sequence, While there is an emerging literature
-that is studying the ``grammatical architecture'' of regulatory regions~\cite{levo14,
-weingarten14}, this literature largely depends on synthetic experiments~\cite{sharon12}
-to drive inference. While the results from these synthetic experiments are valuable, and
-will improve our ability to model the impact of variants on regulation, we instead
-seek to ask if there is a way for us to understand this relationship from existing
-variation datasets? We believe we can answer these questions by building a variant
-annotation engine that incorporates knowledge of this regulatory grammer, and integrating
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.75\linewidth]{tfbs.pdf}
+\caption{This figure represents the area around the start of a gene in the genome. The
+arrow in the figure is the transcription start site~(TSS), which is the start of the coding
+portion of the gene. In the 1,500 bases before the TSS, there is a regulatory region where
+transcription factors will bind to the genome. Variants that occur in the regulatory region
+can have a variety of effects~\cite{levo14, weingarten14}. For example, a variant that occurs
+at TFBS A may reduce the likelihood that the TF binds. In some cases, for a TF to cause
+transcription to start, it must be part of a ``complex'' of multiple TFs. If TFBS B and C
+form a large protein complex, a variant that changes the distance between the two TFs (by
+inserting or deleting sequence) may mean that the TFs cannot form the larger complex, and
+may disable the translation of the DNA into RNA.}
+\label{fig:tfbs}
+\end{center}
+\end{figure}
+
+We are interested in understanding these variants so that we can understand diseases that are
+known to have genomic drivers, but where few variants occur in coding sections of the genome.
+One such disease is AML, which has eight clinically distinct subtypes. Although several of the
+subtypes of AML are known to be caused by specific genomic variants, we do not know the drivers
+for the remaining subtypes of the disease. Our understanding of variation in AML is complicated
+by the relatively low rate of mutation seen in AML, versus other cancers. Figure~\ref{fig:aml}
+shows the long tailed distribution of mutations in AML.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=\linewidth]{aml.pdf}
+\caption{The nodes in this decision tree are genes known to be mutated in a patient in the LAML
+subset of the TCGA~\cite{cancer13}. Each node is a gene. At each node, the left arrow indicates
+that the gene was \emph{not} mutated, while the right arrow indicates that the gene was mutated.
+This tree is notable because it demonstrates the long tail of mutations in AML; specifically,
+the nodes running down the left side of the tree depict a large subset of patients who have
+few or no coding mutations. This figure was generated by Ravi Pandya from MSR as part of the UC
+Berkeley/OHSU/MSR collaboration on the BeatAML project~\cite{paten15}.}
+\label{fig:aml}
+\end{center}
+\end{figure}
+
+While we can use the aforementioned statistical techniques to identify correlative links
+between these variants and the diseases we would like to study, these statistical techniques
+do not explain the underlying disease biology, and cannot be used to determine causation.
+To develop a causitive model, we build upon projects such as ENCODE~\cite{gerstein12} that
+have profiled the interaction of regulatory elements with genomic sequence, While there is
+an emerging literature that is studying the ``grammatical architecture'' of regulatory
+regions~\cite{levo14, weingarten14}, this literature largely depends on synthetic
+experiments~\cite{sharon12} to drive inference. While the results from these synthetic
+experiments are valuable, and will improve our ability to model the impact of variants
+on regulation, we instead seek to ask if there is a way for us to understand this relationship
+from existing variation datasets? We believe we can answer these questions by building a variant
+annotation engine that incorporates knowledge of this regulatory grammar, and integrating
 these annotations into our correlative genomic models.
 
 \section{Work To Date}
@@ -149,9 +216,9 @@ and we show that this allows us to scale genomic analyses linearly to run on tho
 \begin{figure}[h]
 \begin{center}
 \includegraphics[width=0.6\linewidth]{../ms-thesis/expanded-stack-2.pdf}
-\end{center}
 \caption{A Stack Model for Genomic Analyses}
 \label{fig:stack-model}
+\end{center}
 \end{figure}
 
 As a continuation of this work, we are working on a manuscript that demonstrates how \textsc{ADAM}
@@ -181,14 +248,38 @@ and deletion variants, which simplifies the joint analysis of multiple samples.
 
 \section{Proposed Work}
 
-I plan to tackle two remaining problems:
+I plan to tackle three remaining problems:
 
 \begin{itemize}
+\item How can we use the efficient algorithms in \textsc{ADAM} and \textsc{Avocado} to jointly
+analyze thousands of samples?
 \item How can we parallelize the statistical analysis of genotype-phenotype associations on
 large cohorts?
 \item Can we use genomic annotations to better understand the impact of low frequency variation
 on transcriptional regulation?
 \end{itemize}
+
+As mentioned earlier, we have already demonstrated the potential of \textsc{ADAM} for acheving
+order-of-magnitude improvements in throughput when processing a single sample, and we have
+shown how we can use the efficient algorithms in \textsc{Avocado} to achieve faster region
+reassembly. Currently, memory capacity backpressure limits the number of genomes we can process
+given a fixed amount of hardware. This is caused by metadata that is replicated when we translate
+data between \textsc{Parquet}'s columnar format on disk and \textsc{Spark}'s row oriented format
+in memory. However, we have recently experimented with a hybrid denormalized columnar scheme and
+have reduced our memory consumption by $11\times$.
+
+Along with this, we are working on several other parallel data translation problems. Specifically,
+while we introduced optimized join algorithms for finding overlapping genomic regions in the
+latest \textsc{ADAM} paper~\cite{nothaft15}, we are working on a further optimizations to these
+join algorithms for joint variant calling. When jointly analyzing multiple genomes, we perform a
+sweeping pass over the genome in coordinate space. Although this approach is implicitly serial,
+we are working to express this algorithm as an adaptive self join. The adaptive portion of this
+join selects the granularity used for computing key equality. In areas of the genome where there
+are no insertion or deletion variants, we work at single base pair granularity. This granularity
+expands to match the size of the largest deletion whenever one is present. By using this self join
+instead of a na\"{i}ve algorithm that divides the genome into fixed size chunks, we will be able
+to increase our parallelism while reducing the instantaneous amount of data that we materialize
+into memory and preserving the ability to call deletion variants.
 
 Although tools such as \textsc{PLINK}~\cite{purcell07, chang15} can already be used to run
 genotype-phenotype analyses, these tools have largely been designed to work with legacy genetic
@@ -203,23 +294,25 @@ these queries only touch select fields from the genotype data, but must read the
 VCF genotype record. By building \textsc{Gnocchi}, a genotype-phenotype correlation engine, on top
 of \textsc{ADAM}, we will be able to make use of our columnar file format to eliminate the I/O
 bottleneck present in current genotype-phenotype tools and to enable the efficient parallelization
-of genotype-phenotype analyses to hundreds of machines.
+of genotype-phenotype analyses to hundreds of machines. To date, we have implemented a case-control
+model for use in parallel genome wide association studies~(GWAS), which we are in the process of
+validating. We plan to extend \textsc{Gnocchi} to support a more general set of statistical models.
 
-Additionally, with this work, we see a great opportunity to make a contribution to the
-state-of-the-art in scalable systems for machine learning. While recent research at the
-intersection of computer systems and machine learning has focused on algorithms for training
-a single statistical model on systems that are ``tall and skinny''~\cite{meng15, zadeh15},
-genomics exhibits neither of these characteristics. Unlike Internet scale companies, where
-feature vectors are small and there are many users, feature vectors for genomic datasets
-are comprised of all of the genotypes seen for an individual sample. For a whole genome
-sequencing run, this sparse vector can represent more than 1 million genotypes. Although
-fast algorithms are known for fitting linear mixed models~\cite{lippert11} for learning
-genotype-phenotype correlations, there has not been significant research into fast clustering
-methods for ``wide and flat'' data. In preliminary work, we have found that sampling-based
-approaches can be used to efficiently apply parallel methods for clustering on tall and skinny
-datasets~\cite{bahmani12, meng15} to this wide and flat data, but at the loss of some accuracy.
-We will improve our clustering accuracy by deriving efficient parallel methods that are optimized
-for wide and flat data.
+Additionally, with the work on genotype clustering in \textsc{Gnocchi}, we see a great
+opportunity to make a contribution to the state-of-the-art in scalable systems for machine
+learning. While recent research at the intersection of computer systems and machine learning
+has focused on algorithms for training a single statistical model on systems that are ``tall
+and skinny''~\cite{meng15, zadeh15}, genomics exhibits neither of these characteristics.
+Unlike Internet scale companies, where feature vectors are small and there are many users,
+feature vectors for genomic datasets are comprised of all of the genotypes seen for an
+individual sample. For a whole genome sequencing run, this sparse vector can represent more
+than 1 million genotypes. Although fast algorithms are known for fitting linear mixed
+models~\cite{lippert11} for learning genotype-phenotype correlations, there has not been
+significant research into fast clustering methods for ``wide and flat'' data. In preliminary
+work, we have found that sampling-based approaches can be used to efficiently apply parallel
+methods for clustering on tall and skinny datasets~\cite{bahmani12, meng15} to this wide and
+flat data, but at the loss of some accuracy. We will improve our clustering accuracy by deriving
+efficient parallel methods that are optimized for wide and flat data.
 
 While genotype-phenotype analyses can generate correlative findings, these findings do not
 necessarily shed light on the underlying biology that drives these correlations. This is
