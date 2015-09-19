@@ -26,9 +26,10 @@
 
 \begin{abstract}
 
-Recent improvements in DNA sequencing technologies have allowed the cost of sequencing a
-human genome to drop under \$1,000. This drastic change in the economics of DNA sequencing
-has enabled both the use of sequencing in clinical medicine and the genotyping of large
+Since 2001, improvements in DNA sequencing technologies have allowed the cost of sequencing a
+single human genome to drop from \$1 billion to under \$1,000. This drastic change in the
+economics of DNA sequencing
+has enabled both the use of sequencing in clinical medicine and the genomic study of large
 cohorts. However, this shift brings new problems: the cost of analyzing genomic data is
 growing more quickly than the cost of collecting genomic data is falling. This trend is
 occurring because the decline in the cost of sequencing is outpacing Moore's law.
@@ -65,7 +66,7 @@ Although all cancers are defined by a set of mutations that distrupt the normal 
 of the genome, these mutations often occur at low frequencies. To understand the biology
 behind these low frequency mutations, we need to run large scale ($\mathcal{O}(>100,000)$
 individuals) statistical analyses. Although the cost of genome sequencing has plummeted
-in the last fifteen years, the analysis of large cohorts is limited by the computational
+in the last fifteen years, the analysis of cohorts of this size is limited by the computational
 cost of analysing large quantities of genomic data. To make these analyses tractible, we
 must enable the use of novel parallel computing technology, and development more efficient
 genome analysis algorithms. By coupling these improved analyses with advanced genomic
@@ -79,8 +80,8 @@ by more than $10,000\times$~\cite{nhgri}. The rapidly declining cost of sequenci
 genome has enabled large sequencing projects like the 1,000 Genomes Project~\cite{siva08} and
 the Cancer Genome Atlas~(TCGA,~\cite{weinstein13}). As these large sequencing projects perform
 analysis that process terabytes to petabytes of genomic data, they have created a demand
-for genomic analysis tools that can efficiently process these scales of
-data~\cite{schadt10, stein10}. Figure~\ref{fig:sequencing-costs} juxtaposes the rapid drop
+for genomic analysis tools that can efficiently process data at this
+scale~\cite{schadt10, stein10}. Figure~\ref{fig:sequencing-costs} juxtaposes the rapid drop
 in the cost of sequencing a single genome against the amount of data collected by each successive
 generation of sequencing projects. New DNA sequencers such as the Illumina X10 provide
 sufficient throughput such that a single hospital or research lab can generate 750GB of genomic
@@ -111,7 +112,7 @@ United Kingdom~\cite{uk100k}, and the Department of Veterans Affairs' Million Ve
 will generate three to four \emph{orders of magnitude} more data than prior projects like the 1,000
 Genomes Project~\cite{siva08}. Additionally, periodic releases of new reference datasets such as reference
 genomes necessitates the periodic re-analysis of these large datasets. These projects use the current ``best
-practice'' genomic variant calling pipelines~\cite{auwera13}, which takes approximately 120 hours to
+practice'' genomic variant calling pipeline~\cite{auwera13}, which takes approximately 120 hours to
 process a single, high-quality human genome using a single, beefy node~\cite{talwalkar14}. To address
 these challenges, scientists have started to apply computer systems techniques such as
 map-reduce~\cite{langmead09, mckenna10, schatz09} and columnar storage~\cite{fritz11} to custom
@@ -120,17 +121,17 @@ current implementations incur significant overheads imposed by the legacy format
 they use.
 
 Additionally, although these experiments have provided us with a large set of data about
-human variation, several large questions remain. One large question pertains to the role of
+human variation, several large questions remain. One question pertains to the role of
 variation that occurs outside of the coding portions of the human genome. Although the human
 genome is more than three billion bases long, the portion of the genome that codes for proteins
-(the exome) is only approximately 1\% of the genome. Although we can predict how modifications
-to DNA sequence inside of the exome will modify the structure and composition of
-proteins~\cite{mclaren10}, no such rules exist for the remaining 99\% of the genome. However,
+(the exome) is only approximately 1\% of the genome. Although we can accurately predict how
+modifications to DNA sequence inside of the exome will modify the structure and composition of
+proteins~\cite{mclaren10}, no validated rules exist for the remaining 99\% of the genome. However,
 81\% of the sequence outside of the exome is responsible for regulating the rate at which
 a gene in the exome is translated into a protein~\cite{gerstein12}. This estimate was derived
 by identifying the positions where transcription factors~(TFs\footnote{Transcription factors are
 proteins whose function is to bind to DNA and control the rate at which DNA is transcribed into
-RNA. This RNA can then be translated into a protein.}) attach to the genome. As we show in
+RNA. This RNA can then be translated into a protein.}) bind to the genome. As we explain in
 Figure~\ref{fig:tfbs}, sequence variants that occur in regulatory regions can modify the rate
 at which nearby genes are transcribed and translated into proteins~\cite{levo14, weingarten14}.
 
@@ -139,7 +140,8 @@ at which nearby genes are transcribed and translated into proteins~\cite{levo14,
 \includegraphics[width=0.75\linewidth]{tfbs.pdf}
 \caption{This figure represents the area around the start of a gene in the genome. The
 arrow in the figure is the transcription start site~(TSS), which is the start of the coding
-portion of the gene. In the 1,500 bases before the TSS, there is a regulatory region where
+portion of the gene. In the approximately 1,500 bases before the TSS, there is a regulatory
+region where
 transcription factors will bind to the genome. Variants that occur in the regulatory region
 can have a variety of effects~\cite{levo14, weingarten14}. For example, a variant that occurs
 at TFBS A may reduce the likelihood that the TF binds. In some cases, for a TF to cause
@@ -153,7 +155,8 @@ may disable the translation of the DNA into RNA.}
 
 We are interested in understanding these variants so that we can understand diseases that are
 known to have genomic drivers, but where few variants occur in coding sections of the genome.
-One such disease is AML, which has eight clinically distinct subtypes. Although several of the
+One such disease is AML, which has eight clinically distinct subtypes~\cite{cancer13}. Although
+several of the
 subtypes of AML are known to be caused by specific genomic variants, we do not know the drivers
 for the remaining subtypes of the disease. Our understanding of variation in AML is complicated
 by the relatively low rate of mutation seen in AML, relative to other cancers.
@@ -178,10 +181,10 @@ between these variants and the diseases we would like to study, these statistica
 do not explain the underlying disease biology, and cannot be used to determine causation.
 To develop a causitive model, we build upon projects such as ENCODE~\cite{gerstein12} that
 have profiled the interaction of regulatory elements with genomic sequence, While there is
-an emerging literature that is studying the ``grammatical architecture'' of regulatory
+emerging literature that studies the ``grammatical architecture'' of regulatory
 regions~\cite{levo14, weingarten14}, this literature largely depends on synthetic
 experiments~\cite{sharon12} to drive inference. While the results from these synthetic
-experiments are valuable, and will improve our ability to model the impact of variants
+experiments improve our ability to model the impact of variants
 on regulation, we instead seek to ask if there is a way for us to understand this relationship
 from existing variation datasets? We believe we can answer these questions by building a variant
 annotation engine that incorporates knowledge of this regulatory grammar, and integrating
@@ -199,8 +202,8 @@ while letting bioinformaticians write genomic analyses using higher level primit
 
 To make it possible to program genomic analyses against higher level abstractions, we created the
 decomposed stack shown in Figure~\ref{fig:stack-model}, which was inspired by the stack models
-common in networking~\cite{zimmermann80}. The key feature of this stack model is the use of a
-schema to describe the data we are processing. Conventional genomics pipelines rely on binary
+common in networking~\cite{zimmermann80}. Our stack model is distinguished by the use of a
+schema as a ``narrow waist''. Conventional genomics pipelines rely on binary
 data formats that do not distinguish the logical structure of data from the physical representation
 of data. This is problematic, as legacy genomic formats such as SAM/BAM~\cite{li09} use the
 blurring of lines between logical and physical representations to perform ``optimizations''
@@ -209,15 +212,15 @@ that make analyses brittle to write. In the popular \textsc{Genome Analysis Tool
 iterator over the genome. By blurring the bounds between the logical and physical views of the
 data, the \textsc{GATK} can accelerate ``walker'' traversals by pushing a sort order invariant
 down into the data. However, as we have shown in prior work~\cite{nothaft15}, this approach
-can lead to subtle algorithm correctness bugs. In this prior work, we demonstrate how these
+can lead to subtle correctness bugs. In this prior work, we demonstrate how these
 same algorithms can be written using common relational primitives such as aggregates and joins,
 and we show that this allows us to scale genomic analyses linearly to run on thousands of cores,
-without requiring any modifications to the analysis algorithms.
+without modifiying the analysis algorithms.
 
 \begin{figure}[h]
 \begin{center}
 \includegraphics[width=0.6\linewidth]{../ms-thesis/expanded-stack-2.pdf}
-\caption{A Stack Model for Genomic Analyses}
+\caption{The stack model used in \textsc{ADAM}.}
 \label{fig:stack-model}
 \end{center}
 \end{figure}
@@ -229,7 +232,7 @@ analysis pipeline; in this manuscript, we are focusing on the read preprocessing
 likelihood estimation stages. We have evaluated a hybrid variant calling pipeline that
 uses \textsc{ADAM}, along with the \textsc{GATK}'s \textsc{HaplotypeCaller}~\cite{depristo11}. We
 have compared this to the \textsc{GATK}'s ``Best Practices'' pipeline~\cite{auwera13}, and have
-been able to achieve a $3\times$ latency improvement while improving cost by $2\times$. The
+been able to achieve a $3.5\times$ latency improvement while improving cost by $2\times$. The
 two pipelines generate statistically equivalent variant calls. As part of the manuscript, we
 will demonstrate how \textsc{ADAM} makes it less expensive to process large genomic datasets
 by reanalyzing the 50TB Simons Genome Diversity Dataset~\cite{simons}.
@@ -257,18 +260,18 @@ identify variants, we align DNA sequence fragments to the reference genome\footn
 genome represents the ``average'' genome for a species. The Human Genome Project~\cite{lander01}
 generated the first human reference genome from a pool of twenty individuals.} and then run a
 statistical algorithm to identify sequence edits. We are in the process of preparing a manuscript
-on the novel local reassembly algorithm used by \textsc{Avocado}. Most variant callers~(such as
+on the novel local reassembly algorithm used by \textsc{Avocado}. Conventional variant callers~(such as
 the \textsc{GATK}'s \textsc{HaplotypeCaller}, \textsc{Platypus}~\cite{rimmer14}, and
 \textsc{Scalpel}~\cite{narzisi14}) make use of local realignment or reassembly to identify
 variants. These algorithms use the sequenced reads to generate possible haplotypes\footnote{In
-this setting, a haplotype represents the local sequence of a single chromosome. Local implies that
+this setting, a haplotype represents the local sequence of a single chromosome. ``Local'' implies that
 this sequence is a substring of the full chromosome: for variant calling, typical haplotype lengths
 range from 1,000 to 5,000 bases.} that contain the variants from this region. To identify the
 haplotypes that are most likely to exist, we then and then score the pairwise compatibility of
 each read aligned to this region versus each potential haplotype using a string edit distance model.
 These algorithms achieve poor throughput because of the existance of a $\mathcal{O}(n^2)$ stage
 where all haplotype-read pairs are scored. In \textsc{Avocado}, we exploit the structure of the
-\emph{de Bruijn} graph that is assembled from the reads at the locus to achieve best case
+de Bruijn graph that is assembled from the reads at the locus to achieve best case
 $\mathcal{O}(n)$ performance. Additionally, our algorithm provides provably canonical
 representations of insertion and deletion variants, which simplifies the joint analysis of multiple
 samples. This canonical representation is important for insertion/deletion (INDEL) variants, as
@@ -277,7 +280,7 @@ can generate multiple edit representations for a single INDEL variant~\cite{pate
 
 \section{Proposed Work}
 
-I plan to tackle three remaining problems:
+In the remainder of my thesis work, I plan to tackle three problems:
 
 \begin{itemize}
 \item How can we use the efficient algorithms in \textsc{ADAM} and \textsc{Avocado} to jointly
@@ -294,8 +297,8 @@ shown how we can use the efficient algorithms in \textsc{Avocado} to achieve fas
 reassembly. Currently, memory capacity backpressure limits the number of genomes we can process
 given a fixed amount of hardware. This is caused by metadata that is replicated when we translate
 data between \textsc{Parquet}'s columnar format on disk and \textsc{Spark}'s row oriented format
-in memory. However, we have recently experimented with a hybrid denormalized columnar scheme and
-have reduced our memory consumption by $11\times$.
+in memory. However, we have recently developed a hybrid normalized columnar scheme that reduces
+our memory consumption by $11\times$.
 
 Along with this, we are working on several other parallel data translation problems. Specifically,
 while we introduced optimized join algorithms for finding overlapping genomic regions in the
@@ -309,7 +312,7 @@ are no insertion or deletion variants, we work at single base pair granularity. 
 expands to match the size of the largest deletion whenever one is present. By using this self join
 instead of a na\"{i}ve algorithm that divides the genome into fixed size chunks, we will be able
 to increase our parallelism while reducing the instantaneous amount of data that we materialize
-into memory and preserving the ability to call deletion variants.
+into memory and preserving the ability to correctly call deletion variants.
 
 
 \begin{figure}[h]
@@ -331,7 +334,7 @@ the second representation is undesirable as it obfuscates the underlying biology
 \end{center}
 \end{figure}
 
-Although tools such as \textsc{PLINK}~\cite{purcell07, chang15} can already be used to run
+Although tools such as \textsc{PLINK}~\cite{chang15, purcell07} can already be used to run
 genotype-phenotype analyses, these tools have largely been designed to work with legacy genetic
 data. The data generated by modest sized sequencing experiments (such as the 1,000 Genomes project,
 which has 1.8TB of genotypic data) has grown to the point where the data is too large to fit in
@@ -340,21 +343,22 @@ methods~\cite{chang15}, such as parallel script dispatch. These ad hoc methods a
 inefficient and prone to machine failures, and cannot make use of efficient distributed file
 systems, like \textsc{HDFS}. The I/O patterns of genotype-phenotype analyses that are run on
 genotypes generated by next generation sequencing workflows are particularly inefficient, as
-these queries only touch select fields from the genotype data, but must read the entirety of each
-VCF genotype record. By building \textsc{Gnocchi}, a genotype-phenotype correlation engine, on top
+these queries only touch select fields from the genotype data, but legacy tools must read the
+entirety of each
+VCF genotype record. By building the \textsc{Gnocchi} genotype-phenotype correlation engine on top
 of \textsc{ADAM}, we will be able to make use of our columnar file format to eliminate the I/O
-bottleneck present in current genotype-phenotype tools and to enable the efficient parallelization
-of genotype-phenotype analyses to hundreds of machines. To date, we have implemented a case-control
+bottleneck present in current genotype-phenotype tools. This will also enable the efficient parallelization
+of genotype-phenotype analyses across hundreds of machines. To date, we have implemented a case-control
 model for use in parallel genome wide association studies~(GWAS), which we are in the process of
 validating. We plan to extend \textsc{Gnocchi} to support a more general set of statistical models.
 
 Additionally, with the work on genotype clustering in \textsc{Gnocchi}, we see a great
-opportunity to make a contribution to the state-of-the-art in scalable systems for machine
+opportunity to make a contribution to the state-of-the-art in scalable algorithms for machine
 learning. While recent research at the intersection of computer systems and machine learning
 has focused on algorithms for training a single statistical model on systems that are ``tall
 and skinny''~\cite{meng15, zadeh15}, genomics exhibits neither of these characteristics.
 Unlike Internet scale companies, where feature vectors are small and there are many users,
-feature vectors for genomic datasets are comprised of all of the genotypes seen for an
+feature vectors for genomic datasets are comprised of all of the genotypes seen in an
 individual sample. For a whole genome sequencing run, this sparse vector can represent more
 than 1 million genotypes. Although fast algorithms are known for fitting linear mixed
 models~\cite{lippert11} for learning genotype-phenotype correlations, there has not been
@@ -369,27 +373,27 @@ necessarily shed light on the underlying biology that drives these correlations.
 particularly troublesome for the non-coding regions of the genome, where traditional variant
 effect annotation methods that look for impacts on protein composition cannot be
 used~\cite{mclaren10}. We have done some preliminary investigations to see how variation impacts
-the regulatory regions upstream of the transcription start site~(TSS) of a gene. We implemeneted
-this as part of the \textsc{Fig} tool, which is an \textsc{ADAM}-based engine for annotating
+the regulatory regions upstream of the transcription start site~(TSS) of a gene. We implemented
+this as the \textsc{Fig} tool, an \textsc{ADAM}-based engine for annotating
 genomic variants. In this preliminary experiment, we searched for variants from phase 3 of the
 1,000 Genomes project that modified transcription factor binding affinity or spacing. Since
-Transcription Factor Binding Site~(TFBS) spacing requires knowledge about whether two TFBS are
+TFBS spacing requires knowledge about whether two TFBS are
 on the same strand of DNA, we made use of the phasing from the 1,000 Genomes project to annotate
 phased haplotypes. To annotate TFBSs, we used data from the ENCODE project that was compiled by
 Kheradpour and Manolis~\cite{kheradpour14} and the GRCh37 gene annotations.
 
 Our preliminary experiments showed several interesting results. First, we found that the regulatory
-regions upstream of the TSS have a lower rate of variation than expected. 43\% of the annotated
-regions did not contain variants, which is lower than expected as the rate of common variation
+regions upstream of the TSS have a lower rate of variation than expected. Fifty seven percent of the annotated
+regions contained variants, which is lower than expected as the rate of common variation
 in the human genome is 0.1\%\footnote{This rate underestimates the rate of variation in a single
 individual. This estimate is derived from the 1,000 Genomes project, where one ``common'' variant
 (present in $>5\%$ of the population) were seen per 1,000bp.}. Under a Binomial distribution with
-$p = 0.001$ and $n = 1500$, we expect only 22\% of regions to not have variants. This implies that
+$p = 0.001$ and $n = 1500$, we expect 78\% of regions to have variants. This implies that
 these regions are evolutionarily conserved. However, we did see several regions where more than
 three TFBSs were lost, which warrants further investigation. Additionally, we found that these
 variants were unlikely to modify the binding affinity of TFBSs. Binding compatibility was lost at
 fewer than 1\% of sites, and binding affinity was decreased at approximately 10\% of sites.
-Figure~\ref{fig:sites} shows the distributions discussed above.
+Figure~\ref{fig:sites} depicts the distributions discussed above.
 
 \begin{figure}[h]
 \begin{center}
@@ -397,7 +401,7 @@ Figure~\ref{fig:sites} shows the distributions discussed above.
 \includegraphics[width=0.25\linewidth]{../fig/cmpbio290/graphs/lost-sites.pdf}
 \includegraphics[width=0.25\linewidth]{../fig/cmpbio290/graphs/mod-sites.pdf}
 \caption{From left to right, these graphs show the number of variants per regulatory region,
-the number of TFBS where a variant rendered the TFBS incompatible with the TF, and the number
+the number of TFBS where a variant rendered the TFBS sequence incompatible for binding the TF, and the number
 of TFBS where a variant caused the predicted binding affinity to change. These numbers were
 generated using genotype data from the 1,000 Genomes project~\cite{siva08} and TFBS annotations
 from Kheradpour and Kellis~\cite{kheradpour14}.}
