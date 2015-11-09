@@ -3,7 +3,7 @@ import matplotlib.gridspec as gridspec
 
 def dateIdx(year, month):
 
-    return year * 12 + month
+    return year * 12 + (month - 1)
 
 fig = figure()
 gs = gridspec.GridSpec(2, 1, height_ratios=[3,1])
@@ -28,6 +28,19 @@ curDate = dateIdx(2015, 11)
 venues = {}
 articleCitations = {}
 citations = [0] * (curDate - startDate + 1)
+h = []
+i10 = [0] * (curDate - startDate + 1)
+
+def printStats():
+
+    month = curDate % 12
+    year = curDate / 12
+    print "As of %d/%d, %d citations, h-index of %d, i10 of %d." % (month + 1, year, citations[-1], h[-1], i10[-1])
+    print ""
+    print "Articles:"
+    
+    for (key, value) in articleCitations.iteritems():
+        print "%s -> %d citations" % (key, value[1][-1])
 
 def hIndex(array, h = 0):
     
@@ -42,9 +55,6 @@ def hIndex(array, h = 0):
         return h - 1
 
 def plotMetrics():
-
-    h = []
-    i10 = [0] * (curDate - startDate + 1)
 
     for i in range(startDate, curDate + 1):
         
@@ -232,9 +242,10 @@ plotPaper(dateIdx(2015, 5),
 
 # paten et al, BD2K, J1
 # appeared july 2015
-# total: 0
+# total: 1
 plotPaper(dateIdx(2015, 7),
-          [],
+          [("Cancer Discovery", dateIdx(2015, 11)), # lawler15
+        ],
           "J1")
 
 # zhang et al, Kira, C4
@@ -253,3 +264,5 @@ plotMetrics()
 metricAx.legend(loc = 2)
 
 savefig("citations.pdf")
+
+printStats()
