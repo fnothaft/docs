@@ -1,0 +1,47 @@
+\documentclass[11pt]{article} %Sets the default text size to 11pt and class to article.
+%------------------------Dimensions--------------------------------------------
+\topmargin=0.0in %length of margin at the top of the page (1 inch added by default)
+\oddsidemargin=0.0in %length of margin on sides for odd pages
+\evensidemargin=0in %length of margin on sides for even pages
+\textwidth=6.5in %How wide you want your text to be
+\marginparwidth=0.5in
+\headheight=0pt %1in margins at top and bottom (1 inch is added to this value by default)
+\headsep=0pt %Increase to increase white space in between headers and the top of the page
+\textheight=9.1in %How tall the text body is allowed to be on each page
+
+\usepackage{hyperref}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{paralist}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[font=small,labelfont=bf]{caption}
+
+\begin{document}
+
+\title{Analyzing Large Scale Genotype Datasets With \textsc{Gnocchi}}
+\author{Frank Austin Nothaft} 
+\date{}
+
+\maketitle
+
+\begin{abstract}
+The development of inexpensive DNA sequencing technologies has enabled projects
+that sequence large cohorts. While many recent projects have tackled the
+computationally expensive process of turning raw DNA sequence into genomic
+variants, cohort analyses still rely on traditional single node techniques. To
+address this problem, we introduce \textsc{Gnocchi}, a Spark SQL based toolkit
+for analyzing genomic variants. \textsc{Gnocchi} extends the \textsc{ADAM}
+framework for analyzing genomic data with several variation specific patterns,
+such as matrix and genotype state views. With \textsc{Gnocchi}, we are able to
+parallelize common expensive tasks, such as the training of genome-wide
+assocation models, or large scale population stratification.
+\end{abstract}
+
+\section{Introduction}
+
+ADAM~\cite{massie13, nothaft15}.
+
+\bibliographystyle{acm}
+\bibliography{fnothaft-gnocchi-cs294}
+
+\end{document}
