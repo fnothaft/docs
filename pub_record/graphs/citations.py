@@ -1,4 +1,4 @@
-from matplotlib.pyplot import ylabel, xlabel, title, grid, savefig, show, legend, xticks, yticks, figure, hold, plot, xlim, ylim, subplot
+from matplotlib.pyplot import ylabel, xlabel, title, grid, savefig, show, legend, xticks, yticks, figure, hold, plot, xlim, ylim, subplot, semilogy
 import matplotlib.gridspec as gridspec
 
 def dateIdx(year, month):
@@ -6,16 +6,25 @@ def dateIdx(year, month):
     return year * 12 + (month - 1)
 
 fig = figure()
-gs = gridspec.GridSpec(2, 1, height_ratios=[3,1])
+fig.set_size_inches(8, 12)
+print fig.get_size_inches()
+gs = gridspec.GridSpec(3, 1, height_ratios=[3,3,1])
 
 citeAx = subplot(gs[0])
 xlim(dateIdx(2010, 1), dateIdx(2016, 1))
 xticks([dateIdx(2010, 1), dateIdx(2011, 1), dateIdx(2012, 1), dateIdx(2013, 1), dateIdx(2014, 1), dateIdx(2015, 1), dateIdx(2016, 1)],
        ["2010", "2011", "2012", "2013", "2014", "2015", "2016"])
-ylim(0, 100)
+ylim(0, 120)
 citeAx.hold(True)
 
-metricAx = subplot(gs[1])
+logCiteAx = subplot(gs[1])
+xlim(dateIdx(2010, 1), dateIdx(2016, 1))
+xticks([dateIdx(2010, 1), dateIdx(2011, 1), dateIdx(2012, 1), dateIdx(2013, 1), dateIdx(2014, 1), dateIdx(2015, 1), dateIdx(2016, 1)],
+       ["2010", "2011", "2012", "2013", "2014", "2015", "2016"])
+ylim(1, 120)
+logCiteAx.hold(True)
+
+metricAx = subplot(gs[2])
 xlim(dateIdx(2010, 1), dateIdx(2016, 1))
 xticks([dateIdx(2010, 1), dateIdx(2011, 1), dateIdx(2012, 1), dateIdx(2013, 1), dateIdx(2014, 1), dateIdx(2015, 1), dateIdx(2016, 1)],
        ["2010", "2011", "2012", "2013", "2014", "2015", "2016"])
@@ -24,7 +33,7 @@ yticks(range(6), ["0", "1", "2", "3", "4", "5"])
 metricAx.hold(True)
 
 startDate = dateIdx(2011, 6)
-curDate = dateIdx(2015, 11)
+curDate = dateIdx(2016, 1)
 venues = {}
 articleCitations = {}
 citations = [0] * (curDate - startDate + 1)
@@ -104,6 +113,10 @@ def plotPaper(appeared,
     citeAx.plot(yrange,
                 cites,
                 label = pubLabel)
+
+    logCiteAx.semilogy(yrange,
+                       cites,
+                       label = pubLabel)
 
     venues[pubLabel] = citeVenues
     articleCitations[pubLabel] = (appeared, cites)
@@ -189,6 +202,12 @@ plotPaper(dateIdx(2012, 6),
            ("ISSWC", dateIdx(2015, 10)), # begum15
            ("HotPower", dateIdx(2015, 10)), # wang15hotpower
            ("JMicpro", dateIdx(2015, 11)), # tabhki15jmicpro
+           ("JSPS", dateIdx(2015, 11)), # tabkhi15jsps
+           ("TACO", dateIdx(2015, 11)), # lee15
+           ("MASCOTS", dateIdx(2015, 11)), # malladi15
+           ("TOADES", dateIdx(2015, 12)), # jung15
+           ("CICC", dateIdx(2015, 12)), # lee15cicc
+           ("ICCD", dateIdx(2015, 12)), # begum15
            ],
           "C1")
 
@@ -209,7 +228,10 @@ plotPaper(dateIdx(2013, 11),
            ("GigaScience", dateIdx(2015, 6)), # siretskiy15
            ("ArXiv", dateIdx(2015, 6)), # roguski15
            ("thesis", dateIdx(2015, 10)), # curtis15
-           ("SC", dateIdx(2015, 11)) # kovatch15
+           ("SC", dateIdx(2015, 11)), # kovatch15
+           ("PyHPC", dateIdx(2015, 11)), # zynda15
+           ("BMC Genomics", dateIdx(2015, 12)), # obrien15
+           ("book", dateIdx(2016, 1)), # szczerba16
            ],
           "TR1")
 
@@ -245,7 +267,8 @@ plotPaper(dateIdx(2015, 5),
 # total: 1
 plotPaper(dateIdx(2015, 7),
           [("Cancer Discovery", dateIdx(2015, 11)), # lawler15
-        ],
+           ("BMC Genomics", dateIdx(2015, 12)), # obrien15
+           ],
           "J1")
 
 # zhang et al, Kira, C4
@@ -258,6 +281,10 @@ plotPaper(dateIdx(2015, 7),
 citeAx.plot(range(startDate, curDate + 1), citations, ":k", label = "Total")
 citeAx.legend(loc = 2)
 citeAx.grid(True)
+
+logCiteAx.plot(range(startDate, curDate + 1), citations, ":k", label = "Total")
+logCiteAx.legend(loc = 2)
+logCiteAx.grid(True)
 
 metricAx.grid(True)
 plotMetrics()
