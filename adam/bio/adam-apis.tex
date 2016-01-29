@@ -16,8 +16,8 @@
 
 \addbibresource{adam-apis.bib}
 
-\title{ADAM Enables Large Scale Integrative Analyses Across Heterogenous Genomic Datasets}
-\author{Frank~Austin~Nothaft$^{1, 2}$, et al$^{1, 2, 3, 4, 5, 6, 7}$}
+\title{ADAM Enables Distributed Analyses Across Large Scale Genomic Datasets}
+\author{Frank~Austin~Nothaft$^{1, 2}$, et al$^{1, 2, 3, 4, 5, 6, 7, 8}$}
 
 \begin{document}
 
@@ -29,22 +29,23 @@
 \item Cloudera, Inc., San Francisco, CA
 \item GenomeBridge, Cambridge, MA
 \item Icahn School of Medicine at Mount Sinai, New York, NY
-\item Genome Informatics Lab, University of Californa, Santa Cruz, CA
+\item Genome Informatics Lab, University of California, Santa Cruz, CA
+\item University of California, San Francisco, CA
 \item Microsoft Research, Redmond, WA
 \end{affiliations}
 
 \begin{abstract}
 
-The detection and analysis of rare genomic events requires integrative analysis across
-large cohorts with terabytes to petabytes of genomic data. Contemporary genomic analysis tools
-have not been designed for this scale of data-intensive computing. In this paper, we present
-ADAM, a library built on top of the popular Apache Spark distributed computing framework.
-ADAM provides high level primitives that enable genomic analyses to be efficiently executed
-across a large cluster of computers. Unlike other toolkits, ADAM is designed to easily enable
-the mixing of different types and sources of genomic data. In this paper, we demonstrate ADAM
-using several applications that process large genomic feature, genotype, and read datasets.
-ADAM enables analyses to be seamlessly distributed across hundreds of nodes, while achieving a
-66\% cost improvement over current toolkits.
+The detection and analysis of rare genomic events requires integrative analysis
+across large cohorts with terabytes to petabytes of genomic data. Contemporary
+genomic analysis tools have not been designed for this scale of data-intensive
+computing. In this paper, we present ADAM, a library built on top of the popular
+Apache Spark distributed computing framework. We use ADAM to recall the Simons
+Genome Diversity project dataset against the GRCh38 build of the human reference
+genome. Because ADAM is designed to allow genomic analyses to be seamlessly
+distributed across large clusters, we achieve a 3.5$\times$ improvement in variant
+calling latency and a 66\% cost improvement over current toolkits, without
+sacrificing accuracy.
 \end{abstract}
 
 \begin{refsegment}
@@ -60,23 +61,23 @@ frequently too large to process on a single machine
 is difficult to run in a distributed setting
 \item We want to leverage the past decade of industrial development of horizontally scalable
 systems~\cite{zaharia10, dean08}
-\item This approach has been successfully applied to neuroscience~\cite{freeman14}
 \end{enumerate}
-\item In ADAM, we provide abstractions for accessing and processing genomic data on a cluster
+\item ADAM, provides abstractions for accessing and processing genomic data on a cluster
 of commodity machines
 \begin{enumerate}
 \item We provide a programing framework that accelerates common genomic processing tasks, while
 not limiting the algorithms that can be run
 \item Algorithms are high level: shouldn't be concerned about data formats or the layout
 of data on disk
-\item Our approach enables the integration of many different types of genomic datasets, which
-has been overlooked by current platforms~\cite{palsson10}
 \end{enumerate}
 \item By taking a ``ground up'' approach, we are able to improve analysis cost by 66\%
 \begin{enumerate}
 \item Bioinformatics analysis consumes up to 90\% of experiment costs~\cite{andrews14}
 \item Our approach reduces cost by enabling the use of clusters of smaller machines, which are
 more cost proportional~\cite{janapa10}
+\item We demonstrate this by recalling the Simons Genome Diversity dataset~\cite{prufer14}
+\item ADAM reduces cost while improving analysis time by $3.5\times$, and without sacrificing
+accuracy
 \end{enumerate}
 \end{enumerate}
 
@@ -104,42 +105,6 @@ guarantees (fault tolerance, recomputation) by building a DAG~\cite{zaharia10}
 \item Build \emph{workflows}, not \emph{workflow engines}
 \end{enumerate}
 \end{enumerate}
-
-\subsection{Analyses}
-\label{sec:analyses}
-
-\begin{enumerate}
-\item Variant Calling on 1000 Genomes
-\item TCGA variant analysis
-\end{enumerate}
-
-\subsubsection{Scalable Variant Calling}
-\label{sec:scalable-variant-calling}
-
-\begin{enumerate}
-\item ADAM enables both:
-\begin{enumerate}
-\item Rapid variant calling of a single sample
-\item Joint variant calling across a large cohort
-\end{enumerate}
-\end{enumerate}
-
-\subsubsection{TCGA Variant Analysis}
-\label{sec:tcga-variant-analysis}
-
-\begin{enumerate}
-\item Variants can impact transcriptional regulation~\cite{weingarten14, levo14}
-\item However, to study these impacts, we need to integrate across several
-types of genomic data, which is difficult in conventional pipelines
-\item In ADAM, this analysis is trival to do
-\item We demonstrate how this can be done using the somatic variant callset from
-The Cancer Genome Atlas~\cite{weinstein13}
-\end{enumerate}
-
-\section{Conclusion}
-\label{sec:conclusion}
-
-TBA
 
 \printbibliography[segment=1]
 \end{refsegment}
@@ -187,77 +152,6 @@ execution engines (e.g., broadcast, shuffle-based sort)
 \item Tool makes it easy for people to use ADAM on common genomic datasets
 \end{enumerate}
 \item We use eggo to drive all of the analyses in this paper
-\end{enumerate}
-
-\section{Variant Calling Pipeline}
-\label{sec:variant-calling}
-
-\begin{enumerate}
-\item Our variant calling pipeline is similar to the GATK's best practices
-pipeline~\cite{auwera13}
-\end{enumerate}
-
-\subsection{Alignment}
-\label{sec:alignment}
-
-\begin{enumerate}
-\item Short reads are aligned using the SNAP aligner~\cite{zaharia11}
-\item Alignment is parallelized within avocado
-\item To improve parallel efficiency of alignment, we:
-\begin{enumerate}
-\item Add custom code to perform multithreaded alignment index load from HDFS
-\item Run SNAP as a daemon per machine, which allows amortization of index load costs
-\end{enumerate}
-\end{enumerate}
-
-\subsection{Read Preprocessing Algorithms}
-\label{sec:read-preprocessing-algorithm}
-
-\begin{enumerate}
-\item Run duplicate marking and base quality score recalibration
-\item Details TBA; will talk about:
-\begin{enumerate}
-\item Efficient ways to parallelize quality score table aggregation
-\item Benefits of fragment structure for duplicate marking
-\end{enumerate}
-\end{enumerate}
-
-\subsection{Variant Calling Algorithm}
-\label{sec:variant-calling-algorithm}
-
-\begin{enumerate}
-\item We use the avocado variant caller, which is built on ADAM, to call variants
-\item avocado uses a local reassembly based approach for identifying variants
-\begin{enumerate}
-\item We make use of a complexity filtering process to limit the amount of reference
-regions that are locally reassembled~\cite{bloniarz14}
-\item Reassembler is de Bruijn graph based~\cite{pevzner01}
-\end{enumerate}
-\item avocado uses a biallelic statistical model
-\begin{enumerate}
-\item Based off of the statistical model in SAMtools mpileup~\cite{li11}
-\item To improve numerical precision when integrating across large datasets, our
-statistical model is evaluated in log space
-\end{enumerate}
-\end{enumerate}
-
-\section{Regulatory Variant Analysis}
-\label{sec:regulatory}
-
-\begin{enumerate}
-\item Use ``regulatory grammar'' described by Weingarten et al~\cite{weingarten14}
-\item Approach:
-\begin{enumerate}
-\item Ingest TCGA somatic variant calls
-\item Region join against ENCODE data and featurize variant calls into regulatory region
-modifications
-\end{enumerate}
-\item Final analysis ``slices and dices'' in two ways:
-\begin{enumerate}
-\item Cluster genes
-\item Cluster on samples
-\item More details TBA
-\end{enumerate}
 \end{enumerate}
 
 \printbibliography[segment=2]

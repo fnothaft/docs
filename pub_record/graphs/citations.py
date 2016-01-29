@@ -21,7 +21,7 @@ logCiteAx = subplot(gs[1])
 xlim(dateIdx(2010, 1), dateIdx(2016, 1))
 xticks([dateIdx(2010, 1), dateIdx(2011, 1), dateIdx(2012, 1), dateIdx(2013, 1), dateIdx(2014, 1), dateIdx(2015, 1), dateIdx(2016, 1)],
        ["2010", "2011", "2012", "2013", "2014", "2015", "2016"])
-ylim(1, 120)
+ylim(0.9, 120)
 logCiteAx.hold(True)
 
 metricAx = subplot(gs[2])
@@ -208,12 +208,14 @@ plotPaper(dateIdx(2012, 6),
            ("TOADES", dateIdx(2015, 12)), # jung15
            ("CICC", dateIdx(2015, 12)), # lee15cicc
            ("ICCD", dateIdx(2015, 12)), # begum15
+           ("Micro", dateIdx(2015, 12)), # song15
+           ("TACO", dateIdx(2016, 1)) # lee16
            ],
           "C1")
 
 # massie et al, adam TR, TR1
 # appeared november 2013
-# total: 13
+# total: 15
 # 2 extra in scholar (nothaft15cs267, hyve poster)
 plotPaper(dateIdx(2013, 11),
           [("CloudCom", dateIdx(2014, 12)), # amos14
@@ -230,6 +232,7 @@ plotPaper(dateIdx(2013, 11),
            ("thesis", dateIdx(2015, 10)), # curtis15
            ("SC", dateIdx(2015, 11)), # kovatch15
            ("PyHPC", dateIdx(2015, 11)), # zynda15
+           ("BigData", dateIdx(2015, 11)), # bertoni15
            ("BMC Genomics", dateIdx(2015, 12)), # obrien15
            ("book", dateIdx(2016, 1)), # szczerba16
            ],
@@ -244,22 +247,24 @@ plotPaper(dateIdx(2014, 11),
 
 # nothaft et al, adam -> sigmod, C3
 # appeared may 2015
-# total: 6
+# total: 7
 plotPaper(dateIdx(2015, 5),
           [("SIGMOD", dateIdx(2015, 5)), # armbrust15sigmod
            ("thesis", dateIdx(2015, 5)), # nothaft15thesis
            ("BigData", dateIdx(2015, 7)), # zhang15
            ("VLDB", dateIdx(2015, 8)), # armbrust15vldb
            ("DMAH", dateIdx(2015, 8)), # bessani15
-           ("thesis", dateIdx(2015, 10)) # curtis15thesis
+           ("thesis", dateIdx(2015, 10)), # curtis15thesis
+           ("BigData", dateIdx(2015, 11)) # klein15
            ],
           "C3")
 
 # nothaft, masters thesis, TH2
 # appeared may 2015
-# total: 0
+# total: 1
 plotPaper(dateIdx(2015, 5),
-          [],
+          [("BIBM", dateIdx(2015, 11)) # aggour15
+           ],
           "TH2")
 
 # paten et al, BD2K, J1
