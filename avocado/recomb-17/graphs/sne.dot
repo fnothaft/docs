@@ -1,0 +1,5 @@
+digraph sne {
+  rankdir = LR;
+  CCA -> CAC -> ACT -> CTG -> TGT;
+  CCA -> CAA -> AAT -> ATG -> TGT;
+}
