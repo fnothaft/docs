@@ -28,13 +28,13 @@
 \hspace{92pt}
 \fontsize{1cm}{1em}
 Frank~Austin~Nothaft$^{1,2,\star}$, Arun~Ahuja$^3$, Timothy~Danford$^{1,4}$,
-Jey~Kottalam$^1$, Matt~Massie$^1$, Audrey~Musselman-Brown$^5$, Beau~Norgeot$^5$,
-Ravi~Pandya$^6$, Hannes~Schmidt$^5$, Eric~Tu$^1$,
+Michael~Heuer$^1$, Jey~Kottalam$^1$, Matt~Massie$^1$, Audrey~Musselman-Brown$^5$,
+Beau~Norgeot$^{5,6}$, Ravi~Pandya$^7$, Justin~Paschall$^1$, Hannes~Schmidt$^5$,
 
-\hspace{100pt} Ryan~Williams$^3$,
+\hspace{100pt} Eric~Tu$^1$, Ryan~Williams$^3$,
 Carl~Yeksigian$^4$, Michael~Linderman$^3$, Jeff~Hammerbacher$^3$,
-\textbf{Benedict~Paten}$^{5,\star}$, Uri~Laserson$^7$, David~Haussler$^5$,
-Anthony~D.~Joseph$^1$, David~A.~Patterson$^{1,2}$
+\textbf{Benedict~Paten}$^{5,\star}$, Uri~Laserson$^{3,9}$, Gaddy Getz$^{10}$,
+David~Haussler$^5$, Anthony~D.~Joseph$^1$, David~A.~Patterson$^{1,2}$
 
 \hspace{100pt}
 $^1$AMPLab, University of California, Berkeley, CA,
@@ -42,12 +42,15 @@ $^2$ASPIRE Lab, University of California, Berkeley, CA,
 $^3$Icahn School of Medicine at Mount Sinai, New York, NY,
 
 \hspace{100pt}
-$^4$GenomeBridge, Cambridge, MA,
+$^4$Tamr, Inc., Cambridge, MA,
 $^5$Genome Informatics Lab, University of Californa, Santa Cruz, CA,
+$^6$Pharmaceutical Science and Pharmacogenomics, University of California, San Francisco, CA
 
 \hspace{100pt}
-$^6$Microsoft Research, Redmond, WA,
-$^7$Cloudera, Inc., San Francisco, CA
+$^7$Microsoft Research, Redmond, WA,
+$^8$GenomeBridge, Cambridge, MA,
+$^9$Cloudera, Inc., San Francisco, CA,
+$^{10}$The Broad Institute of MIT and Harvard, Cambridge, MA
 
 \hspace{100pt}
 \fontsize{1cm}{1em}
@@ -206,15 +209,14 @@ optimized parallel join.
 \item We evaluated ADAM by replacing the GATK ``Best Practices'' pre-processing
 stages with an ADAM based reimplementation
 \item GATK was run on a single \texttt{i2.8xlarge} node, ADAM was run on 16
-\texttt{r3.4xlarge} nodes.
-\item The ADAM-based pipeline is $3.55\times$ faster, and $2\times$ cheaper.
-\item The two pipelines generate statistically equivalent variant calls:
-\begin{itemize}
-\item During this process, we identified two bugs in the GATK/Picard.
+\texttt{r3.4xlarge} nodes
+\item The ADAM-based pipeline is $3.55\times$ faster, and $2\times$ cheaper
+\item The two pipelines generate statistically equivalent variant calls
+\end{itemize}
+
+During this process, we identified two bugs in the GATK/Picard.
 Both of these issues are caused by sort order invariants necessitated by
 programming at a lower level of abstraction.
-\end{itemize}
-\end{itemize}
 \end{minipage}
 \begin{minipage}{0.03\linewidth}
 \hfill
