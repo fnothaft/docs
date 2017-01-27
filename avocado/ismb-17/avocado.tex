@@ -180,8 +180,10 @@ that most likely represents the variants hypothesized to exist in the region,
 then used for genotyping.
 \end{enumerate}
 
-In this paper, we focus on steps one through three of the local reassembly problem, as there is wide
-variation in the algorithms used in stages four and five. Stage one (graph
+In this paper, we focus on improving the algorithmic efficiency steps one through three of the local reassembly problem.
+We do not focus algorithmically on accelerating stages four and five, as there is wide
+variation in the algorithms used in stages four and five. However, we do provide an parallel
+implementation of a widely used statistical model for genotyping~\citep{li11}. Stage one (graph
 creation) has approximately $\mathcal{O}(r l_r)$ time complexity, and stage two (graph elaboration) has
 $\mathcal{O}(h \max(l_h))$ time complexity.
 The asymptotic time cost bound of local reassembly comes from stage three, where cost is $\mathcal{O}(h r l_r
@@ -201,6 +203,9 @@ $k$-mer with the index position of that $k$-mer in the sequence it was observed 
 enables the use of the indexed de Bruijn graph for $\Omega(n)$ local sequence alignment with
 canonical edit representations for most edits. This structure can be used for both sequence alignment and
 assembly, and achieves a more efficient approach for variant discovery via local reassembly.
+To further improve the efficiency of this approach, we demonstrate in~\S\ref{sec:implementation}
+how we can implement the canonicalization scheme that we demonstrate using indexed de Bruijn
+graphs without constructing a de Bruijn graph that contains both sequences.
 
 Current variant calling pipelines depend heavily on realignment based approaches for accurate
 genotyping~\citep{li14}. Although there are several approaches that do not make explicit use of reassembly,
@@ -277,11 +282,13 @@ sub-stages:
 \item \textbf{INDEL Reassembly:} Here, we clean up all reads that are aligned
 near INDEL variants. We do this as a two step process:
 \begin{enumerate}
-\item We make a pass over all reads, using our ``bubble flank motif'' algorithm
+\item We make a pass over all reads, using our indexed de Bruijn algorithm
 to extract INDEL variants. These INDEL variants are collected on a single node,
 and used as inputs to the next stage.
-\item We run \textsc{ADAM}'s~\citep{massie13, nothaft15} INDEL realigner, using the
-discovered INDELs from stage one as ``known INDELs'' to realign to.
+\item Optionally, we run \textsc{ADAM}'s~\citep{massie13, nothaft15} INDEL realigner,
+using the discovered INDELs from stage one as ``known INDELs'' to realign to.
+This improves variant calling accuracy over solely using the indexed de
+Bruijn algorithm.
 \end{enumerate}
 \item \textbf{Variant Calling:} In this phase, we discover all SNVs and INDELs,
 score them using the reads, and emit either called variants or genotype
@@ -306,14 +313,14 @@ library~\citep{massie13, nothaft15}.
 \label{sec:indel-reassembly}
 
 As opposed to traditional realignment based approaches, we canonicalize INDELs
-in the reads by looking for ``bubble flank motifs.'' In a colored de Bruijn
+in the reads by looking for bubbles flanked by read vs. reference sequence matches. In a colored de Bruijn
 graph, a bubble refers to a location where the graph diverges between two
 samples. In \S\ref{sec:formulation}, we demonstrate how we can use the
 reconvergence of the de Bruijn graph in the flanking sequence around a bubble
 to define provably canonical alignments of the bubble between two sequences.
 For a colored de Bruijn graph containing reads and the reference genome, this
 allows us to canonically express INDEL variants in the reads against the
-reference. In \S\ref{sec:implementation}, we then show how this approach
+reference. In~\S\ref{sec:implementation}, we then show how this approach
 can be implemented efficiently without building a de Bruijn graph per read,
 or even adding each read to a de Bruijn graph. Once we have extracted a
 canonical set of INDELs, we realign the reads to each INDEL sequence using
@@ -485,6 +492,8 @@ $\mathcal{L}_i$ against $\mathcal{L}_j$, which reduces the size of the realignme
 can further limit this bound by limiting the maximum number of INDEL edits to $d = | l_{\mathcal{L}_i} -
 l_{\mathcal{L}_j} |$. This allows us to use an alignment algorithm that limits the number of INDEL
 edits~(e.g., Ukkonen's algorithm~\citep{ukkonen85}). By this, we can achieve $O(n(d + 1))$ cost.
+Alternatively, we can decide to not further canonicalize the site, and to express it as a combined
+insertion and deletion. For simplicity and performance, we use this approach in \textsc{Avocado}.
 
 \subsubsection{Implementation}
 \label{sec:implementation}
@@ -538,16 +547,16 @@ reference sequence for a bubble from the read sequence and CIGAR.
 
 One problem with this method is that it can be misled by sequencing errors
 that are proximal to a true variant. As can be seen in~\S\ref{sec:accuracy},
-solely using our bubble flanking algorithm to clean up INDEL alignments leads
+solely using our indexed de Bruijn algorithm to clean up INDEL alignments leads
 to lower accuracy than the state-of-the-art toolkit. However, if the INDEL
 variant in a read that is discovered is a true variant, it is a good candidate
 to be used as an input to a local realignment scheme.  To implement this
-approach, we used our bubble flanking algorithm to canonicalize INDEL variants,
+approach, we used our indexed de Bruijn algorithm to canonicalize INDEL variants,
 and then we used our variant discovery algorithm~(see~\S\ref{sec:discovery})
 with filtration disabled to collect all canonical INDELs. We then fed these
 INDELs and our input reads into \textsc{ADAM}'s INDEL realignment
-engine~\citep{massie13, nothaft15}. This tool is based on the \texttt{GATK}'s
-INDEL realigner~\citep{depristo11}, and calculates the quality-score
+engine~\citep{massie13, nothaft15}. This tool is based on the algorithms used in
+the \texttt{GATK}'s INDEL realigner~\citep{depristo11}, and calculates the quality-score
 weighted Hamming edit distance between a set of reads, a consensus sequence~(a
 haplotype containing a potential INDEL variant), and the reference sequence. If
 the sum weighted edit distance between the reads and the consensus sequence
@@ -626,7 +635,8 @@ by many high quality reads is an engineering limitation currently in
 more variants to be detected, we increase the amount of variants that we
 need to broadcast between nodes. This causes the size of data that we
 must serialize to grow beyond the size of the maximum individual item
-that we can serialize (limited to 2GB due to the Java Virtual Machine).
+that we can serialize (limited to 2GB due to the Java Virtual Machine, which
+is used by Apache Spark).
 We are working to eliminate this limitation. There are several possible
 strategies. A simple strategy would be to reduce the amount of data written
 to the serialization buffer by compressing the data before streaming it
@@ -739,8 +749,8 @@ with the ``Best Practices'' settings, using
 \textsc{Toil}~\citep{vivian16}\footnote{The \textsc{Toil} scripts used can be
 found at \url{https://github.com/BD2KGenomics/toil-scripts/tree/master/src/toil_scripts/gatk_germline}.}.
 Table~\ref{tab:accuracy} compares the accuracy of the two tools. We include two
-columns for \textsc{Avocado}: \textsc{Avocado 1} uses only the bubble flanking
-realignment code, while \textsc{Avocado 2} uses the bubble flanking realigner
+columns for \textsc{Avocado}: \textsc{Avocado 1} uses only the indexed de Bruijn
+realignment code, while \textsc{Avocado 2} uses the indexed de Bruijn realigner
 to generate candidate variants that are aligned using the \textsc{ADAM} INDEL
 realigner. These two modes are described in~\S\ref{sec:implementation}. As
 mentioned in~\S\ref{sec:implementation}, we require our input data to have MD
@@ -798,7 +808,7 @@ will improve up to 97.2\%.
 
 As illustrated in Table~\ref{tab:accuracy}, \textsc{Avocado} is approximately
 45\% faster than the \textsc{GATK HaplotypeCaller} when run on a single node,
-using the fast realignment (bubble canonicalization only mode). We did not
+using the fast realignment (indexed de Bruijn canonicalization only mode). We did not
 have the opportunity to run \textsc{Avocado}'s full realignment mode on a
 single node. However, this mode is approximately 2.2$\times$ slower than
 the bubble canonicalization mode when run on a cluster. As such, we expect
@@ -819,10 +829,12 @@ System}~(HDFS,~\citep{shvachko10}). The cluster resources are managed by \textsc
 YARN}~\citep{vavilapalli13}. We ran \textsc{Apache Hadoop} 2.6.2, and \textsc{Apache
 Spark} 1.6.2. Due to cluster maintainance, several nodes were out of commission,
 limiting us to 896 cores for our experiments.
+\textsc{Avocado} demonstrates linear strong scaling out to the full size of our
+cluster.
 
-\begin{figure}[h]
+\begin{figure}
 \begin{center}
-\includegraphics[width=0.95\linewidth]{graphs/speedup.pdf}
+\includegraphics[width=0.75\linewidth]{graphs/speedup.pdf}
 \end{center}
 \caption{Runtime of the INDEL realignment and genotyping algorithms as the
 number of cores is changed. Note that the times on the Y-axis are descending; as
@@ -832,15 +844,9 @@ the number of cores in the cluster is doubled.}
 \label{fig:speedup}
 \end{figure}
 
-\textsc{Avocado} demonstrates linear strong scaling out to the full size of our
-cluster. This is due to the even distribution of work across all of the nodes in
-our cluster. This can be seen in Figure~\ref{fig:speedup}B, which shows that
-task completion times are fairly uniform within each stage of the realignment
-and genotyping process.
-
-\begin{figure}[h]
+\begin{figure}
 \begin{center}
-\includegraphics[width=0.95\linewidth]{graphs/perf.pdf}
+\includegraphics[width=0.75\linewidth]{graphs/perf.pdf}
 \end{center}
 \caption{Runtime of the different stages in the genotyper core.}
 \label{fig:genotyper-perf}
