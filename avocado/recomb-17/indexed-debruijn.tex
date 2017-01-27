@@ -16,6 +16,7 @@
 \usepackage{algorithmic}
 \usepackage{amsthm}
 \usepackage{graphicx}
+\usepackage{url}
 
 \newtheorem{defn}{Definition}
 \newtheorem{lemma}{Lemma}
@@ -32,40 +33,106 @@ morestring=[b]"}
 
 \begin{document}
 
-\title{Achieving Canonical Local Sequence Alignment \\ With Indexed de Bruijn Graphs}
-\author{Frank~Austin~Nothaft, Anthony~D.~Joseph, \and David~A.~Patterson \\
+\title{Fast, Parallel INDEL Discovery \\ With Bubble Flank Motifs}
+\author{Frank~Austin~Nothaft \\
 Department of Electrical Engineering and Computer Sciences\\
 University of California, Berkeley \\ 
 Berkeley, CA 94720, USA \\
-\{fnothaft, adj, pattrsn\}@berkeley.edu}
+fnothaft@berkeley.edu}
 
-\maketitle              % typeset the title of the contribution
+\maketitle
 
 \begin{abstract}
 
-Modern variant calling methods frequently rely on local reassembly based approaches to discover
-variants. Although local reassembly allows for the accurate reconstruction of insertion and deletion
-variants in the presence of local mapping errors, current reassembly methods provide low throughput.
-These methods achieve low throughput due to a reliance on an exhaustive graph search to identify
-haplotypes, coupled with the use of expensive realignment methods for haplotype scoring. In this paper,
-we enhance the traditional \emph{de Bruijn} graph with the location of $k$-mers in a reference sequence.
-First, we demonstrate how an \emph{indexed de Bruijn} graph simplifies to an efficient algorithm for local sequence
-alignment. We are able to derive canonical edit representations, and achieve $\Omega(n)$ alignment cost
-for canonical edits. From this alignment formulation, we demonstrate how an \emph{indexed de Bruijn}
-graph can be used for variant discovery in a local reassembly pipeline with lower cost than a traditional
-reassembly algorithm. An \emph{indexed de Bruijn} graph has identical storage cost as a traditional
-\emph{de Bruijn} graph. 
+One of the primary challenges in variant calling is the discovery of short
+insertion/deletion variants. These variants are difficult to call because the
+reads that contain these variants are frequently misaligned around the variant.
+To improve variant calling accuracy for short insertions and deletions, several
+tools have switched to use local assembly based approaches. Local assemblers
+detect areas of the reference genome that appear to be poorly aligned, and
+call variants by performing de novo assembly on these regions. While local
+assembly greatly improves variant calling accuracy, it has a substantial runtime
+cost. In this paper, we introduce an algorithm that uses insight gained from
+the structure of a colored de Bruijn graph to realign individual reads. We
+prove that this algorithm has lower runtime complexity than traditional local
+assembly approaches, while also providing canonical alignments for an individual
+sequence variant. We demonstrate this algorithm in the open source, parallel
+variant caller Avocado, which is available from
+\url{https://github.com/bigdatagenomics/avocado}.
 
 \end{abstract}
 
 \section{Introduction}
 \label{sec:introduction}
 
+While many modern short-read based variant callers can achieve greater than
+99\% accuracy when calling single nucleotide variants~(SNVs), accuracy decreases
+when calling insertion/deletion~(INDEL) variants. For INDELs that are shorter
+than the read length, some degradation in accuracy is caused by incorrect
+mapping of reads containing INDELs. However, this is not the primary culprit.
+As we show in~\S\ref{fixme} with a synthetic experiment, the majority of reads
+that contain short INDELs map correctly. While these reads map correctly, they
+are frequently locally misaligned. In short, these reads have been placed in
+the correct area of the reference genome, but their local alignment makes them
+appear to represent a different sequence variant then they truly contain.
+
+There are two general approaches that can be used to eliminate the effect of
+incorrect local alignment on variant calling accuracy: we can either use a local
+sequence alignment algorithm that is less likely to misrepresent INDEL variants
+when aligning individual reads, or we can try to improve the alignments of all
+reads that have mapped around a genomic locus by pooling and jointly realigning
+these reads. Most tools have focused on the second approach, which further
+bifurcates into realignment-only and reassembly-with-realignment algorithms.
+Research has focused on realignment-based approaches because realignment-based
+approaches obliviate the major problem with traditional local sequence alignment
+algorithms~\cite{smith81, ukkonen85, laundau86}, which by their probabilistic or
+dynamic nature cannot be guaranteed to emit consistent alignments for all reads
+that contain an INDEL variant~\cite{liFIXME}. Realignment algorithms eliminate
+this problem by identifying all possible INDELs in the reads at the site,
+scoring these variants at the site, and realigning the reads to contain a
+consistent representation of the top scoring variant(s).
+
+Although realignment and reassembly algorithms have high accuracy, they also
+have high computational cost. The traditional formulation of a realignment
+algorithm has $\mathcal{O}(n^4)$ runtime complexity, while most local sequence
+alignment algorithms have runtime complexity of $\mathcal{O}(n^2)$ or lower.
+Additionally, realignment approaches require all of the reads covering a
+genomic locus to be materialized which necessitates a shuffle of the input
+dataset and can have significant memory requirements. While the end-to-end
+runtime can be decreased by only reassembling a portion of the genome, the
+performance improvements available through these approaches are bound similarly
+to Amdahl's law: local assembly is sufficiently expensive that an approach that
+prefilters 90\% of the genome only achieves a $3\times$ improvement in
+end-to-end runtime~\cite{bloniarz14}.
+
+As an alternative to traditional realignment and reassembly approaches, we
+introduce a local sequence alignment algorithm that is inspired by colored de
+Bruijn graphs~\cite{iqbal12}. This algorithm has several desirable properties:
+it has linear runtime complexity and it produces provably canonical pairwise
+alignments. When used for locally realigning previously mapped reads, we can
+determine if an individual read is already canonically aligned prior to
+realigning, which allows us to aggressively limit the number of reads realigned.
+Our algorithm uses motifs that we have identified in the structure of the
+sequence flanking a bubble in a colored de Bruijn graph. Our algorithm has an
+efficient implementation and we can prove strong guarantees about the local
+alignments that our algorithm generates. We have implemented this algorithm in
+\textsc{Avocado}, a parallel variant caller implemented using \textsc{Apache
+Spark}~\cite{zaharia12, zaharia10} and the \textsc{ADAM} library for parallel
+genomic analysis~\cite{massie13, nothaft15}. Our approach achieves a $10\times$
+speedup over conventional INDEL realignment tools when run on a single node
+while maintaining variant calling accuracy, and can be parallelized across a
+cluster of computers. Our implementation is released as open source code under
+an Apache 2 license and is available from
+\url{https://github.com/bigdatagenomics/avocado}.
+
+\section{Background}
+\label{sec:background}
+
 The accuracy of insertion and deletion~(INDEL) variant discovery has been improved by the development
 of variant callers that couple local reassembly with haplotype-based statistical models to recover INDELs
 that were locally misaligned~\cite{albers11}. Now, several prominent variant callers such as the Genome
-Analysis Toolkit's~(GATK) \texttt{HaplotypeCaller}~\cite{depristo11}, \texttt{Scalpel}~\cite{narzisi14}, and
-\texttt{Platypus}~\cite{rimmer14}. Although haplotype-based methods have enabled more accurate INDEL
+Analysis Toolkit's~(GATK) \textsc{HaplotypeCaller}~\cite{depristo11}, \textsc{Scalpel}~\cite{narzisi14}, and
+\textsc{Platypus}~\cite{rimmer14}. Although haplotype-based methods have enabled more accurate INDEL
 and single nucleotide polymorphism~(SNP) calls~\cite{bao14}, this accuracy comes at the cost of
 end-to-end runtime~\cite{talwalkar14}. Several recent projects have been focused on improving
 reassembly cost either by limiting the percentage of the genome that is reassembled~\cite{bloniarz14} or
@@ -77,7 +144,7 @@ complexity of reassembly algorithms. Although specific implementations may vary 
 local reassembler performs the following steps:
 
 \begin{enumerate}
-\item A \emph{de Bruijn} graph is constructed from the reads aligned to a region of the reference genome,
+\item A de Bruijn graph is constructed from the reads aligned to a region of the reference genome,
 \item All valid paths~(\emph{haplotypes}) between the start and end of the graph are enumerated,
 \item Each read is realigned to each haplotype, typically using a pair Hidden Markov Model~(HMM,
 see~\cite{durbin98}),
@@ -101,23 +168,20 @@ callers discussed target Illumina reads that have constant length.}, and $\min(l
 shortest haplotype that we are evaluating. This complexity comes from realigning $r$ reads to $h$
 haplotypes, where realignment has complexity $\mathcal{O}(l_r l_h)$. We ignore the storage complexity of
 reassembly here, but provide an extended
-discussion of \emph{de Bruijin} graph complexity in~\S\ref{sec:background}.
+discussion of {de Bruijn} graph complexity in~\S\ref{sec:background}.
 
-In this paper, we introduce the \emph{indexed de Bruijn} graph and demonstrate how it can be used to
-reduce the asymptotic complexity of reassembly. An \emph{indexed de Bruijn} graph is identical to a
-traditional \emph{de Bruijn} graph, with one modification: when we create the graph, we annotate each
+In this paper, we introduce the indexed de Bruijn graph and demonstrate how it can be used to
+reduce the asymptotic complexity of reassembly. An indexed de Bruijn graph is identical to a
+traditional de Bruijn graph, with one modification: when we create the graph, we annotate each
 $k$-mer with the index position of that $k$-mer in the sequence it was observed in. This simple addition
-enables the use of the \emph{indexed de Bruijn} graph for $\Omega(n)$ local sequence alignment with
+enables the use of the indexed de Bruijn graph for $\Omega(n)$ local sequence alignment with
 canonical edit representations for most edits. This structure can be used for both sequence alignment and
 assembly, and achieves a more efficient approach for variant discovery via local reassembly.
-
-\section{Background}
-\label{sec:background}
 
 Current variant calling pipelines depend heavily on realignment based approaches for accurate
 genotyping~\cite{li14}. Although there are several approaches that do not make explicit use of reassembly,
 all realignment based variant callers use an algorithmic structure similar to the one described
-in~\S\ref{sec:introduction}. In non-assembly approaches like \texttt{FreeBayes}~\cite{garrison12}, stages
+in~\S\ref{sec:introduction}. In non-assembly approaches like \textsc{FreeBayes}~\cite{garrison12}, stages
 one and two are replaced with a single step where the variants observed in the reads aligned to a given
 haplotyping region are filtered for quality and integrated directly into the reference haplotype in that region.
 In both approaches, local alignment errors~(errors in alignment \emph{within} this region) are corrected
@@ -125,8 +189,8 @@ by using a statistical model to identify the most likely location that the read 
 the other reads seen in this area.
 
 Although the model used for choosing the best haplotype pair to finalize realignments to varies between
-methods~(e.g., the GATK's \texttt{IndelRealigner} uses a simple log-odds model~\cite{depristo11}, while
-methods like \texttt{FreeBayes}~\cite{garrison12} and \texttt{Platypus}~\cite{rimmer14} make use of richer
+methods~(e.g., the GATK's \textsc{IndelRealigner} uses a simple log-odds model~\cite{depristo11}, while
+methods like \textsc{FreeBayes}~\cite{garrison12} and \textsc{Platypus}~\cite{rimmer14} make use of richer
 Bayesian models), these methods require an all-pairs alignment of reads to candidate
 haplotypes. This leads to the runtime complexity bound of $\mathcal{O}(h r l_r \min(l_h))$ given
 in~\S\ref{sec:introduction}, as we must realign $r$ reads to $h$ haplotypes, where the cost of realigning
@@ -138,10 +202,10 @@ bounding storage cost at $\mathcal{O}(h r)$.
 
 For non-reassembly based approaches, the cost of generating candidate haplotypes is $\mathcal{O}(r)$,
 as each read must be scanned for variants, using the pre-existing alignment. These variants are typically
-extracted from the CIGAR string, but may need to be normalized~\cite{li14}. \emph{de Bruijn} graph based 
-reassembly methods have similar $\mathcal{O}(r)$ time complexity for building the \emph{de Bruijn}
+extracted from the CIGAR string, but may need to be normalized~\cite{li14}. de Bruijn graph based 
+reassembly methods have similar $\mathcal{O}(r)$ time complexity for building the de Bruijn
 graph as each read must be sequentially broken into $k$-mers, but these methods have a different
-storage cost. Specifically, storage cost for a \emph{de Bruijn} graph is similar to $\mathcal{O}(k
+storage cost. Specifically, storage cost for a de Bruijn graph is similar to $\mathcal{O}(k
 (l_{\text{ref}} + l_{\text{variants}} + l_{\text{errors}}))$, where $l_{\text{ref}}$ is the length of the reference
 haplotype in this region, $l_{\text{variants}}$ is the length of true variant sequence in this region, 
 $l_{\text{errors}}$ is the length of erroneous sequence in this region, and $k$ is the $k$-mer size. In
@@ -155,7 +219,7 @@ bound the best case cost of this search at $\Omega(h \min l_h)$.
 The number of haplotypes evaluated, $h$, is an important contributor to the algorithmic complexity of
 reassembly pipelines, as it sets the storage and time complexity of the realignment scoring phase, the
 time complexity of the haplotype enumeration phase, and is related to the storage complexity of the
-\emph{de Bruijn} graph. The best study of the complexity of assembly techniques was done by Kingsford
+de Bruijn graph. The best study of the complexity of assembly techniques was done by Kingsford
 et al.~\cite{kingsford10}, but is focused on \emph{de novo} assembly and pays special attention to
 resolving repeat structure. In the local realignment case, the number of haplotypes identified is determined
 by the number of putative variants seen. We can na\"{i}vely model this cost with \eqref{eq:haplotypes},
@@ -173,16 +237,35 @@ total number of sequence errors, this is not completely correlated with the numb
 sequencing errors, as sequencing errors are correlated with sequence context~\cite{depristo11}. Many
 current tools allow users to limit the total number of evaluated haplotypes, or apply strategies to minimize
 the number of haplotypes considered, such as filtering observed variants that are likely to be sequencing
-errors~\cite{garrison12}, restricting realignment to INDELs~(\texttt{IndelRealigner},~\cite{depristo11}), or
-by trimming paths from the assembly graph. Additionally, in an \emph{de Bruijn} graph, errors in the
+errors~\cite{garrison12}, restricting realignment to INDELs~(\textsc{IndelRealigner},~\cite{depristo11}), or
+by trimming paths from the assembly graph. Additionally, in an de Bruijn graph, errors in the
 first $k$ or last $k$ bases of a read will manifest as spurs~(see~\S\ref{sec:spurs}) and will not contribute paths through the graph. We provide~\eqref{eq:haplotypes} solely as a motivating
 approximation, and hope to study these characteristics in more detail in future work.
 
-\section{Formulation}
+\section{Method}
+\label{sec:method}
+
+As opposed to traditional realignment based approaches, we canonicalize INDELs
+in the reads by looking for ``bubble flank motifs.'' In a colored de Bruijn
+graph, a bubble refers to a location where the graph diverges between two
+samples. In \S\ref{sec:formulation}, we demonstrate how we can use the
+reconvergence of the de Bruijn graph in the flanking sequence around a bubble
+to define provably canonical alignments of the bubble between two sequences.
+For a colored de Bruijn graph containing reads and the reference genome, this
+allows us to canonically express INDEL variants in the reads against the
+reference. In \S\ref{sec:implementation}, we then show how this approach
+can be implemented efficiently without building a de Bruijn graph per read,
+or even adding each read to a de Bruijn graph.
+
+\subsection{Preliminaries}
 \label{sec:formulation}
 
-To construct an \emph{indexed de Bruijn} graph, we start with the traditional formulation of a \emph{de
-Brujin} graph for sequence assembly:
+Our method relies on an \emph{indexed de Bruijn} graph, which is a slight
+extension of the colored de Bruijn graph~\cite{iqbal12}. Specifically, each
+$k$-mer in an indexed de Bruijn graph knows which sequence position~(index)
+it came from in it's underlying read/sequence. To construct an indexed de
+Bruijn graph, we start with the traditional formulation of a \emph{de Brujin}
+graph for sequence assembly:
 
 \begin{defn}[de Bruijn Graph]
 \label{defn:dbg}
@@ -196,16 +279,16 @@ Now, suppose we have $n$ sequences $\mathcal{S}_1, \dots, \mathcal{S}_n$. Let us
 $k$-mer $s \in \mathcal{S}_i$, then the output of function $\text{index}_i(s)$ is defined. This function
 provides us with the integer position of $s$ in sequence $\mathcal{S}_i$. Further, given two $k$-mers
 $s_1, s_2 \in \mathcal{S}_i$, we can define a distance function
-$\text{distance}_i(s_1, s_2) = | \text{index}_i(s_1) - \text{index}_i(s_2) |$. To create an \emph{indexed
-de Bruijn} graph, we simply annotate each $k$-mer $s$ with the $\text{index}_i(s)$ value for all
+$\text{distance}_i(s_1, s_2) = | \text{index}_i(s_1) - \text{index}_i(s_2) |$. To create an indexed
+de Bruijn graph, we simply annotate each $k$-mer $s$ with the $\text{index}_i(s)$ value for all
 $\mathcal{S}_i, i \in \{1, \dots, n\}$ where $s \in \mathcal{S}_i$. This index value is trivial to log when
-creating the original \emph{de Bruijn} graph from the provided sequences.
+creating the original de Bruijn graph from the provided sequences.
 
 Let us require that all sequences $\mathcal{S}_1, \dots, \mathcal{S}_n$ are not repetitive, which implies
-that the resulting \emph{de Bruijn graph} is acyclic. If we select any two sequences $\mathcal{S}_i$ and
+that the resulting de Bruijn graph is acyclic. If we select any two sequences $\mathcal{S}_i$ and
 $\mathcal{S}_j$ from $\mathcal{S}_1, \dots, \mathcal{S}_n$ that share at least two $k$-mers $s_1$ and
 $s_2$ with common ordering~($s_1 \rightarrow \dots \rightarrow s_2$ in both $\mathcal{S}_i$ and
-$\mathcal{S}_j$), the \emph{indexed de Bruijn} graph $G$ provides several guarantees:
+$\mathcal{S}_j$), the indexed de Bruijn graph $G$ provides several guarantees:
 
 \begin{enumerate}
 \item If two sequences $\mathcal{S}_i$ and $\mathcal{S}_j$ share at least two $k$-mers $s_1$ and
@@ -234,7 +317,7 @@ $\mathcal{S}_i$ and $\mathcal{S}_j$.
 
 \begin{defn}[Path Independence]
 \label{defn:path-independence}
-Given a non-repetitive \emph{de Bruijn} graph $G$ constructed from $\mathcal{S}_i$ and $\mathcal{S}_j$, we say
+Given a non-repetitive de Bruijn graph $G$ constructed from $\mathcal{S}_i$ and $\mathcal{S}_j$, we say
 that $G$ contains independent paths between $s_1$ and $s_2$ if we can construct two subsets
 $\mathcal{S}'_i \subset \mathcal{S}_i, \mathcal{S}'_j \subset \mathcal{S}_j$ of $k$-mers where $s_{i + n}
 \in \mathcal{S}'_i \forall n \in \{0, \dots, m_i\}, s_{i + n - 1} \rightarrow s_{i + n} \forall n \in \{1, \dots, m_i\}$,
@@ -247,12 +330,12 @@ $\mathcal{S}_j$ are different between $s_1, s_2$,
 
 We have a canonical substitution edit if $m_i = m_j = k$, where $k$ is the $k$-mer size. Here, we can
 prove that the edit between $\mathcal{S}_i$ and $\mathcal{S}_j$ between $s_1, s_2$ is a single base
-substitution $k$ letters \emph{after} $\text{index}(s_1)$:
+substitution $k$ letters after $\text{index}(s_1)$:
 
 \begin{proof}[Proof regarding Canonical Substitution]
 \label{proof:canonical-substitution}
 Suppose we have two non-repetitive sequences, $\mathcal{S}_i'$ and $\mathcal{S}_j'$, each of length
-$2k + 1$. Let us construct a \emph{de Bruijn} graph $G$, with $k$-mer length $k$. If each sequence begins with
+$2k + 1$. Let us construct a de Bruijn graph $G$, with $k$-mer length $k$. If each sequence begins with
 $k$-mer $s_1$ and ends with $k$-mer $s_2$, then that implies that the first and last $k$ letters of
 $\mathcal{S}_i'$ and $\mathcal{S}_j'$ are identical. If both subsequences had the same character at
 position $k$, this would imply that both sequences were identical and therefore the two paths between
@@ -283,7 +366,7 @@ $\text{index}(s_1)$:
 \begin{lemma}[Distance between $k$ length subsequences]
 \label{lem:minimum-distance}
 \emph{Indexed de Bruijn} graphs naturally provide a distance metric for $k$ length substrings. Let us construct an
-\emph{indexed de Bruijn} graph $G$ with $k$-mers of length $k$ from a non-repetitive sequence $\mathcal{S}$.
+indexed de Bruijn graph $G$ with $k$-mers of length $k$ from a non-repetitive sequence $\mathcal{S}$.
 For any two $k$-mers $s_a, s_b \in \mathcal{S}, s_a \ne s_b$, the
 $\text{distance}_\mathcal{S}(s_a, s_b)$ metric is equal to $l_p + 1$, where $l_p$ is the length of the
 path (in $k$-mers) between $s_a$ and $s_b$. Thus, $k$-mers with overlap of $k - 1$ have an edge
@@ -323,7 +406,7 @@ Where we have a canonical allele, the cost of computing the edit is set by the n
 linearly from $s_1$ to $s_2$, and is therefore $\mathcal{O}(n)$. However, in practice, we will see
 differences that cannot be described as one of the earlier two canonical approaches. First, let us
 generalize from the two above proofs: if we have two independent paths between $s_1, s_2$ in the
-\emph{de Bruijn} graph $G$ that was constructed from $\mathcal{S}_i, \mathcal{S}_j$, we can describe
+de Bruijn graph $G$ that was constructed from $\mathcal{S}_i, \mathcal{S}_j$, we can describe
 $\mathcal{S}_i$ as a sequence created by concatenating $s_1, \mathcal{L}_i, s_2$.\footnote{This
 property holds true for $\mathcal{S}_j$ as well.} The canonical edits merely result from special cases:
 
@@ -340,188 +423,98 @@ can further limit this bound by limiting the maximum number of INDEL edits to $d
 l_{\mathcal{L}_j} |$. This allows us to use an alignment algorithm that limits the number of INDEL
 edits~(e.g., Ukkonen's algorithm~\cite{ukkonen85}). By this, we can achieve $O(n(d + 1))$ cost.
 
-\section{Specialization for Local Reassembly}
-\label{sec:local-reassembly}
+\subsection{Implementation}
+\label{sec:implementation}
 
-As stated in~\S\ref{sec:formulation}, we have assumed that we want to find the edits between two or
-more \emph{known} sequences. However, when performing local reassembly for variant discovery/calling,
-our goal is to identify all possible variants and to associate probabilities to observations that contain these
-variants. This hypothesized variants are generated by examining the reads aligned to the reference
-at/near a given site.
+\section{Results}
+\label{sec:results}
 
-However, we can adopt a ``pooled'' model that uses the \emph{indexed de Bruijn} graph to discover alternate
-alleles without performing a search for all haplotypes. Here, we extract a substring $\mathcal{R}$ from a
-reference assembly, corresponding to the subsection of that reference that we would like to reassemble.
-Then, we create a pooled ``sequence'' $\mathcal{P}$, that is generated from the $k$-mers present in
-the reads aligned to $\mathcal{R}$. However, since $\mathcal{P}$ is a composite of the pooled reads, we
-cannot assign indices to $k$-mers in $\mathcal{P}$. Instead, we will rely wholly on the path length
-properties demonstrated in~\S\ref{sec:formulation} and the indices of $k$-mers in $\mathcal{R}$ to
-discover and anchor alleles. First, let us classify paths where $\mathcal{R}$ and $\mathcal{P}$ diverge
-into two types:
+\subsection{Accuracy}
+\label{sec:accuracy}
 
-\begin{itemize}
-\item \textbf{Spurs:} A spur is a set $S$ of $n$ $k$-mers $\{s_1, \dots, s_n\}$ where either $s_1$ or
-$s_n \in \mathcal{R}, \mathcal{P}$ and all other $k$-mers are $\not\in \mathcal{R}, \in \mathcal{P}$,
-and where $s_i \rightarrow s_{i + 1} \forall i \in \{1, \dots, n - 1\}$. If $s_1 \in \mathcal{R}$, then $s_n$ must 
-not have a successor. Alternatively, if $s_n \in \mathcal{R}$, than $s_1$ is required to not have a
-predecessor.
-\item \textbf{Bubbles:} A bubble is a set $S$ of $n$ $k$-mers $\{s_1, \dots, s_n\}$ where both $s_1$ and
-$s_n \in \mathcal{R}, \mathcal{P}$ and all other $k$-mers are $\not\in \mathcal{R}, \in \mathcal{P}$, and
-where $s_i \rightarrow s_{i + 1} \forall i \in \{1, \dots, n - 1\}$.
-\end{itemize}
+To benchmark \textsc{Avocado}'s accuracy, we used the high coverage, PCR-free
+whole genome sequencing~(WGS) run of NA12878 from the 1,000 Genomes
+project~\cite{1kg}. We chose this dataset because NA12878 has extensive
+orthogonal verification data that is available through the National Institute
+for Standards and Time's~(NIST's) Genome-in-a-Bottle~(GIAB)
+project~\cite{zook15}, and the WGS preparation of NA12878 for the 1,000 Genomes
+project\footnote{The high coverage NA12878 data is available from
+\url{ftp://ftp-trace.ncbi.nlm.nih.gov/1000genomes/ftp/phase3/data/NA12878/high_coverage_alignment/NA12878.mapped.ILLUMINA.bwa.CEU.high_coverage_pcr_free.20130906.bam}.}
+is more representative of a typical sequencing dataset than the GIAB $300\times$
+coverage WGS data for NA12878. We verified our calls using the Global Alliance
+for Genomics and Health's~(GA4GH's) benchmarking suite\footnote{Available from
+\url{https://github.com/ga4gh/benchmarking-tools}. Also, see Paten et
+al~\cite{paten15}.} Since the NA12878 alignment available from 1,000 Genomes
+represents the final, preprocessed analysis-ready reads, we realigned the reads
+using \textsc{BWA}, before running the data through \textsc{Avocado},
+\textsc{Samtools}/\textsc{Bcftools} \textsc{Mpileup}~\cite{danecek11, li11,
+li09}, and the \textsc{GATK}'s \textsc{HaplotypeCaller}~\cite{depristo11}.
+The relative accuracy of all three tools is shown in Table~\ref{tab:accuracy}.
 
-Currently, we disregard spurs. Spurs typically result from sequencing errors near the start or end of a
-read. Additionally, given a spur, we cannot put a constraint on what sort of edit it may be from the
-reference, which increases the computational complexity of processing the spur. We concede that this
-may not be the best approach, and have included a longer discussion of the accuracy impact of this
-decision, as well as options for processing spurs with an \emph{indexed de Bruijn} graph in~\S\ref{sec:spurs}.
+\begin{table}[h]
+\centering
+\caption{Accuracy on NA12878}
+\label{tab:accuracy}
+\begin{tabular}{ l | c c c }
+\hline
+ & \bf \textsc{Mpileup} & \bf \textsc{GATK} & \bf \textsc{Avocado} \\
+\hline
+\hline
+SNP Recall & & & 97\% \\
+SNP Precision & & & 98\% \\
+\hline
+INDEL Recall & & & 55\% \\
+INDEL Precision & & & 75\% \\
+\hline
+Runtime & & & 19h55m \\
+\end{tabular}
+\end{table}
 
-We can elaborate the graph and identify variants by walking the graph from the first $k$-mer in
-$\mathcal{R}$. Although haplotype elaboration algorithms have $\Omega(h \min l_h)$ cost~(see~\S\ref{sec:background}) where
-$\min l_h$ is the length of the shortest haplotype and $h$ is the number of haplotypes described by the graph, we can limit our graph traversal
-to have $\mathcal{O}(n)$ runtime cost where $n = V(G)$ by introducing a tail-recursive finite state machine~(FSM). Whenever we
-reach a branch point in the graph, our FSM will push state onto a stack, which allows us---with a few
-exceptions---to avoid making multiple traversals through a single $k$-mer in the graph. Our FSM has
-the following states:
+\subsection{Performance}
+\label{sec:performance}
 
-\begin{itemize}
-\item \texttt{R}, \texttt{Reference}: We are on a run of $k$-mers that are in $\mathcal{R}$.
-\item \texttt{A}, \texttt{Allele}: We are on a run of $k$-mers that have diverged off of the reference. We
-have a divergence start point, but have not connected back to the reference yet. This could be either
-a bubble or a spur. 
-\item \texttt{C}, \texttt{ClosedAllele}: We were on a run of $k$-mers that had diverged off of the reference,
-but have just reconnected back to the reference and now know the start and end positions~(in
-$\mathcal{R}$) of the bubble, as well as the non-reference sequence and length of the bubble.
-\end{itemize}
-
-We allow the FSM to make the following state transitions, which are depicted in Figure~\ref{fig:fsm}:
-
-\begin{itemize}
-\item \texttt{R} $\rightarrow$ \texttt{R}: We are continuing along a reference run.
-\item \texttt{R} $\rightarrow$ \texttt{A}: We were at a $k$-mer $\in \mathcal{R}$, and have seen a branch
-to a $k$-mer $\not\in \mathcal{R}$.
-\item \texttt{A} $\rightarrow$ \texttt{A}: We are continuing along a non-reference run.
-\item \texttt{A} $\rightarrow$ \texttt{C}: We were on a non-reference run, and have just connected back to
-a reference $k$-mer.
-\item \texttt{C} $\rightarrow$ \texttt{R}: We have just closed out an allele, and are back at a $k$-mer
-$\in \mathcal{R}$.
-\end{itemize}
+Figure~\ref{fig:speedup}A demonstrates \textsc{Avocado}'s strong scaling. In
+this experiment, we ran \textsc{Avocado}'s INDEL realigner and genotyper on a
+constant dataset (the high coverage NA12878 dataset from 1,000
+Genomes~\cite{1kg}), while varying the size of the cluster that \textsc{Avocado}
+was run on. This experiment was run on our in-house cluster, which contains
+64 machines connected by a full-bisection bandwidth 10 gigabit ethernet
+network. Each machine in this cluster runs a 16-core Intel Xeon E5-2670 at
+2.6GHz, with 256GB of memory. Each node has four 1TB hard disk
+drives, and data was stored in the \textsc{Apache Hadoop Distributed File
+System}~(HDFS,~\cite{shvachko10}). The cluster resources are managed by \textsc{Apache
+YARN}~\cite{vavilapalli13}. We ran \textsc{Apache Hadoop} 2.6.2, and \textsc{Apache
+Spark} 1.6.2. Due to cluster maintainance, several nodes were out of commission,
+limiting us to 896 cores for our experiments.
 
 \begin{figure}[h]
 \begin{center}
-\includegraphics[width=0.5\linewidth, clip=true, trim=0 39 0 39]{graphs/fsm.pdf}
+\includegraphics[width=0.5\linewidth]{graphs/speedup.pdf}
 \end{center}
-\caption{Finite State Machine for Pooled vs. Reference Assembly}
-\label{fig:fsm}
+\caption{\textbf{A, left:} Runtime of the INDEL realignment and genotyping algorithms as the
+number of cores is changed. Note that the times on the Y-axis are descending; as
+the number of cores made available to \textsc{Avocado} is doubled, runtime
+decreases. The dotted lines represent ideal scaling, where runtime halves when
+the number of cores in the cluster is doubled. \textbf{B, right:} Job completion times
+for the various stages of the \textsc{Avocado} pipeline.}
+\label{fig:speedup}
 \end{figure}
 
-We initialize the state machine to \texttt{R}, and start processing with the first $k$-mer from $\mathcal{R}$.
-Per $k$-mer, we evaluate the possible state transitions of each successor $k$-mer. If the set of successor
-$k$-mers contains a single $k$-mer, we continue to that state. If the successor set contains multiple
-$k$-mers, we choose a successor state to transition to, and push the branch context of all other
-successor states onto our stack. If the successor set is empty, we pop a branch context off of the stack,
-and switch to that context. We stop once we reach a $k$-mer whose successor set is empty, \emph{and}
-our branch context stack is empty.
-
-The implementation of the \texttt{R} and \texttt{A} states largely amount to bookkeeping. In the \texttt{R}
-state, we must track the current position in $\mathcal{R}$, and in \texttt{A}, we must record where we
-branched off of $\mathcal{R}$, and $\mathcal{L}'$, the bases we have seen since we
-branched\footnote{Although we are processing $k$-mers, we only need to reconstruct the sequence that
-the $k$-mers are describing by taking the first base from each successive $k$-mer.} off of $\mathcal{R}$.
-If we are in the \texttt{A} state and walk to a $k$-mer $\in \mathcal{R}$, we then transition into the
-\texttt{C} state. Using the positions of our branch point and the current $k$-mer in $\mathcal{R}$, we are
-able to calculate the length of the reference path via Lemma~\ref{lem:minimum-distance}, while the length
-of the non-reference path is given by $l_{\mathcal{L}'}$. The edited sequence $\mathcal{L}$ present
-between the branch point and the current $k$-mer is given by trimming the first $k - 1$ bases from
-$\mathcal{L}'$. If we have a non-canonical edit, or a deletion in $\mathcal{P}$ relative to $\mathcal{R}$,
-we can look these bases up by indexing into $\mathcal{R}$.
-
-To improve computational efficiency, we should emit statistics for genotyping \emph{while} traversing the graph. By doing
-this, we can eliminate the need for realignment in haplotype reassembly. Since we have constructed a
-graph where every $k$-mer is anchored to a reference position or to a position in a variant, or is in a spur,
-if we log several statistics when processing reads from $\mathcal{P}$, we can directly emit the probability
-observations that support a reference base or a variant allele. Although the relevant statistics vary
-between different variant calling/genotyping algorithms, common statistics include base and mapping
-quality, as well as strand of the observation. Additionally, genotyping algorithms that incorporate phasing
-may want to identify observations that came from the same allele. These statistics can be logged when
-chopping the reads in $\mathcal{P}$ into $k$-mers at a low cost.
-
-As noted earlier in this section, we normally do \emph{not} need to retrace through any $k$-mers in the
-graph when processing the graph. However, we may need to retrace $k$-mers if we have overlapping
-variants. For example, take the reference string \texttt{ACTGCCGTCT}, the SNV \texttt{ACTGCAGTCT},
-and the complex variant \texttt{ACTGCAAGTCT}\footnote{At \texttt{CCG}, we have inserted an \texttt{A}
-between the two \texttt{C}s, and changed the second \texttt{C} $\rightarrow$ \texttt{A}. Alternatively, this
-can be described as a deletion of the second \texttt{C} and an insertion of \texttt{AA} between
-\texttt{CG}.}. For $k = 4$, both variants share the 4-mer \texttt{AGTC}, but both take independent paths
-from the reference 4-mer \texttt{CTGC} to \texttt{AGTC}. In this case, we need to walk \texttt{AGTC} twice.
-
-\section{Discussion and Future Work}
-\label{sec:discussion}
-
-In this work, we have presented algorithms that allow for efficient sequence comparison using an \emph{indexed
-de Bruijn} graph, and have then demonstrated how this can be used in a local reassembly pipeline. We are
-working to build a variant calling and genotyping platform using this algorithm, and hope to demonstrate
-results on real data soon.
-
-One limitation of current local reassemblers is that they cannot simultaneously reassemble two regions
-of the reference genome. This strategy \emph{may} be useful if we have two regions $\mathcal{R}_1$ and
-$\mathcal{R}_2$ with high similarity. Since a global aligner may not properly place reads into
-$\mathcal{R}_1$ or $\mathcal{R}_2$ during alignment, the reads aligned to $\mathcal{R}_1$ and
-$\mathcal{R}_2$ could be placed into the same pool $\mathcal{P}$ for reassembly. By emitting putative
-variants from this graph \emph{and} using a genotyping model that incorporated phasing, this structure
-may be able to correct for global alignment errors between similar regions. Pooling multiple regions
-together can be used for detecting structural variants. If graph $G$ constructed from $\mathcal{R}_1,
-\mathcal{R}_2, \mathcal{P}$ contains an arc $s_0 \rightarrow \dots \rightarrow s_n$ where $s_i \in
-\mathcal{P}, \not\in \mathcal{R}_1, \mathcal{R}_2, \forall i \in \{1, \dots, n - 1\}$ and $s_0 \in \mathcal{P},
-\mathcal{R}_1, \not\in \mathcal{R}_2, s_n \in \mathcal{P}, \mathcal{R}_2, \not\in \mathcal{R}_1$, then the
-arc from $s_1$ to $s_n$ identifies a possible structural variant breakpoint between $\mathcal{R}_1$ and
-$\mathcal{R}_2$.
-
-Although this paper motivates the use of \emph{indexed de Bruijn} graphs for variant calling, they can also
-be used for canonicalizing the output of multiple variant calling tools. Specifically, assume that we have
-two variants that are within $n$ bases of each other. For these two variants, we can generate sequences
-$\mathcal{V}_1, \mathcal{V}_2$ by substituting the variant into $\mathcal{R}$ overlapping the site. We
-can then construct an \emph{indexed de Bruijn} graph from $\mathcal{V}_1, \mathcal{V}_2$ with $k$-mer length
-$k \ge n$. If both $\mathcal{V}_1, \mathcal{V}_2$ overhang the variants by $\ge k$ bases and the graph
-contains a single path, the two variant representations are equivalent. This presents a more principled
-strategy for canonicalizing variants than the \textsc{Rescue} strategy used in the \texttt{SMASH}
-benchmarking suite~\cite{talwalkar14}.
-
-\subsection{Limits of Processing Repeated Sequences}
-\label{sec:limits-repeated-sequences}
-
-In this paper, we constrain our sequences to not contain repeated subsequences of length greater than
-$k$, where $k$ is the $k$-mer length used when constructing a \emph{de Bruijn} graph $G$. If there is a repeated 
-subsequence with length $\ge k$, then $G$ will contain a cycle. Although \emph{de novo} assembly
-methods attempt to resolve repeats through scaffolding~\cite{zerbino09}, local reassembly methods
-frequently disallow repeats. Both the GATK's \texttt{HaplotypeCaller}~\cite{depristo11} and
-\texttt{Scalpel}~\cite{narzisi14} increment the $k$-mer size until the repeat is eliminated or the tool
-gives up on locally reassembling the region.
-
-\subsection{Methods for Processing Spurs}
-\label{sec:spurs}
-
-Although local reassembly methods typically trim spurs from the haplotype reassembly graph to reduce
-the graph's complexity, the statistics from the bases in these spurs are assigned to locations on a
-haplotype during the realignment phase and are captured during genotyping/variant calling. Thus, in
-practice, we would like to place spurs in our graph as an small edit off of the reference genome or of an
-arc in $\mathcal{P}$. Note that a spur is created whenever a sequencing error occurs within $k$ bases of
-the start or end of a read. Although we suggest exact realignment in~\S\ref{sec:formulation}, we expect
-errors in Illumina data to be single nucleotide errors, and thus searching for a single nucleotide
-substitution edit should suffice. If the spur branches off of a path in $\mathcal{R}$, then it is likely best to
-realign the spur to $\mathcal{R}$. If the spur branches off of a divergent variant within $k$ bases of the
-variant either branching off of or rejoining $\mathcal{R}$, then we can realign the spur to the remainder of
-the variant's path, plus any necessary bases from $\mathcal{R}$.
+\textsc{Avocado} demonstrates linear strong scaling out to the full size of our
+cluster. This is due to the even distribution of work across all of the nodes in
+our cluster. This can be seen in Figure~\ref{fig:speedup}B, which shows that
+task completion times are fairly uniform within each stage of the realignment
+and genotyping process.
 
 \section{Conclusion}
 \label{sec:conclusion}
 
-In this paper, we have introduced the \emph{indexed de Bruijn} graph. This extension of the traditional
-\emph{de Bruijn} graph allows for $\Omega(n)$ local alignment of two or more sequences, with a hard
+In this paper, we have introduced the indexed de Bruijn graph. This extension of the traditional
+de Bruijn graph allows for $\Omega(n)$ local alignment of two or more sequences, with a hard
 $\mathcal{O}(n)$ bound for canonical edits and an $\mathcal{O}(l^2)$ bound for non-canonical edits
 (in genotyping, $l$ is the variant allele length, which is typically much smaller than $n$). After describing this structure, we have demonstrated how
-\emph{indexed de Bruijn} graphs can be used with a pooled model to locally reassemble haplotypes that contain
-variants. By using an \emph{indexed de Bruijn} graph, we are able to reduce the runtime complexity of the local
+indexed de Bruijn graphs can be used with a pooled model to locally reassemble haplotypes that contain
+variants. By using an indexed de Bruijn graph, we are able to reduce the runtime complexity of the local
 reassembly algorithms that are commonly used for variant discovery and calling.
 
 \bibliographystyle{acm}
