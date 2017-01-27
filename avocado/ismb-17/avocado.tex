@@ -847,13 +847,18 @@ caller, and consider it as future work.
 \section{Conclusion}
 \label{sec:conclusion}
 
-In this paper, we have introduced the indexed de Bruijn graph. This extension of the traditional
-de Bruijn graph allows for $\Omega(n)$ local alignment of two or more sequences, with a hard
-$\mathcal{O}(n)$ bound for canonical edits and an $\mathcal{O}(l^2)$ bound for non-canonical edits
-(in genotyping, $l$ is the variant allele length, which is typically much smaller than $n$). After describing this structure, we have demonstrated how
-indexed de Bruijn graphs can be used with a pooled model to locally reassemble haplotypes that contain
-variants. By using an indexed de Bruijn graph, we are able to reduce the runtime complexity of the local
-reassembly algorithms that are commonly used for variant discovery and calling.
+In this paper, we have introduced \textsc{Avocado}, a distributed variant caller
+built on top of \textsc{Apache Spark}~\citep{zaharia10, zaharia12} and the
+\textsc{ADAM} library for parallel genomic analysis~\citep{massie13, nothaft15}.
+\textsc{Avocado} is open source software released under the permissive Apache 2
+license, and makes use of a novel variant canonicalization engine that
+reduces the runtime complexity of the local reassembly algorithms that are
+commonly used for variant discovery and calling. By combining our novel variant
+canonicalization engine with efficient parallelization of tasks across a
+distributed system, we are able to reduce the latency of calling variants on a
+single human genome to under one hour on a 896 core cluster of commodity
+computers. We do this while achieving SNP precision and recall that is
+competitive with the current state of the art, and high INDEL precision.
 
 \section*{Acknowledgements}
 
