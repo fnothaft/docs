@@ -46,7 +46,21 @@ Apache 2 license. The Avocado source code is hosted at
 \maketitle
 
 \section{Introduction}
+\label{sec:introduction}
 
+As the cost of sequencing continues to decline, the core algorithms and tools used
+to analyze genomic data must scale to handle larger data volumes~\citep{muir16}.
+To meet this challenge, we need both more efficient algorithms, as well software
+that can make use of computational infrastructure that is designed to enable the
+efficient use of clusters of commodity machines and cloud computing~\cite{schadt10,
+nothaft15}. Going from unaligned reads to accurate variant calls is a
+computationally expensive process that is critical to many sequencing projects.
+In spite of both the expense and wide use of variant calling, there has been
+limited focus towards developing a variant caller that is optimized for cloud
+and cluster computing~\citep{langmead09crossbow}.
+
+Part of the expense involved in variant calling is due to the expensive algorithms
+used to achieve accurate INDEL calling.
 While many modern short-read based variant callers can achieve greater than
 99\% accuracy when calling single nucleotide variants~(SNVs), accuracy decreases
 when calling insertion/deletion~(INDEL) variants. For INDELs that are shorter
@@ -96,10 +110,14 @@ realigning, which allows us to aggressively limit the number of reads realigned.
 Our algorithm uses motifs that we have identified in the structure of the
 sequence flanking a bubble in a colored de Bruijn graph. Our algorithm has an
 efficient implementation and we can prove strong guarantees about the local
-alignments that our algorithm generates. We have implemented this algorithm in
+alignments that our algorithm generates. Additionally, for more sensitive
+INDEL discovery, this algorithm can be coupled with a traditional local
+realignment tool.
+
+To marry efficient algorithms with scalable computing, we have implemented this algorithm in
 \textsc{Avocado}, a parallel variant caller implemented using \textsc{Apache
 Spark}~\citep{zaharia12, zaharia10} and the \textsc{ADAM} library for parallel
-genomic analysis~\citep{massie13, nothaft15}. Our approach achieves a $10\times$
+genomic analysis~\citep{massie13, nothaft15}. Our approach achieves a
 speedup over conventional INDEL realignment tools when run on a single node
 while maintaining variant calling accuracy, and can be parallelized across a
 cluster of computers. Our implementation is released as open source code under
@@ -107,6 +125,35 @@ an Apache 2 license and is available from
 \url{https://github.com/bigdatagenomics/avocado}.
 
 \section{Approach}
+\label{sec:approach}
+
+Figure~\ref{fig:architecture} depicts the technology stack that \textsc{Avocado}
+uses. \textsc{Avocado} uses the \textsc{ADAM} library~\citep{massie13, nothaft15}
+to load and manipulate genomic data on top of \textsc{Apache
+Spark}~\citep{zaharia10, zaharia12}. As we describe in detail
+in~\S\ref{sec:methods}, \textsc{Avocado} is implemented as a two part application:
+the first part of the application cleans up alignments around variant sites, while
+the second part of the application discovers likely variants and scores them to
+emit genotype calls. While \textsc{Avocado}'s parallel architecture enables it to
+scale efficiently on clusters with over 1,000 cores, \textsc{Avocado} also
+introduces a novel algorithm for canonicalizing read alignments around variants
+with low computational cost. We use this algorithm standalone to clean up read
+alignments, and also use this algorithm to generate candidate INDELs to be used
+with \textsc{ADAM}'s INDEL realigner.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.95\linewidth]{architecture.pdf}
+\end{center}
+\caption{Avocado's architecture. Avocado is built on top of the ADAM library for
+distributed genomic analysis, which provides interfaces and schemas for
+manipulating genomic data using Apache Spark. Apache Spark is a distributed system
+whose central abstraction, the Resilient Distributed Dataset~(RDD), approximates
+a collection that is distributed across a cluster, which can be transformed using
+relational and functional operators. Apache Spark can be run on on-premises
+clusters, cloud computing serivces, and locally on a single machine.}
+\label{fig:architecture}
+\end{figure}
 
 The accuracy of insertion and deletion~(INDEL) variant discovery has been improved by the development
 of variant callers that couple local reassembly with haplotype-based statistical models to recover INDELs
@@ -221,6 +268,7 @@ approximation, and hope to study these characteristics in more detail in future 
 
 \begin{methods}
 \section{Methods}
+\label{sec:methods}
 
 To use Avocado to call variants, we run two applications, each of which has several
 sub-stages:
@@ -758,7 +806,7 @@ it to be approximately 20\% slower than the \textsc{GATK} when run on a single
 node. However, \textsc{Avocado} can be efficiently parallelized across more
 than 1,000 cores.
 
-Figure~\ref{fig:speedup}A demonstrates \textsc{Avocado}'s strong scaling. In
+Figure~\ref{fig:speedup} demonstrates \textsc{Avocado}'s strong scaling. In
 this experiment, we ran \textsc{Avocado}'s INDEL realigner and genotyper on a
 constant dataset (the high coverage NA12878 dataset from 1,000
 Genomes~\citep{1kg}), while varying the size of the cluster that \textsc{Avocado}
