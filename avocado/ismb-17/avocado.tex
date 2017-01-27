@@ -116,8 +116,7 @@ Analysis Toolkit's~(GATK) \textsc{HaplotypeCaller}~\citep{depristo11}, \textsc{S
 and single nucleotide polymorphism~(SNP) calls~\citep{bao14}, this accuracy comes at the cost of
 end-to-end runtime~\citep{talwalkar14}. Several recent projects have been focused on improving
 reassembly cost either by limiting the percentage of the genome that is reassembled~\citep{bloniarz14} or
-by improving the performance of algorithms of the core algorithms used in local
-reassembly~\citep{rimmer14}.
+by improving the performance of the core algorithms used in local reassembly~\citep{rimmer14}.
 
 The performance issues seen in haplotype reassembly approaches derives from the high asymptotic
 complexity of reassembly algorithms. Although specific implementations may vary slightly, a typical
@@ -170,8 +169,8 @@ Although the model used for choosing the best haplotype pair to finalize realign
 methods~(e.g., the GATK's \textsc{IndelRealigner} uses a simple log-odds model~\citep{depristo11}, while
 methods like \textsc{FreeBayes}~\citep{garrison12} and \textsc{Platypus}~\citep{rimmer14} make use of richer
 Bayesian models), these methods require an all-pairs alignment of reads to candidate
-haplotypes. This leads to the runtime complexity bound of $\mathcal{O}(h r l_r \min(l_h))$
-, as we must realign $r$ reads to $h$ haplotypes, where the cost of realigning
+haplotypes. This leads to the runtime complexity bound of $\mathcal{O}(h r l_r \min(l_h))$,
+as we must realign $r$ reads to $h$ haplotypes, where the cost of realigning
 one read to one haplotype is $\mathcal{O}(l_r \max(l_h))$, where $l_r$ is the read length~(assumed to be
 constant for Illumina sequencing data) and $\max(l_h)$ is the length of the longest haplotype. Typically,
 the data structures used for realignment~($\mathcal{O}(l_r \max(l_h))$ storage cost) can be reused.
@@ -215,8 +214,8 @@ total number of sequence errors, this is not completely correlated with the numb
 sequencing errors, as sequencing errors are correlated with sequence context~\citep{depristo11}. Many
 current tools allow users to limit the total number of evaluated haplotypes, or apply strategies to minimize
 the number of haplotypes considered, such as filtering observed variants that are likely to be sequencing
-errors~\citep{garrison12}, restricting realignment to INDELs~(\textsc{IndelRealigner},~\citep{depristo11}), or
-by trimming paths from the assembly graph. Additionally, in an de Bruijn graph, errors in the
+errors~\citep{garrison12}, restricting realignment to INDELs~(\textsc{IndelRealigner},~\citet{depristo11}), or
+by trimming paths from the assembly graph. Additionally, in a de Bruijn graph, errors in the
 first $k$ or last $k$ bases of a read will manifest as spurs and will not contribute paths through the graph. We provide~\eqref{eq:haplotypes} solely as a motivating
 approximation, and hope to study these characteristics in more detail in future work.
 
@@ -279,7 +278,7 @@ of the INDEL realignment process, see~\citet{nothaft15avocado}.
 Our method relies on an \emph{indexed de Bruijn} graph, which is a slight
 extension of the colored de Bruijn graph~\citep{iqbal12}. Specifically, each
 $k$-mer in an indexed de Bruijn graph knows which sequence position~(index)
-it came from in it's underlying read/sequence. To construct an indexed de
+it came from in its underlying read/sequence. To construct an indexed de
 Bruijn graph, we start with the traditional formulation of a \emph{de Brujin}
 graph for sequence assembly:
 
@@ -375,7 +374,7 @@ position three. With $k$-mer length $k = 3$, this corresponds to the graph in Fi
 
 If $m_i = k - 1, m_j \ge k$ or vice versa, we have a canonical INDEL edit (for convenience, we assume
 that $\mathcal{S}_i'$ contains the $k - 1$ length path). Here, we can prove that there is a $m_j - m_i$
-length insertion\footnote{This is equivalently a $m_j - m_i$ length deletion in $\mathcal{S}_i'$ relative to
+length insertion\footnote{This is equivalently an $m_j - m_i$ length deletion in $\mathcal{S}_i'$ relative to
 $\mathcal{S}_j'$.} in $\mathcal{S}_j'$ relative to $\mathcal{S}_i'$, $k - 1$ letters \emph{after}
 $\text{index}(s_1)$:
 
@@ -842,7 +841,8 @@ described in~\citet{li11} to compute the major allele frequency. We run for a
 fixed number of iterations of the E-M loop before using the major allele
 frequency with a binomial distribution to compensate the genotype
 likelihoods. These compensated genotype likelihoods are then used to emit
-a ``squared-off'' genotype matrix.
+a ``squared-off'' genotype matrix. We have not yet validated our joint variant
+caller, and consider it as future work.
 
 \section{Conclusion}
 \label{sec:conclusion}
