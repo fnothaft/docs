@@ -1,0 +1,328 @@
+% THIS IS AN EXAMPLE DOCUMENT FOR VLDB 2012
+% based on ACM SIGPROC-SP.TEX VERSION 2.7
+% Modified by  Gerald Weber <gerald@cs.auckland.ac.nz>
+% Removed the requirement to include *bbl file in here. (AhmetSacan, Sep2012)
+% Fixed the equation on page 3 to prevent line overflow. (AhmetSacan, Sep2012)
+
+\documentclass{vldb}
+\usepackage{graphicx}
+\usepackage{balance}  % for  \balance command ON LAST PAGE  (only there!)
+
+
+\begin{document}
+
+% ****************** TITLE ****************************************
+
+\title{Techniques for Accelerating Distributed Genomic Aggregation and Join Patterns [Innovative Systems and Applications]}
+
+% ****************** AUTHORS **************************************
+
+% You need the command \numberofauthors to handle the 'placement
+% and alignment' of the authors beneath the title.
+%
+% For aesthetic reasons, we recommend 'three authors at a time'
+% i.e. three 'name/affiliation blocks' be placed beneath the title.
+%
+% NOTE: You are NOT restricted in how many 'rows' of
+% "name/affiliations" may appear. We just ask that you restrict
+% the number of 'columns' to three.
+%
+% Because of the available 'opening page real-estate'
+% we ask you to refrain from putting more than six authors
+% (two rows with three columns) beneath the article title.
+% More than six makes the first-page appear very cluttered indeed.
+%
+% Use the \alignauthor commands to handle the names
+% and affiliations for an 'aesthetic maximum' of six authors.
+% Add names, affiliations, addresses for
+% the seventh etc. author(s) as the argument for the
+% \additionalauthors command.
+% These 'additional authors' will be output/set for you
+% without further effort on your part as the last section in
+% the body of your article BEFORE References or any Appendices.
+
+\numberofauthors{6}
+
+\author{
+% You can go ahead and credit any number of authors here,
+% e.g. one 'row of three' or two rows (consisting of one row of three
+% and a second row of one, two or three).
+%
+% The command \alignauthor (no curly braces needed) should
+% precede each author name, affiliation/snail-mail address and
+% e-mail address. Additionally, tag each line of
+% affiliation/address with \affaddr, and tag the
+% e-mail address with \email.
+%
+% 1st. author
+\alignauthor
+Devin~Petersohn\titlenote{These authors contributed equally to this work.} \\
+       \affaddr{UC Berkeley AMPLab} \\
+       \affaddr{465 Soda Hall} \\
+       \affaddr{Berkeley, CA 94270} \\
+       \email{devin.petersohn@berkeley.edu}
+\alignauthor
+Frank~Austin~Nothaft\raisebox{9pt}{$\ast$} \\
+       \affaddr{UC Berkeley AMP/ASPIRE Labs} \\
+       \affaddr{465 Soda Hall} \\
+       \affaddr{Berkeley, CA 94270} \\
+       \email{fnothaft@berkeley.edu}
+\alignauthor
+Alyssa~K.~Morrow \\
+       \affaddr{UC Berkeley AMPLab} \\
+       \affaddr{465 Soda Hall} \\
+       \affaddr{Berkeley, CA 94270} \\
+       \email{akmorrow@berkeley.edu}
+\and
+\alignauthor
+Stephen~Fang \\
+       \affaddr{UC Berkeley AMPLab} \\
+       \affaddr{465 Soda Hall} \\
+       \affaddr{Berkeley, CA 94270} \\
+       \email{fang.mingtao@berkeley.edu}
+\alignauthor
+Dave~A.~Patterson \\
+       \affaddr{UC Berkeley AMP/ASPIRE Labs} \\
+       \affaddr{465 Soda Hall} \\
+       \affaddr{Berkeley, CA 94270} \\
+       \email{pattrsn@berkeley.edu}
+\alignauthor
+Anthony~D.~Joseph \\
+       \affaddr{UC Berkeley AMPLab} \\
+       \affaddr{465 Soda Hall} \\
+       \affaddr{Berkeley, CA 94270} \\
+       \email{adj@berkeley.edu}
+}
+
+\maketitle
+
+\begin{abstract}
+The advent of genomics projects that will generate hundreds of petabytes of
+sequence data has spawned several projects that are investigating how to
+efficiently parallelize genomics algorithms in a distributed setting.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:introduction}
+
+\begin{enumerate}
+\item Large datasets in genomics are pushing the bounds of traditional
+data management systems, as well as HPC
+\item Many genomics queries can be described as ``genome arithmetic'':
+\begin{enumerate}
+\item Manipulating data in the genomic coordinate space
+\item ``Genome arithmetic'' was introduced in BEDtools~\cite{quinlan10}
+\item ``Region join'' primitive was introduced in ADAM~\cite{nothaft15}
+\end{enumerate}
+\item Why are genome arithmetic queries difficult?
+\begin{enumerate}
+\item Queries involve range queries across a complex 2D coordinate space
+\item Key distribution can be skewed
+\item Need to deploy different strategies as table cardinality can vary
+widely~\cite{kozanitis16}
+\end{enumerate}
+\item In this work, we introduce and evaluate optimized algorithms for executing
+joins and aggregates in the genomic coordinate space
+\begin{enumerate}
+\item We use an interval array to accelerate broadcast joins, and a work-balancing
+approach to accelerate sort-merge joins
+\item The work-balancing approach that is used for sort-merge joins can also be
+applied to aggregates
+\item We implement these queries on top of \textsc{Apache Spark}~\cite{zaharia12,
+zaharia10} as part of the \textsc{ADAM}~\cite{massie13, nothaft15} library
+\end{enumerate}
+\item Our evaluation demonstrates that these strategies improve join performance
+by two orders of maginitude, leading to a $5\times$ improvement in application
+runtime
+\begin{enumerate}
+\item We evaluate raw join performance on a set of microbenchmarks that approximate
+realistic genomic datasets
+\item In these microbenchmarks, we compare against flattened genomics
+tools~\cite{quinlan10}, na\"{i}ve \textsc{Apache Spark} implementations,
+\textsc{Spark SQL}~\cite{armbrust15}, \textsc{Apache Impala}~\cite{kornacker15},
+\textsc{SciDB}~\cite{brown10, taft14}, and \textsc{TileDB}~\cite{papadopoulos16}
+\end{enumerate}
+\end{enumerate}
+
+\section{Background}
+\label{sec:background}
+
+\begin{enumerate}
+\item Genomics has been experiencing a continuous explosion in the volume of data
+collected~\cite{stephens15}
+\begin{enumerate}
+\item Sequencing costs have dropped from \$100,000,000 per genome in 2001 to under
+\$1,000 per genome last year
+\item Each genome is dense: raw reads are 200GB, reduced form is 10--100GB
+\item Sequencing data is most useful when observed as a population, so biomedical
+and biotechnical organizations are amassing datasets with more than 100,000
+samples~\cite{lek16}
+\item These datasets have long outgrown traditional HPC and flat analysis systems
+\end{enumerate}
+\item How is genomics data processed?
+\begin{enumerate}
+\item Most genomics data is processed in the context of a ``reference genome''
+\item The reference genome is the ``average'' sequence for a given chromosome
+of a species
+\item Can be thought of as a set of disparate 1D coordinate spaces: each
+chromosome is a 1D coordinate space
+\end{enumerate}
+\item What are common genomics query patterns?
+\begin{enumerate}
+\item ETL: preprocessing and data cleaning~\cite{massie13, nothaft15avocado}
+\item Coordinate space arithmetic~\cite{quinlan10}/joins~\cite{nothaft15}
+\item Aggregation queries at a specific position in the genomic coordinate plan
+\item TODO: add more examples of the above
+\end{enumerate}
+\item What makes genomics queries expensive/difficult?
+\begin{enumerate}
+\item Key skew: even if the average genomic locus is covered by 60 datapoints,
+the worst case locus may be covered by 50,000 datapoints~\cite{pinard06}
+\item Number of records/dataset size: an average genomic dataset will typically have several
+billion records, and an average dataset is several hundred GB for reads, and up to
+40TB for genotypes
+\item Queries are typically range based: requires novel indexing strategies
+\end{enumerate}
+\end{enumerate}
+
+\section{Architecture}
+\label{sec:architecture}
+
+\begin{enumerate}
+\item We introduce two optimized approaches:
+\begin{enumerate}
+\item A broadcast join, for applications with one low cardinality table
+\item A sort-merge join, for applications with two high cardinality tables
+\item Our sort-merge join uses load balancing to improve query performance
+\end{enumerate}
+\end{enumerate}
+
+\subsection{Sort-Merge Join}
+\label{sec:sort-merge}
+
+\subsection{Broadcast Join}
+\label{sec:broadcast}
+
+\section{Results}
+\label{sec:results}
+
+\subsection{Microbenchmarks}
+\label{sec:microbenchmarks}
+
+\begin{enumerate}
+\item Here we compare raw join performance using our two approaches with
+several tools:
+\begin{enumerate}
+\item \textsc{BEDtools}: The single node, flattened tool that is widely
+used in genomics to execute these queries at the present day~\cite{quinlan10}
+\item Na\"{i}ve approaches in \textsc{ADAM}: the approaches introduced
+in the original \textsc{ADAM} paper~\cite{nothaft15}
+\item \textsc{SciDB} and \textsc{GenomicsDB}: Two array stores that are
+designed for querying genomics data~\cite{brown10, taft14, papadopoulos16}
+\item \textsc{Spark SQL} and \textsc{Impala}: Two high performance SQL
+implementations on top of the Hadoop ecosystem~\cite{armbrust15, kornacker15}
+\end{enumerate}
+\item We evaluate these systems using synthetic datasets:
+\begin{enumerate}
+\item These datasets emulate real world genomic data
+\item We vary:
+\begin{itemize}
+\item Key skew and sparsity: What is the number of keys that are overloaded,
+and how much are they overloaded by?
+\item Interval size distribution: What is the width distribution of intervals
+that we are querying across?
+\item Payload: What is the density of an average item in the join? I.e., genomic
+reads are ``heavy'', genomic features are ``light''
+\end{itemize}
+\item The datasets are described in Table~\ref{tab:microbenchmarks}
+\end{enumerate}
+\item Additionally, for all the tools except for \textsc{BEDtools}, we evaluate
+several aggregation queries:
+\begin{enumerate}
+\item Aggregate: Counting read coverage per genomic locus
+\item Aggregate: Computing allele frequency per variant
+\item Join plus aggregate: Computing read coverage per genomic feature
+\end{enumerate}
+\end{enumerate}
+
+\begin{table*}[t]
+\centering
+\caption{Microbenchmark Datasets}
+\label{tab:microbenchmarks}
+\begin{tabular}{ l | c c c | c c c }
+\hline
+Dataset & Right Type & Right Size & Right Skew & Left Type & Left Size & Left Skew \\
+\hline
+\hline
+1 & Variants & 8 GB & Balanced & Reads & 250GB & Skewed \\
+2 & Features & 250MB & Balanced & Reads & 250GB & Skewed \\
+3 & Variants & 8 GB & Balanced & Genotypes & 1TB & Balanced \\
+% We should do sparklines for the key skew
+\hline
+\end{tabular}
+\end{table*}
+
+\subsection{Applications}
+\label{sec:applications}
+
+\begin{enumerate}
+\item We evaluate several application kernels:
+\begin{enumerate}
+\item The INDEL Realigner and Base Quality Score Recalibrator from
+\textsc{ADAM}~\cite{massie13, nothaft15}
+\item \textsc{Avocado}'s genotyping engine~\cite{nothaft15avocado, nothaft17}
+\item TBD
+\end{enumerate}
+\end{enumerate}
+
+\section{Discussion}
+\label{sec:discussion}
+
+\begin{enumerate}
+\item Future work: cost-based optimizer for genomic queries
+\begin{enumerate}
+\item If we have the full query trace and statistics about the cardinality of
+the input datasets, we can optimize end-to-end performance
+\item Especially useful for machine learning queries: broadcast join may be
+cheaper if run once, but if in a join-aggregate pattern (e.g., running a
+machine learning query), sorting up-front may be more efficient
+\end{enumerate}
+\end{enumerate}
+
+\section{Conclusions}
+\label{sec:conclusions}
+
+\balance
+
+\section{Acknowledgments}
+
+The authors would like to thank Timothy Danford and Uri Laserson, who defined
+and refined the region join primitive in \textsc{ADAM}, and Eric Tu, who
+contributed heavily to an early implementation of the datastructures used in
+the broadcast join.
+
+This research is supported in part by NSF CISE Expeditions Award CCF-1139158,
+LBNL Award 7076018, and DARPA XData Award FA8750-12-2-0331, NIH BD2K Award
+1-U54HG007990-01, NIH Cancer Cloud Pilot Award \linebreak HHSN261201400006C and gifts
+from Amazon Web Services, Google, SAP,  The Thomas and Stacey Siebel
+Foundation, Adatao, Adobe, Apple, Inc., Blue Goji, Bosch, C3Energy, Cisco,
+Cray, Cloudera, EMC, Ericsson, Facebook, Guavus, Huawei, Intel, Microsoft,
+NetApp, Pivotal, Samsung, Splunk, Virdata, VMware, and Yahoo!. Author FAN is
+supported by a National Science Foundation Graduate Research Fellowship.
+
+% The following two commands are all you need in the
+% initial runs of your .tex file to
+% produce the bibliography for the citations in your paper.
+\bibliographystyle{abbrv}
+\bibliography{genomic_indexing}  % vldb_sample.bib is the name of the Bibliography in this case
+% You must have a proper ".bib" file
+%  and remember to run:
+% latex bibtex latex latex
+% to resolve all references
+
+%APPENDIX is optional.
+% ****************** APPENDIX **************************************
+% Example of an appendix; typically would start on a new page
+%pagebreak
+
+\end{document}
