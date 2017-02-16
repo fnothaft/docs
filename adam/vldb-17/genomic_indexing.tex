@@ -99,10 +99,16 @@ Anthony~D.~Joseph \\
 \begin{abstract}
 The advent of genomics projects that will generate hundreds of petabytes of
 sequence data has spawned several projects that are investigating how to
-efficiently parallelize genomics algorithms in a distributed setting.
+efficiently parallelize genomics algorithms in a distributed setting. Overlap joins 
+are a fundamental primitive for many operations in genomics analyses. These 
+genomic analyses include: variant calling, INDEL realignment, and BQSR. 
+We describe improvements to our genomics processing library, ADAM, with
+respect to the overlap join implementation. We achieved multiple orders of magnitude 
+runtime improvement over state-of-the-art distributed database systems and
+genomics processing pipelines.
 \end{abstract}
 
-\section{Introduction}
+\section{Introduction (<1 page)}
 \label{sec:introduction}
 
 \begin{enumerate}
@@ -144,7 +150,7 @@ tools~\cite{quinlan10}, na\"{i}ve \textsc{Apache Spark} implementations,
 \end{enumerate}
 \end{enumerate}
 
-\section{Background}
+\section{Background (1 page)}
 \label{sec:background}
 
 \begin{enumerate}
@@ -167,6 +173,9 @@ of a species
 \item Can be thought of as a set of disparate 1D coordinate spaces: each
 chromosome is a 1D coordinate space
 \end{enumerate}
+
+INSERT JOIN PATTERN FIGURE
+
 \item What are common genomics query patterns?
 \begin{enumerate}
 \item ETL: preprocessing and data cleaning~\cite{massie13, nothaft15avocado}
@@ -174,6 +183,11 @@ chromosome is a 1D coordinate space
 \item Aggregation queries at a specific position in the genomic coordinate plan
 \item TODO: add more examples of the above
 \end{enumerate}
+
+INSERT BACKGROUND FIGURE FOR SORT-MERGE JOIN
+
+INSERT BACKGROUND FIGURE FOR BROADCAST JOIN
+
 \item What makes genomics queries expensive/difficult?
 \begin{enumerate}
 \item Key skew: even if the average genomic locus is covered by 60 datapoints,
@@ -185,9 +199,8 @@ billion records, and an average dataset is several hundred GB for reads, and up 
 \end{enumerate}
 \end{enumerate}
 
-\section{Architecture}
+\section{Architecture  (1/2 page)}
 \label{sec:architecture}
-
 \begin{enumerate}
 \item We introduce two optimized approaches:
 \begin{enumerate}
@@ -197,17 +210,50 @@ billion records, and an average dataset is several hundred GB for reads, and up 
 \end{enumerate}
 \end{enumerate}
 
-\subsection{Sort-Merge Join}
+\subsection{Sort-Merge Join  (3 page)}
 \label{sec:sort-merge}
+Figure X.X illustrates the system architecture outline for the sort-merge the overlap 
+join primitives in ADAM. Our approach has four major modules:  1.) Sort, 2.) 
+Load Balancing, 3.) Data Colocation, 4.) Distributed Join. 
 
-\subsection{Broadcast Join}
+INSERT SORT-MERGE JOIN ARCHITECTURE FIGURE
+
+The sort phase of our system is handled by Apache Spark, we only need to define the 
+ordering of the dataset. We add some metadata about how the data is partitioned for 
+downstream modules. This metadata contains the partition bounds and a flag that the 
+data has been sorted. The flag also helps us avoid additional sorting for various other 
+operations that presort the data. We persist this metadata through disk writes to expedite
+future processing.
+
+During the load balancing phase, we repartition the data so that each node has approximately
+the same amount of data. If the data was sorted, the load balancing also happens at the 
+time of the sort. The load balancing is a data-derived repartitioning scheme that computes
+the partition bounds based on the data. This distributes the data much better than the tactic 
+used in most Genomic data processing: data range-based processing. If the data was 
+repartitioned, we update the partition bound metadata.
+
+The data colocation module of the sort-merge join primitive is an additional phase required
+because of the load balancing phase. With range-based partitioning, both datasets can be
+partitioned based on the same range, however with data-derived repartitioning, we must use
+the previously computed partition bounds to colocate each data point with those it will join
+with. Because these are range-based joins, some data points may belong to multiple 
+partitions.
+
+After all data has been properly colocated, we perform each join locally on each node. ADAM
+provides multiple types of joins as illustrated in Table X.X.
+
+\subsection{Broadcast Join  (2 page)}
 \label{sec:broadcast}
+
+INSERT BROADCAST JOIN ARCHITECTURE FIGURE
 
 \section{Results}
 \label{sec:results}
 
-\subsection{Microbenchmarks}
+\subsection{Microbenchmarks (3 page)}
 \label{sec:microbenchmarks}
+
+INSERT PLOTS/CHARTS FOR MICROBENCHMARKS
 
 \begin{enumerate}
 \item Here we compare raw join performance using our two approaches with
@@ -262,7 +308,7 @@ Dataset & Right Type & Right Size & Right Skew & Left Type & Left Size & Left Sk
 \end{tabular}
 \end{table*}
 
-\subsection{Applications}
+\subsection{Applications (1-2 page)}
 \label{sec:applications}
 
 \begin{enumerate}
@@ -275,7 +321,7 @@ Dataset & Right Type & Right Size & Right Skew & Left Type & Left Size & Left Sk
 \end{enumerate}
 \end{enumerate}
 
-\section{Discussion}
+\section{Discussion  (1 page)}
 \label{sec:discussion}
 
 \begin{enumerate}
@@ -289,8 +335,22 @@ machine learning query), sorting up-front may be more efficient
 \end{enumerate}
 \end{enumerate}
 
-\section{Conclusions}
+\section{Conclusions  (1/4 page)}
 \label{sec:conclusions}
+
+In this paper, we describe our updates to ADAM, an efficient and performant system
+for performing genomics primitive operations. These updates are improvements to 
+the genomics join queries: sort-merge join and broadcast join. We evaluated our join
+primitives against the state-of-the-art in both distributed database systems and genomics
+specific systems. Our load balancing approach for the sort-merge join allowed us to 
+better distribute the computation across a cluster and attain better performance than 
+both the naive cartesian product approach implemented by SparkSQL and the range
+based partitioners implemented by the existing genomics processing engines. Our 
+approach was not only faster in total runtime, it was also faster at repartitioning the 
+data and resulted in a lower amount of data shuffled than the other approaches.
+
+Joins are an extremely important primitive to many different analyses commonly 
+performed in genomics. 
 
 \balance
 
@@ -307,7 +367,7 @@ LBNL Award 7076018, and DARPA XData Award FA8750-12-2-0331, NIH BD2K Award
 from Amazon Web Services, Google, SAP,  The Thomas and Stacey Siebel
 Foundation, Adatao, Adobe, Apple, Inc., Blue Goji, Bosch, C3Energy, Cisco,
 Cray, Cloudera, EMC, Ericsson, Facebook, Guavus, Huawei, Intel, Microsoft,
-NetApp, Pivotal, Samsung, Splunk, Virdata, VMware, and Yahoo!. Author FAN is
+NetApp, Pivotal, Samsung, Splunk, Virdata, VMware, and Yahoo!. Authors FAN  and DP are
 supported by a National Science Foundation Graduate Research Fellowship.
 
 % The following two commands are all you need in the
