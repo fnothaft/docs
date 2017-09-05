@@ -233,6 +233,7 @@ morestring=[b]"}
   \item A simple API for parallelizing single node genomic tools with a minimal
     amount of code.
   \end{itemize}
+\item \textsc{ADAM} has enabled a large ecosystem of work
 \end{itemize}
 
 \chapter{Background and Related Work}
@@ -482,15 +483,595 @@ approximation, and hope to study these characteristics in more detail in future 
 \chapter{Design Principles for Scalable Genomics}
 \label{chap:design}
 
+\begin{itemize}
+\item Initially, \textsc{ADAM} had several goals:
+  \begin{itemize}
+  \item Provide clean APIs for writing large scale genomic data analyses
+  \item Raise abstraction by centering data manipulation around schemas instead
+    of file formats
+  \item Allow these APIs to be exposed across commonly used languages
+  \end{itemize}
+\item To do this, \textsc{ADAM} used a decoupled, stack-oriented architecture
+\item Over time, these goals grew in scope to include:
+  \begin{itemize}
+  \item Support coordinate-space joins with genomic data
+  \item Support exploratory data analysis on genomic datasets
+  \item Allow people to reuse their existing genomic analysis tools on Spark with
+    minimal modifications
+  \end{itemize}
+\item Supporting these goals was enabled by \textsc{ADAM}'s decoupled architecture
+\end{itemize}
+
+\section{A Stack Architecture for Scientific Data Processing}
+\label{sec:stack-architecture}
+
+The processing patterns being applied to scientific data shift widely as the data itself ages. Because of
+this change, we want to design a scientific data processing system that is flexible enough to
+accommodate our different use cases. At the same time, we want to ensure that the components in the
+system are well isolated so that we avoid bleeding functionality across the stack. If we bleed functionality
+across layers in the stack, we make it more difficult to adapt our stack to different applications.
+Additionally, as we discuss in~\S\ref{sec:read-preprocessing}, improper separation of concerns can
+actually lead to errors in our application.
+
+These concerns are very similar to the factors that led to the development of the Open Systems
+Interconnection~(OSI) model and Internet Protocol~(IP) stack for networking
+services~\cite{zimmermann80}. The networking stack models were designed to allow the mixing and
+matching of different protocols, all of which existed at different functional levels. The success of the
+networking stack model can largely be attributed to the ``narrow waist'' of the stack, which simplified the
+integration of a new protocol or technology by ensuring that the protocol only needed to implement a
+single interface to be compatible with the rest of the stack.
+
+Unlike conventional scientific systems that leverage custom data formats like BAM or SAM~\cite{li09},
+or CRAM~\cite{fritz11}, we believe that the use of an explicit schema for data interchange is critical.
+In our stack model shown in Figure~\ref{fig:stack-model}, the schema becomes the ``narrow waist''
+of the stack. Most importantly, placing the schema as the narrow waist enforces a strict separation
+between data storage/access and data processing. Additionally, this enables literate programming
+techniques which can clarify the data model and access patterns. The seven layers of our stack model
+are decomposed as follows, and are numbered in ascending order from bottom to top:
+
+\begin{enumerate}
+\item \textbf{Physical Storage:} This layer coordinates data writes to physical media.
+\item \textbf{Data Distribution:} This layer manages access, replication, and distribution of the files that have
+been written to storage media.
+\item \textbf{Materialized Data:} This layer encodes the patterns for how data is encoded and stored. This
+layer determines I/O bandwidth and compression.
+\item \textbf{Data Schema:} This layer specifies the representation of data, and forms the narrow waist of
+the stack that separates access from execution.
+\item \textbf{Evidence Access:} This layer provides us with primitives for processing data, and allows us to
+transform data into different views and traversals.
+\item \textbf{Presentation:} This layer enhances the data schema with convenience methods for performing
+common tasks and accessing common derived fields from a single element.
+\item \textbf{Application:} At this level, we can use our evidence access and presentation layers to compose
+the algorithms to perform our desired analysis.
+\end{enumerate}
+
+A well defined software stack has several other significant advantages. By limiting application
+interactions with layers lower than the presentation layer, application developers are given a clear and
+consistent view of the data they are processing, and this view of the data is independent of whether the
+data is local or distributed across a cluster or cloud. By separating the API from the data access layer,
+we improve flexibility. With careful design in the data format and data access layers, we can seamlessly
+support conventional whole file access patterns, while also allowing easy access to small slices of files.
+By treating the compute substrate and storage as separate layers, we also drastically increase
+the portability of the APIs that we implement.
+
+As we discuss in more detail in~\S\ref{sec:read-preprocessing}, current scientific systems bleed
+functionality between stack layers. An exemplar is the SAM/BAM and CRAM formats, which expect data
+to be sorted by genomic coordinate. This order modifies the layout of data on disk~(level 3, Materialized Data)
+and constrains how applications traverse datasets~(level 5, Evidence Access). Beyond
+constraining applications, this leads to bugs in applications that are difficult to detect.\footnote{The
+current best-practice implementations of the BQSR and Duplicate Marking algorithms both fail when
+processing certain corner-case alignments. These errors are caused because of the requirement to
+traverse reads in sorted order.} These views of evidence should be implemented at the evidence
+access layer instead of in the layout of data on disk. This split enforces independence of anything below the
+schema.
+
+The idea of decomposing scientific applications into a stack model is not new; Bafna et al~\cite{bafna13}
+made a similar suggestion in 2013. We borrow some vocabulary from Bafna et al, but our approach is
+differentiated in several critical ways:
+
+\begin{itemize}
+\item Bafna et al consider the stack model specifically in the context of data management systems for
+genomics; as a result, they bake current technologies and design patterns into the stack. In our opinion,
+a stack design should serve to abstract layers from methodologies/implementations. If not, future
+technology trends may obsolete a layer of the stack and render the stack irrelevant.
+\item Bafna et al define a binary data format as the narrow waist in their stack, instead of a schema.
+While these two seem interchangeable, they are not in practice. A schema is a higher level of abstraction
+that encourages the use of literate programming techniques and allows for data serialization techniques
+to be changed as long as the same schema is still provided.
+\item Notably, Bafna et al use this stack model to motivate GQL~\cite{kozanitis14}. While a query system
+should provide a way to process and transform data, Bafna et al instead move this system down to the
+data materialization layer. We feel that this inverts the semantics that a user of the system would prefer
+and makes the system less general.
+\end{itemize}
+
+Deep stacks like the OSI stack~\cite{zimmermann80} are generally simplified for practical use. Conceptually,
+the stack we propose is no exception. In practice, we combine layers one and two, and layers five and six.
+There are several reasons for these mergers. First, in \texttt{Hadoop}-based systems, the system does not have practical visibility
+below layer two, thus there is no reason to split layers one and two except as a philosophical exercise.
+Layers five and six are commingled because some of the enriched presentation objects are used to
+implement functionality in the evidence access layer. This normally happens when a key is needed, such as
+when repartitioning the dataset, or when reducing or grouping values.
+
 \part{Architecture and Infrastructure}
 
 \chapter{The \textsc{ADAM} Architecture}
 \label{chap:architecture}
 
+Due to both the growing volume of genomic sequencing data and the large size of these datasets,
+sequencing centers face the increasingly difficult task of turning around genomic data analyses in a
+reasonable timeframe~\cite{schadt10, stein10}. While the per-run latency of current genomic pipelines
+such as the \texttt{GATK} can be improved by manually partitioning the input dataset and distributing
+work, native support for distributed computing is not provided. As a stopgap solution, projects like
+\texttt{Cloudburst}~\cite{schatz09} and \texttt{Crossbow}~\cite{langmead09} have ported individual
+analytics tools to run on top of \texttt{Hadoop}. While this approach has served well for proofs of concept,
+it provides poor abstractions for application developers and makes it difficult to create novel distributed
+genomic analyses, and does little to attack sources of inefficiency or incorrectness in distributed
+genomics pipelines.
+
+To address these problems, we need to reconsider how to build software for processing genomic data.
+Modern genome analysis pipelines are built around monolithic architectures and flat file formats.
+These architectures are designed to efficiently run current algorithms on single node processing
+systems, but impose significant restrictions. These restrictions include:
+
+\begin{itemize}
+\item These implementations are locked to a single node processing model. Even the \texttt{GATK}'s
+``map-reduce'' styled \texttt{walker} API~\cite{mckenna10} is limited to natively support processing on
+a single node. While these jobs can be manually partitioned and run in a distributed setting, manual
+partitioning can lead to imbalance in work distribution and makes it difficult to run algorithms that
+require aggregating data across all partitions, and lacks the fault tolerance provided by modern
+distributed systems such as \texttt{Hadoop} or \texttt{Spark}~\cite{zaharia12}.
+\item Most of these implementations \emph{assume} invariants about the sorted order of records on
+disk. This ``stack smashing'' (specifically, the layout of data is used to ``accelerate'' a processing stage)
+can lead to bugs when data does not cleanly map to the assumed sort order. Additionally, since these
+sort order invariants are rarely explicit and vary from tool to tool, pipelines assembled from disparate
+tools can be brittle. We discuss this more in~\S\ref{sec:read-preprocessing} and footnote 1.
+\item Additionally, while these invariants are intended to improve performance, it is not clear that these
+invariants \emph{actually} improve performance. There are two common sort invariants used in genomics:
+sort by reference position and sort by read name. Changing between these two sort orders entails
+a full shuffle and resort of the dataset. Additionally, a sort is required after alignment to establish a sort order.
+\end{itemize}
+
+As noted above, current implementations are locked to a single node model. Projects like
+\texttt{Hadoop-BAM}~\cite{niemenmaa12}, \texttt{SeqPig}~\cite{schumacher14}, and \texttt{BioPig}~\cite{nordberg13}
+have attempted to build a distributed processing environment on top of current single node genomics APIs.
+However, several problems must be solved in order to make distributed processing of genomic data productive:
+
+\begin{itemize}
+\item Current genomics data formats rely on a centralized header for storing experiment metadata. Since the
+metadata is centralized, it must be replicated to all machines.
+\item A simple map-reduce or SQL-like API is insufficient for implementing genomic analyses. Rather, to enhance
+bioinformatician productivity, we need to define APIs that allow developers to conveniently express algorithms.
+\end{itemize}
+
+In \texttt{ADAM}, we have taken a more aggressive approach to the design of APIs for processing genomic data
+in a distributed system. Although modern genomics pipelines are built as monolithic applications, we have
+chosen a layered decomposition for \texttt{ADAM}, that uses a schema as a ``narrow waist''. Instead of using
+a flat file format, as is traditional in genomics, we are using this schema with \texttt{Parquet}~(a commodity columnar
+store~\cite{parquet}) to store genomic data in a way that both allows efficient distributed read/write and that
+achieves high compression. On top of this, we have added primitives that implement common genomic traversals
+in a distributed manner. We have then used \texttt{ADAM} to implement common preprocessing stages from
+commonly used genomics pipelines. \texttt{ADAM}'s preprocessing stages are between 1-5$\times$ faster than the
+equivalent \texttt{GATK} preprocessing stages, and achieve linear scaling out to 128 nodes.
+
+\section{Realizing A Decoupled Stack Architecture In \textsc{ADAM}}
+\label{sec:realizing-stack-architecture}
+
+\begin{itemize}
+\item Implementing a stack architecture requires careful API design
+  \begin{itemize}
+  \item If APIs are too strictly specified, stack layers can't actually be exchanged
+  \item If APIs are too vaguely specified, system is unreliable
+  \end{itemize}
+\item \textsc{ADAM} ultimately extends two important APIs:
+  \begin{itemize}
+  \item The \textsc{ADAMContext}: the entrypoint to loading all data
+  \item The \textsc{GenomicRDD} abstraction: a wrapper for genomic datasets
+  \end{itemize}
+\item How are these APIs important in realizing the stack vision?
+  \begin{itemize}
+  \item Layers 1 and 2 are largely deferred to Apache Spark
+  \item Layer 3 is essentially a view; the \textsc{ADAMContext} provides the view
+    on load, \textsc{GenomicRDD} provides the view on save
+  \item Layer 4 is enclosed in the \textsc{GenomicRDD}
+  \item Layers 5 and 6 are implemented in the \textsc{GenomicRDD}; users can
+    specialize a \textsc{GenomicRDD} for their specific application/query pattern
+  \item Layer 7 is where the user builds their code, and this is built by
+    using the \textsc{ADAMContext} to load in a \textsc{GenomicRDD}, which is then
+    transformed and saved.
+  \end{itemize}
+\end{itemize}
+
+\section{Query Patterns for Genomic Data Analysis}
+\label{sec:query-patterns}
+
+There are a wide array of experimental techniques and platforms in genome informatics, but many of these
+methods produce datapoints that are tied to locations in the genome through the use of genomic coordinates.
+Each cell contains a copy of the genome with one molecule per chromosome. Each molecule is a collection of
+DNA polymers coated with (and wrapped around) proteins and packed into the nucleus in a complex
+3-dimensional shape. In practice, computational biologists abstract this complexity by storing a single long
+string that represents the nucleotides of the chromosome. We can then connect a datapoint or observation to the
+genome by associating the data with the chromosome name and a point or interval on a 1-dimensional space.
+
+A platform for scientific data processing in genomics needs to understand these 1-dimensional coordinate
+systems because these become the basis on which data processing is parallelized. For example, when calling
+variants from sequencing data, the sequence data that is localized to a single genomic region (or ``locus'') can be 
+processed independently from the data localized to a different region, as long as the regions are far enough
+apart.
+
+Beyond parallelization, many of the core algorithms and methods for data aggregation in genomics are phrased
+in terms of geometric primitives on 1-D intervals and points where we compute distance, overlap, and
+containment.  An algorithm for calculating quality control metrics may try to calculate ``coverage,'' a count
+of how many reads overlap each base in the genome. A method for filtering and annotating potential variants
+might assess the validity of a variant using the quality characteristics of all reads that overlap the putative variant.
+
+To support these algorithms, we provide a ``region'' or ``spatial'' join primitive. The algorithm used is described
+in algorithm~\ref{alg:region-join} and takes as input two sets (RDDs, see Zaharia et al~\cite{zaharia12}) of
+\texttt{ReferenceRegions}, a data structure that represents intervals along the 1-D genomics coordinate
+space. It produces the set of all overlapping \texttt{ReferenceRegion} pairs. The $hulls$ variable contains
+the set of convex hulls and is broadcasted to all compute nodes during the join.
+
+\begin{algorithm}
+\caption{Partition And Join Regions via Broadcast}
+\label{alg:region-join}
+\begin{algorithmic}
+\STATE $left \leftarrow$ input dataset; left side of join
+\STATE $right \leftarrow$ input dataset; right side of join
+\STATE $regions \leftarrow left$.map($data \Rightarrow $generateRegion($data$))
+\STATE $regions \leftarrow regions$.groupBy($region \Rightarrow region$.$name$)
+\STATE $hulls \leftarrow regions$.findConvexHull()
+\STATE $hulls$.broadcast()
+\STATE $keyLeft \leftarrow left$.keyBy($data \Rightarrow $getHullId($data$, $hulls$))
+\STATE $keyRight \leftarrow right$.keyBy($data \Rightarrow $getHullId($data$, $hulls$))
+\STATE $joined \leftarrow keyLeft$.join($keyRight$)
+\STATE $truePositives \leftarrow joined$.filter($r1, r2 \Rightarrow r1$.overlaps($r2$))
+\RETURN $truePositives$
+\end{algorithmic}
+\end{algorithm}
+
+To find the maximal set of non-overlapping regions, we must find the convex hull of all regions emitted.
+We present a distributed algorithm for finding convex hulls in Appendix \ref{sec:convex-hull}. The
+distributed convex hull computation problem is important because it is used both for computing regions
+for partitioning during a region join and for performing INDEL realignment.
+
+While the join described above is a broadcast join, a region join can also be implemented via a straightforward
+shuffle-based approach, which is described in Algorithm~\ref{alg:shuffle-region-join}. The \texttt{partitionJoinFn}
+function maintains two iterators (one each from both the left and right collections), along with a buffer. This buffer is
+used to track all key-value pairs from the right collection iterator that \emph{could} match to a future key-value pair
+from the left collection iterator. We prune this buffer every time that we advance the left collection iterator. For
+simplicity, the description of Algorithm~\ref{alg:shuffle-region-join} ignores the complexity of processing keys that cross
+partition boundaries. In our implementation, we replicate keys that cross partition boundaries into both partitions.
+
+\begin{algorithm}
+\caption{Partition And Join Regions via Shuffle}
+\label{alg:shuffle-region-join}
+\begin{algorithmic}
+\STATE $left \leftarrow$ input dataset; left side of join
+\STATE $right \leftarrow$ input dataset; right side of join
+\STATE $partitions \leftarrow left$.getPartitions()
+\STATE $left \leftarrow left$.repartitionAndSort($partitions$)
+\STATE $right \leftarrow right$.repartitionAndSort($partitions$)
+\STATE $joined \leftarrow left$.zipPartitions($right$, \texttt{partitionJoinFn})
+\RETURN $joined$
+\end{algorithmic}
+\end{algorithm}
+
+These joins serve as a core that we can use to build other abstractions with. For example, self-region joins and
+multi-region joins are common in genomics, and can be easily implemented using the above implementations.
+We are currently working to implement further parallel spatial functions such as sliding windows, using techniques
+similar to the shuffle-based join. We are working to characterize the performance differences between the two
+join strategies described above. In the future, we hope to enable the use of the region join in a SQL based system
+such as \texttt{Spark SQL}~\cite{armbrust15}.
+
+\section{Schema Design for Representing Genomic Data}
+\label{sec:schema-design}
+
+A common criticism of bioinformatics as a field surrounds the proliferation of file formats. Short read data alone is
+stored in four common formats: \texttt{FASTQ}~\cite{cock10}, \texttt{SAM}~\cite{li09}, \texttt{BAM}, and
+\texttt{CRAM}~\cite{fritz11}. While these formats all represent different layouts of data on disk, they tend to be
+logically harmonious. Due to this logical congruency of the different formats, we chose to build \texttt{ADAM}
+on top of a logical schema, instead of a binary format on disk. While we do use Apache \texttt{Parquet}~\cite{parquet} to
+materialize data on disk, the Apache \texttt{Avro}~\cite{avro} schema is used as a narrow waist in the system,
+that enables ``legacy'' formats to be processed identically to data stored in \texttt{Parquet} with modest performance
+degradation.
+
+We made several high level choices when designing the schemas used in \texttt{ADAM}. First, the schemas are fully
+denormalized, which reduces the cost of metadata access and simplifies metadata distribution. We are able to
+get these benefits without greatly increasing the cost of memory access because our backing store~(\texttt{Parquet})
+makes use of run length and dictionary encoding, which allows for a single object to be allocated for highly repetitive
+elements on read. Another key design choice was to require that all fields in the schema are nullable; by enforcing
+this requirement, we enable arbitrary user specified projections. Arbitrary projections can be used to accelerate
+common sequence quality control algorithms such as Flagstat~\cite{massie13, nothaft15}.
+
+We have reproduced the schemas used to describe reads, variants, and genotypes below. \texttt{ADAM} also
+contains schemas for describing assembled contigs, genomic features, and variant annotations, but we have
+not included them in this section.
+
+\begin{lstlisting}[caption=\texttt{ADAM} read schema]
+record AlignmentRecord {
+  /** Alignment position and quality */
+  Contig contig;
+  long start;
+  long oldPosition;
+  long end;
+
+  /** read ID, sequence, and quality */
+  string readName;
+  string sequence;
+  string qual;
+  
+  /** alignment details */
+  string cigar;
+  string oldCigar;
+  int mapq;
+  int basesTrimmedFromStart;
+  int basesTrimmedFromEnd;
+  boolean readNegativeStrand;
+  boolean mateNegativeStrand;
+  boolean primaryAlignment;
+  boolean secondaryAlignment;
+  boolean supplementaryAlignment;
+  string mismatchingPositions;
+  string origQual;
+
+  /** Read status flags */
+  boolean readPaired;
+  boolean properPair;
+  boolean readMapped;
+  boolean mateMapped;
+  boolean firstOfPair;
+  boolean secondOfPair;
+  boolean failedVendorQualityChecks;
+  boolean duplicateRead;
+
+  /** optional attributes */
+  string attributes;
+
+  /** record group metadata */
+  string recordGroupName;
+  string recordGroupSequencingCenter;
+  string recordGroupDescription;
+  long recordGroupRunDateEpoch;
+  string recordGroupFlowOrder;
+  string recordGroupKeySequence;
+  string recordGroupLibrary;
+  int recordGroupPredictedMedianInsertSize;
+  string recordGroupPlatform;
+  string recordGroupPlatformUnit;
+  string recordGroupSample;
+
+  /** Mate pair alignment information */
+  long mateAlignmentStart;
+  long mateAlignmentEnd;
+  Contig mateContig;
+}
+\end{lstlisting}
+
+Our read schema maps closely to the logical layout of data presented by \texttt{SAM} and \texttt{BAM}.
+The main modifications relate to how we represent metadata, which has been denormalized across the record.
+All of the metadata from the sequencing run and prior processing steps are packed into the record
+group metadata fields. The program information describes the processing lineage of the sample and
+is expected to be uniform across all records, thus it compresses extremely well. The record group
+information is not guaranteed to be uniform across all records, but there are a limited number number
+of record groups per sequencing dataset. This
+metadata is string heavy, which benefits from column-oriented decompression and makes proper deserialization from disk important. Although the
+information consumes less than 5\% of space on disk, a poor deserializer implementation may replicate
+a string per field per record, which greatly increases the amount of memory allocated and the garbage
+collection~(GC) load.
+
+\begin{lstlisting}[caption=\texttt{ADAM} variant and genotype schemas]
+enum StructuralVariantType {
+  DELETION,
+  INSERTION,
+  INVERSION,
+  MOBILE_INSERTION,
+  MOBILE_DELETION,
+  DUPLICATION,
+  TANDEM_DUPLICATION
+}
+
+record StructuralVariant {
+  StructuralVariantType type;
+  string assembly;
+
+  boolean precise;
+  int startWindow;
+  int endWindow;
+}
+
+record Variant {
+  Contig contig;
+  long start;
+  long end;
+
+  string referenceAllele;
+  string alternateAllele;
+  StructuralVariant svAllele;
+
+  boolean isSomatic;
+}
+
+enum GenotypeAllele {
+  Ref,
+  Alt,
+  OtherAlt,
+  NoCall
+}
+
+record VariantCallingAnnotations {
+  float variantCallErrorProbability;
+
+  array<string> variantFilters;
+
+  int readDepth;
+  boolean downsampled;
+  float baseQRankSum;
+  float clippingRankSum;
+  float fisherStrandBiasPValue = null;
+  float haplotypeScore;
+  float inbreedingCoefficient;
+  float rmsMapQ;
+  int mapq0Reads;
+  float mqRankSum;
+  float variantQualityByDepth;
+  float readPositionRankSum;
+
+  array<int> genotypePriors;
+  array<int> genotypePosteriors;
+
+  float vqslod;
+  string culprit;
+  boolean usedForNegativeTrainingSet;
+  boolean usedForPositiveTrainingSet;
+
+  map<string> attributes;
+}
+
+record Genotype {
+  Variant variant;
+  VariantCallingAnnotations variantCallingAnnotations;
+
+  string sampleId;
+  string sampleDescription;
+  string processingDescription;
+
+  array<GenotypeAllele> alleles;
+
+  float expectedAlleleDosage;
+  int referenceReadDepth;
+  int alternateReadDepth;
+  int readDepth;
+  int minReadDepth;
+  int genotypeQuality;
+  array<int> genotypeLikelihoods;
+  array<int> nonReferenceLikelihoods;
+  array<int> strandBiasComponents;
+
+  boolean splitFromMultiAllelic;
+
+  boolean isPhased;
+  int phaseSetId;
+  int phaseQuality;
+}
+\end{lstlisting}
+
+The variant and genotype schemas present a larger departure from the representation used by the Variant Call
+Format~(\texttt{VCF}). The most noticeable difference is that we have migrated away from \texttt{VCF}'s variant oriented
+representation to a matrix representation. Instead of the variant record serving to group together genotypes, the
+variant record is embedded within the genotype. Thus, a record represents the genotype assigned to a sample,
+as opposed to a \texttt{VCF} row, where all individuals are collected together. The second major modification is to assume
+a biallelic representation\footnote{In a biallelic representation, we describe the genotype of a sample at a position or
+interval as the composition of a reference allele and a single alternate allele. If multiple alternate alleles segregate at
+the site (e.g., there are two known SNPs in a population at this site), we create multiple biallelic variants for the site.}.
+This differs from \texttt{VCF}, which allows multiallelic records. By limiting
+ourselves to a biallelic representation, we are able to clarify the meaning of many of the variant calling annotations. If a
+site contains a multiallelic variant (e.g., in \texttt{VCF} parlance this could be a \texttt{1/2} genotype), we split the
+variant into two or more biallelic records. The sufficient statistics for each allele should then be computed under
+a reference model similar to the model used in genome \texttt{VCF}s. If the sample does contain a multiallelic variant at
+the given site, this multiallelic variant is represented by referencing to another record via the \texttt{OtherAlt}
+enumeration.
+
+These representations achieve high compression versus the legacy formats. We provide a detailed breakdown of
+compression in~\S\ref{sec:compression}. \texttt{ADAM} data stored in \texttt{Parquet} achieves an
+approximately 25\% reduction in file size over compressed \texttt{BAM} for read data, and a 66\% reduction
+over \texttt{GZIP}ped \texttt{VCF} for variant data.
+
 \part{Algorithms and Tools}
 
 \chapter{Automatic Parallelization of Legacy Tools with \textsc{Cannoli}}
 \label{chap:cannoli}
+
+\begin{itemize}
+\item Will never be able to eliminate single node tools
+  \begin{itemize}
+  \item Most/all current widely used tools are designed for a single node
+  \item Certain tools (e.g., aligners) pay a steep performance penalty moving out of C/C++
+  \item Diversity of genomic workflows is too large ($>$100 sequencing assays)
+  \end{itemize}
+\item Several pipelines rely on manually chunking up tools to run in parallel:
+  \begin{itemize}
+  \item GATK Queue
+  \item SpeedSeq/FreeBayes Parallel
+  \end{itemize}
+\item Several tools have custom Hadoop Streaming/Spark wrappers:
+  \begin{itemize}
+  \item BWA through Seal, CS-BWAMEM, BWASpark
+  \item RNA-Rail
+  \item CrossBow, Cloudburst
+  \end{itemize}
+\item We should be able to automate this process:
+  \begin{itemize}
+  \item Many genomics tools are built around a streaming paradigm
+  \item If we can provide automated chunking and process setup, then we are good to go
+  \end{itemize}
+\item Two part architecture:
+  \begin{itemize}
+  \item \texttt{pipe} API in \textsc{ADAM}: auto-parallelization architecture
+  \item Tool wrappers in \textsc{Cannoli}
+  \end{itemize}
+\item Is it a truly general approach?
+  \begin{itemize}
+  \item No.
+  \item Tools that need an all-reduce aren't a good match (e.g., Kallisto/Sailfish/Salmon,
+    CNV callers).
+  \item However, this approach works well for the majority of tools.
+  \end{itemize}
+\end{itemize}
+
+\section{Accomodating Single-node Tools in \textsc{ADAM} With the \texttt{pipe} API}
+\label{sec:pipe-api}
+
+\begin{itemize}
+\item The \textsc{pipe} API provides a simple API that autoparallelizes a command
+  across a cluster that supports Apache Spark:
+  \begin{itemize}
+  \item User specifies command, files to copy locally, environment settings
+  \item ADAM infers partitioning from attached sequences
+  \item Piped formats are specified at compile-time, optionally at runtime
+  \end{itemize}
+\item Implementation:
+  \begin{itemize}
+  \item For data aligned to a reference genome, uses fixed size chunking, built on
+    region join infrastructure~(\S\ref{sec:query-patterns}); user can specify flank size
+  \item Once data is partitioned, we open up a subprocess, and connect to stdin/out of
+    this process.
+  \item Data is formatted using In/Out formatters:
+    \begin{itemize}
+    \item Converts data from ADAM schemas into stream in legacy format, and vice versa
+    \item \textsc{ADAM} supports a broad range of codecs, including...
+    \end{itemize}
+  \end{itemize}
+\end{itemize}
+
+\section{Packaging Parallelized Single-node Tools in \textsc{Cannoli}}
+\label{sec:parallelizing-in-cannoli}
+
+\begin{itemize}
+\item Approach:
+  \begin{itemize}
+  \item Delegate to \texttt{pipe} API as much as possible
+  \item Transparently support both local and ``remote'' reference files
+  \item Support native executables, but default to Docker for convenience of packaging
+  \end{itemize}
+\item Tools supported:
+  \begin{itemize}
+  \item Aligners:
+    \begin{itemize}
+    \item BWA
+    \item Bowtie2
+    \item SNAP
+    \end{itemize}
+  \item Variant callers:
+    \begin{itemize}
+    \item FreeBayes
+    \item SAMTools mpileup
+    \end{itemize}
+  \item Annotation tools:
+    \begin{itemize}
+    \item SNPEff
+    \item BEDTools
+    \end{itemize}
+  \end{itemize}
+\end{itemize}
 
 \chapter{Scalable Alignment Preprocessing with \textsc{ADAM}}
 \label{chap:adam}
@@ -540,7 +1121,7 @@ mishandled if the two reads in the pair overlap.
 
 In the rest of this section, we discuss the high level implementations of these algorithms.
 
-\subsection{BQSR Implementation}
+\section{BQSR Implementation}
 \label{sec:bqsr-implementation}
 
 Base quality score recalibration seeks to identify and correct correlated errors in base quality score estimates.
@@ -613,7 +1194,7 @@ Binomial likelihood and a Beta(1, 1) prior.
 After these probabilities are estimated, we go back across the input read dataset and reconstruct the quality
 scores of the read by using the covariate assigned to the read to look into the covariate table.
 
-\subsection{Indel Realignment Implementation}
+\section{Indel Realignment Implementation}
 \label{sec:indel-realignment-implementation}
 
 Although global alignment will frequently succeed at aligning reads to the proper region of the genome, the local
@@ -625,13 +1206,13 @@ the convex hull of these candidate sites, to determine the windows we need to re
 identified, we generate candidate haplotype sequences, and realign reads to minimize the overall quantity of mismatches
 in the region.
 
-\subsubsection{Realignment Target Identification}
+\subsection{Realignment Target Identification}
 \label{sec:realignment-target-identification}
 
 To identify target regions for realignment, we simply map across all the reads. If a read contains INDEL evidence,
 we then emit a region corresponding to the region covered by that read.
 
-\subsubsection{Convex-Hull Finding}
+\subsection{Convex-Hull Finding}
 \label{sec:convex-hull}
 
 Once we have identified the target realignment regions, we must then find the maximal convex hulls
@@ -701,7 +1282,7 @@ Algorithm~\ref{alg:join-targets}.
 
 The set returned by this function is used as an index for mapping reads directly to realignment targets.
 
-\subsubsection{Candidate Generation and Realignment}
+\subsection{Candidate Generation and Realignment}
 \label{sec:candidate-generation-realignment}
 
 Once we have generated the target set, we map across all the reads and check to see if the read overlaps
@@ -743,7 +1324,7 @@ consensus has a log-odds ratio~(LOD) that is greater than $5.0$ with respect to 
 reads. This is done by recomputing the CIGAR and MDTag for each new alignment. Realigned reads have their
 mapping quality score increased by 10 in the Phred scale.
 
-\subsection{Duplicate Marking Implementation}
+\section{Duplicate Marking Implementation}
 \label{sec:duplicate-marking-implementation}
 
 Reads may be duplicated during sequencing, either due to clonal duplication via PCR before sequencing, or
@@ -792,7 +1373,7 @@ All of these stages are implemented as a parallel application that runs on top o
 \textsc{Apache Spark}~\cite{zaharia10, zaharia12}, using the \textsc{ADAM}
 library~\cite{massie13, nothaft15}.
 
-\subsection{INDEL Reassembly}
+\section{INDEL Reassembly}
 \label{sec:indel-reassembly}
 
 As opposed to traditional realignment based approaches, we canonicalize INDELs
@@ -810,7 +1391,7 @@ canonical set of INDELs, we realign the reads to each INDEL sequence using
 \textsc{ADAM}'s INDEL realigner, in known INDELs mode. For a full description
 of the INDEL realignment process, see~\S\ref{sec:indel-realignment-implementation}.
 
-\subsubsection{Preliminaries}
+\subsection{Preliminaries}
 \label{sec:formulation}
 
 Our method relies on an \emph{indexed de Bruijn} graph, which is a slight
@@ -978,7 +1559,7 @@ edits~(e.g., Ukkonen's algorithm~\cite{ukkonen85}). By this, we can achieve $O(n
 Alternatively, we can decide to not further canonicalize the site, and to express it as a combined
 insertion and deletion. For simplicity and performance, we use this approach in \textsc{Avocado}.
 
-\subsubsection{Implementation}
+\subsection{Implementation}
 \label{sec:implementation}
 
 As alluded to earlier in this section, we can use this indexed de Bruijn concept
@@ -1051,7 +1632,7 @@ As seen in~\S\ref{sec:accuracy}, coupling local realignment with our INDEL
 canonicalization scheme improves SNP calling accuracy to comparable with the
 state-of-the-art, while improving INDEL calling accuracy by 2--5\%.
 
-\subsection{Genotyping}
+\section{Genotyping}
 \label{sec:genotyping}
 
 \textsc{Avocado} performs genotyping as a several stage process where variants
@@ -1072,7 +1653,7 @@ in these regions are likely to be caused by artifacts in the reference genome th
 confound mapping and thus are uninformative or spurious, and are hard filtered by
 our pipeline~(see~\S\ref{sec:variant-filtration}).
 
-\subsubsection{Variant Discovery and Overlapping}
+\subsection{Variant Discovery and Overlapping}
 \label{sec:discovery}
 
 To identify a set of variants to score, we scan over all of the input reads,
@@ -1129,7 +1710,7 @@ itself, which causes a minor amount of data duplication in memory. By
 eliminating this data duplication, we should be able to eliminate this
 engineering constraint.
 
-\subsubsection{Genotyping Model}
+\subsection{Genotyping Model}
 \label{sec:genotyping-model}
 
 Once we have joined our reads against our variants, we score each read using
@@ -1179,7 +1760,7 @@ sample mode, we assume no prior probability. We support a joint variant calling
 mode that computes reference allele frequency for use in a binomial prior
 probability distribution.
 
-\subsubsection{Variant Filtration}
+\subsection{Variant Filtration}
 \label{sec:variant-filtration}
 
 Once we have called variants, we pass the calls through a hard filtering engine.
