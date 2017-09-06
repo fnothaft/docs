@@ -1796,6 +1796,81 @@ However, we will add this functionality soon.
 \chapter{Future Work}
 \label{sec:future-work}
 
+\begin{itemize}
+\item What were our overarching the goals?
+  \begin{itemize}
+  \item Make genomic analysis easier to scale
+  \item Improve variant calling accuracy
+  \item Make genomic data analysis faster
+  \end{itemize}
+\item Several future directions:
+  \begin{itemize}
+  \item Further improving query performance in \textsc{ADAM}
+  \item Extending variant calling algorithms in \textsc{Avocado}
+  \item Hardware acceleration for genomics
+  \end{itemize}
+\end{itemize}
+
+\section{Further Query Optimization in \textsc{ADAM}}
+\label{sec:extensions-adam}
+
+\begin{itemize}
+\item Preserving sorted knowledge in \textsc{ADAM}
+  \begin{itemize}
+  \item Needed to improve performance of region joins
+  \item Currently implemented, but refactoring to extend to legacy genomic datatypes
+  \item Store sorted state as metadata in the GenomicRDD.
+  \end{itemize}
+\item Extending what transformations can be optimized by partitioning:
+  \begin{itemize}
+  \item Currently just accelerate joins
+  \item Aggregation queries naturally fall out of this as well
+  \end{itemize}
+\item Exposing other primitives as well:
+  \begin{itemize}
+  \item Convex hull merge
+  \end{itemize}
+\end{itemize}
+
+\section{Extensions to \textsc{Avocado}}
+\label{sec:extending-avocado}
+
+\begin{itemize}
+\item Deep learning for variant calling:
+  \begin{itemize}
+  \item Current model for INDEL discovery is intolerant of read errors
+  \item Doesn't model error distribution over technologies
+  \item Google \textsc{DeepVariant} uses deep learning but in an unglamorous way
+  \item Would the \textsc{Avocado} INDEL canonicalization algorithm be a better fit?
+  \end{itemize}
+\item Somatic variant calling:
+  \begin{itemize}
+  \item \textsc{Avocado} currently only models a sample with known ploidy
+  \item Can we accomodiate pooled or somatic variant calling?
+  \item WIP towards porting over MuTect
+  \end{itemize}
+\end{itemize}
+
+\section{Hardware Acceleration for Genomic Data Processing}
+\label{sec:genomic-hardware}
+
+\begin{itemize}
+\item With improved I/O, single thread performance remains an issue
+  \begin{itemize}
+  \item As seen with \textsc{Cannoli}, hard to outperform C++ from Java
+  \item However, marginal benefit to jumping to C++ is unclear
+  \item Can we go directly to hardware?
+  \end{itemize}
+\item WIP on Genie library
+\item How can we make this even more accessible?
+  \begin{itemize}
+  \item SQL as target language is a great opportunity
+  \item Integrate Genie with Apache Arrow
+  \item Allow generation of FPGA from Spark SQL plan
+  \end{itemize}
+\item How can we easily accomodate UDFs?
+\end{itemize}
+
 \chapter{Conclusion}
 \label{chap:conclusion}
 
