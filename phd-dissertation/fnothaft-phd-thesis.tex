@@ -102,7 +102,7 @@ of YouTube by 2021~\cite{stephens15}.
 
 The massive scale of the sequencing data this is being acquired enables
 novel insight into biological phenomena. The Exome Aggregation
-project~\cite{lek16}--now gnomAD--provides an especially powerful
+project~(ExAC,~\cite{lek16})--now gnomAD--provides an especially powerful
 demonstration: by sequencing more than 60,000 exomes, we have been able
 to better understand the impact of genomic variation on prion
 disease~\cite{minikel16} and cardiovascular disease~\cite{walsh16}, and to
@@ -196,107 +196,133 @@ Big Data Genomics/\textsc{ADAM} project.
 \section{Economic Trends and Population Scale Sequencing}
 \label{sec:economic-trends-population-scale}
 
-\begin{itemize}
-\item Genomic data is often only meaningful when viewed in aggregate.
-  \begin{itemize}
-  \item The association between genotype and phenotype is often weak, unless
-    the variant under study is strongly pathogenic.
-  \item Many diseases are not driven by a single genotype, but rather by the
-    combined effect of multiple genotypes.
-  \item For example, in AML there is a spread spectrum of mutations which
-    fall into several clearly distinct disease subtypes. What is the impact of
-    a single mutation?
-  \end{itemize}
-\item Technical innovation has made large scale sequencing tractible.
-  \begin{itemize}
-  \item NHGRI ``Moore's Law'' plot.
-  \item While the sequencing technology used in the Human Genome Project was
-    expensive, current whole genome sequencing technology is inexpensive.
-  \item Additionally, exome and targeted capture techniques can further reduce
-    costs.
-  \end{itemize}
-\item Population scale sequencing projects are no longer unprecidented.
-  \begin{itemize}
-  \item The 1,000 Genomes project is now small data; there are a multitude of
-    projects that have sequenced at the 10,000+ sample scale.
-  \item These include the UK10K, Exome Aggregation Consortium, and Genomics
-    England, among others.
-  \end{itemize}
-\item Finally, large scale sequencing projects are moving out of research and
-  into practice.
-  \begin{itemize}
-  \item Large scale sequencing projects can inform both drug design and risk
-    models.
-  \item GSK/NHS public/private model for Genomics England
-  \item Modeling risk via sequencing for cancer at Color Genomics
-  \item Regeneron/Geisenger tie-up
-  \end{itemize}
-\end{itemize}
+The need for tools capable of processing large genomic datasets is precipitated
+by the rise of popultation scale sequencing. While the raw data from a single
+genome may be provide insight into the fitness of a single individual, genetic
+data is most meaningful when viewed in aggregate across large cohorts.
+For variants that do not have an obvious and severe pathogenic effect, our best
+lens for understanding their impact from genomic data is through statistical
+association testing. While genome wide association testing~(GWAS) has yielded
+some successes, including prominent findings in neurogenetics~\cite{ripke14},
+GWAS has faced several limitations. First, the association between genotype and
+phenotype is often weak, unless the variant under study is strongly
+pathogenic~\cite{shi16}. Additionally, few traits are truly Mendelian.
+For complex traits, which are driven by the combined effect of multiple
+genotypes~\cite{boyle17}, much heritability is explained through the complex
+interaction of variants that impact regulatory regions. Modeling the effect of
+non-coding changes is still an active area of work~\cite{weingarten14}.
+Additionally, some diseases decompose into disease subtypes when studied in
+aggregate. A strong example of this is acute myleoid leukemia~(AML): genomic
+sequencing of germlines and tumors from a cohort of AML patients reveals
+that AML is composed of eight or more genetic subtypes~\cite{aml13}. This
+hinders classifying the impact of a single mutation, especially as some
+gene mutations can be shared across disease subtypes.
+
+These population scale sequencing projects have been enabled entirely by
+technical innovation. While it cost more than \$100M to complete the data
+acquisition for the Human Genome Project, the cost of sequencing a single
+genome has dropped to under \$1,000~\cite{nhgri}. This has been driven by
+continuous technical improvements by Illumina and competing sequencer vendors.
+With the continued improvement of nanopore sequencing~\cite{jain17}, we may see
+an additional precipitous drop in sequencing costs, as nanopore sequencers have
+both lower capital and reagent costs relative to the Illumina sequencing
+platform, but are currently limited in throughput and accuracy.
+
+At the intersection of these two trends, population-scale sequencing has arisen.
+The first population scale sequencing project was the 1,000 Genomes
+project~\cite{1kg}, which collected a total data catalog of more than 75
+terabytes~(TB) of data. Since then, sequencing projects have pushed beyond
+petabyte-scale~(PB), with the 3PB catalog collected by The Cancer Genome
+Atlas~(TCGA,~\cite{weinstein13}) and the 300PB data catalog collected by the
+ExAC~\cite{lek16} project. While population-scale sequencing has largely been
+done in academic settings to date, these sequencing projects are beginning
+to move into industrial and medical settings. These include the collaboration
+between the United Kingdom's Biobank, GlaxoSmithKline, and Regeneron to sequence
+the 500,000 individuals in the UK Biobak~\cite{ukbiobank}, and the Geisenger
+MyCode collaboration with Regeneron~\cite{carey16}.
 
 \section{The Case for Distributed Computing for Genomic Analysis}
 \label{sec:distributed-computing-for-genomics}
 
-\begin{itemize}
-\item Most genomic analysis tasks map naturally to distributed computing.
-  \begin{itemize}
-  \item Heavyweight analyses either typically work on unaligned data, or on
-    a sorted stream across aligned data.
-  \item These patterns typically can be parallelized without significant
-    communication.
-  \item Additionally, there are many queries that map directly onto
-    relational primitives.
-  \end{itemize}
-\item We believe we need to clean slate re-architect genomics for distributed
-  computing.
-  \begin{itemize}
-  \item Genomics tools are typically designed assuming a flattened stack running
-    on a single node, or on a HPC-style cluster.
-  \item There have been several attempts to retrofit tools onto distributed
-    computing, e.g., \textsc{CloudBurst}/\textsc{Crossbow} using Hadoop
-    Streaming.
-  \item There have been several attempts to retrofit genomics specific file
-    formats onto distributed query architectures, e.g., \textsc{SegPig},
-    \textsc{BioPig}.
-  \item However, these implementations provide either poor programming costs or
-    inefficient and limited query mechanisms.
-  \item By doing a clean-slate rearchitecture, we can eliminate architectural
-    problems and provide better user-facing query models with better performance.
-  \end{itemize}
-\end{itemize}
+The rapid uptake of genome sequencing in academic, industrial, and clinical
+settings is driving the total number of human genomes sequenced to double
+approximately once every seven months~\cite{stephens15}. This far outpaces
+Moore's law at its peak, and is a rate of increase approximately four times
+greater than current estimates of Moore's law, which peg the doubling of
+transistor counts to occur approximately every two years. As a result of
+this growth in the volume of sequencing data, legacy tools are struggling to
+handle genome-scale analyses across cohorts~\cite{schadt10, linderman17}.
+We believe that distributed computing is a natural solution to these problems.
+
+As asserted in the original GATK manuscript that proposed a single-node
+MapReduce architecture for genomic data processing~\cite{mckenna10}, most
+genomic analysis tasks map naturally to a share-nothing computing architecture.
+Heavyweight genomic data analyses like alignment, variant calling, and
+association testing either typically work on unaligned data, or are implemented
+on a sorted stream traversing aligned data (the ``walker'' model). These
+patterns either lack data dependencies~(unaligned reads, or analyses that look
+at a single genomic locus), or have well defined spatial communication
+patterns~(process data overlapping a given locus). These computations can
+typically be paralellized with minimal communication. Additionally, many genomic
+analysis queries map directly onto relational primitives which are implemented
+in existing distributed data analysis platforms~\cite{armbrust15}. An example of
+this is a genomic association test, which can be implemented as an aggregation
+query.
+
+To take full advantage of distributed computing, we believe that we need to do a
+clean slate re-architecture of the genomic data processing infrastructure. In a
+typical genomic processing pipeline, the analysis tools are typically designed
+assuming a flattened stack running on a single node, or on a high performance
+computing~(HPC)-style cluster with shared storage. These systems typically make
+strong assumptions about the cost of making random accesses into a POSIX file
+system, and present low level abstractions to users. While there have been
+several attempts to retrofit legacy tools onto distributed
+computing~(\textsc{CloudBurst}~\cite{schatz09}
+and~\textsc{Crossbow}~\cite{langmead09}), these approaches have typically used
+custom wrappers around \textsc{Apache Hadoop Streaming} and have been
+non-general. There have also been several attempts to retrofit genomics-specific
+file formats onto distributed query
+architectures~(\textsc{SegPig}~\cite{schumacher14} and
+\textsc{BioPig}~\cite{nordberg13}), but these implementations provide either
+poor programming models or inefficient implementations. By doing a clean-slate
+rearchitecture, we can eliminate architectural problems and provide better
+user-facing query models with better performance.
 
 \section{Mapping Genomics onto Distributed Computing using \textsc{ADAM}}
 \label{sec:mapping-genomics-to-distributed-computing}
 
+To address these problems, we propose \textsc{ADAM}, a comprehensive framework
+for processing genomic data using the \textsc{Apache Spark} framework for
+distributed computing. \textsc{ADAM} defines schemas for a full range of genomic
+datatypes, which provides a data-indepent query model. These schemas form the
+basis of a narrow waisted stack, which yields APIs that support both genomic
+query and metadata management. By extending \textsc{ADAM} onto \textsc{Apache
+  Spark SQL}, these APIs can be used across multiple languages. This extends the
+power of distributed computing to bioinformatics users who are writing in the
+Python or R languages, as opposed to previous tools that were centered either
+around Java or the Pig scripting language~\cite{nordberg13, schumacher14}.
+
+To demonstrate \textsc{ADAM}, we have built an end-to-end variant calling
+pipeline. This pipeline includes distributed implementations of alignment, read
+preprocessing, and variant calling. The pipeline can run end-to-end on a
+$60\times$ coverage whole genome in under an hour, at a cost of $<$\$15 on
+cloud computing. This pipeline provides results comparable to state-of-the-art
+for single nucleotide variant~(SNV) calling, and high accuracy~(97\%) for
+insertion and deletion~(INDEL) variant calling. Additionally, the alignment
+step in this pipeline is implemented on top of a general interface for
+parallelizing single-node genomics tools, which makes it possible to leverage
+distributed computing without reimplementing a tool or developing custom shims,
+unlike prior approaches~\cite{langmead09, schatz09}.
+
+As a result, \textsc{ADAM} improves over conventional genomics tools by providing:
+
 \begin{itemize}
-\item To this end, we propose \textsc{ADAM}.
-  \begin{itemize}
-  \item Define schemas for genomic datatypes, which provide data independence.
-  \item These schemas form the basis of a narrow waisted stack, which yields
-    APIs that support both genomic query and metadata management, and which can
-    be used across multiple languages.
-  \item We implement this architecture on top of \textsc{Apache Spark}, one of
-    the most widely used distributed computing frameworks.
-  \end{itemize}
-\item To demonstrate \textsc{ADAM}, we have built an end-to-end variant calling
-  pipeline.
-  \begin{itemize}
-  \item This pipeline includes distributed implementations of alignment, read
-    preprocessing, and variant calling.
-  \item The pipeline can run end-to-end on a $60\times$ coverage whole genome
-    in under an hour, at a cost of $<$\$15 on cloud computing.
-  \item This pipeline provides results comparable to state of the art for SNV
-    calling, and high accuracy (97\%) for INDEL calling.
-  \end{itemize}
-\item \textsc{ADAM} improves over conventional genomics tools by providing:
-  \begin{itemize}
-  \item Schemas which can support loading data from a large variety of formats.
-  \item High level, quasi-relational APIs for manipulating genomic data in both
-    single node and cluster environments.
-  \item Parallel I/O across genomics file formats.
-  \item A simple API for parallelizing single node genomic tools with a minimal
-    amount of code.
-  \end{itemize}
-\item \textsc{ADAM} has enabled a large ecosystem of work
+\item Schemas which can support loading data from a large variety of formats.
+\item High level, quasi-relational APIs for manipulating genomic data in both
+  single node and cluster environments.
+\item Parallel I/O across genomics file formats.
+\item A simple API for parallelizing single node genomic tools with a minimal
+  amount of code.
 \end{itemize}
 
 \chapter{Background and Related Work}
