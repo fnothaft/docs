@@ -87,48 +87,111 @@ morestring=[b]"}
 \chapter{Introduction}
 \label{chap:introduction}
 
+The rapid decrease in sequencing cost has made large scale sequencing
+tractible. The dramatic improvement in sequencing cost since the Human
+Genome Project has enabled a human whole genome sequence~(WGS) to be
+generated for under \$1,000 in wetlab costs~\cite{nhgri}. This trend
+will continue for the forseeable future, as sequencing vendors like
+Illumina unveil new sequencers such as the NovaSeq that provide even
+higher throughput while also decreasing cost, and as radically new
+sequencing technologies like Oxford Nanopore come online~\cite{jain17}.
+The reduced cost of sequencing enables the use of genome sequencing in
+population health research projects and clinical practice. As a result,
+the total volume of sequencing data produced is expected to exceed that
+of YouTube by 2021~\cite{stephens15}.
+
+The massive scale of the sequencing data this is being acquired enables
+novel insight into biological phenomena. The Exome Aggregation
+project~\cite{lek16}--now gnomAD--provides an especially powerful
+demonstration: by sequencing more than 60,000 exomes, we have been able
+to better understand the impact of genomic variation on prion
+disease~\cite{minikel16} and cardiovascular disease~\cite{walsh16}, and to
+better characterize the effect of structural variation~\cite{ruderfer16}.
+However, this scale of data solves biological problems at the cost of techincal
+and logistical problems. Data storage and transfer has become a serious problem,
+and the focus of many researchers~\cite{fritz11, kozanitis11} and standards
+organizations~\cite{paten15}. Not only is the volume of data large, but
+expensive processing is needed to analyze the data. Due to historical design
+decisions, much of this processing is currently restricted to single node
+architectures that assume POSIX storage APIs. As a result, it can take well
+upwards of 100 hours to analyze the raw read data from a single genome.
+
+We believe that distributed computing architectures are a good match for
+genomic data analysis. Horizontally scalable storage architectures can
+simultaneously provide increased data storage capacities, data access
+throughput, and reduced storage cost. Because most genomic analyses are centered
+on analyzing the genomic data at disparate genomic loci without coordination
+betwen loci, most genomic analysis tasks can be executed in parallel. Even more
+importantly, these analysis patterns cleanly map onto quasi-relational primitives
+that are powerful and can be executed in parallel. Finally, by building upon
+widely used open-source distributed processing architectures like \textsc{Apache
+Spark}~\cite{zaharia12} and \textsc{Hadoop}~\cite{hadoop}, genomics can benefit
+from engineering contributions from a broader swath of engineering.
+
+In this thesis, we introduce \textsc{ADAM}, an application programming
+interface~(API) for processing genomic data using Apache Spark. \textsc{ADAM}
+is based around a novel stack-oriented architecture that uses schemas to define
+the narrow waist in the stack. On top of the schemas, we provide high-level
+APIs that allow computational biologists and bioinformaticians to manipulate
+collections of genomic data in a parallel fashion. The high level APIs extend
+\textsc{Apache Spark}'s Resilient Distributed Dataset~(RDD, see Zahaira et
+al.~\cite{zaharia12}) abstraction with genomics-specific functionality, and
+eliminates the low level ``walker'' pattern~\cite{mckenna10} that is common in
+genomics. At lower levels in the stack, we provide efficient implementations
+of the common genomics query models. By having clearly defined APIs between
+each level of the stack, we are able to exchange layers to optimize query
+performance for a given query, input data type, or cluster/cloud configuration.
+
+Our work on \textsc{ADAM} has resulted in the broad ecosystem of projects
+depicted in Figure~\ref{fig:bdg}. We refer to the tools built on \textsc{ADAM}
+as the ``Big Data Genomics''~(BDG) project. In this dissertation, we will limit
+our focus to \textsc{ADAM}'s architecture and APIs, and the tools and algorithms
+that form the core components of the BDG variant calling pipeline:
+
 \begin{itemize}
-\item The rapid decrease in sequencing cost has made large scale sequencing
-  tractible.
-  \begin{itemize}
-  \item Illumina recently hit $<$\$1,000 per genome.
-  \item New platforms such as Illumina's NovoSeq will provide even higher
-    throughput while also decreasing cost.
-  \item The total volume of sequencing data produced is expected to exceed
-    that of YouTube by 2021.
-  \end{itemize}
-\item However, this solves biological problems at the cost of techincal
-  and logistical problems.
-  \begin{itemize}
-  \item Data storage and capacity is a bottleneck.
-  \item Not only is the volume of data large, but expensive processing is needed
-    to analyze the data.
-  \item Additionally, much of this processing is currently restricted to single
-    node architectures that assume POSIX storage APIs.
-  \end{itemize}
-\item We believe that distributed computing architectures are a good match for
-  genomic data analysis.
-  \begin{itemize}
-  \item Horizontally scalable storage architectures can simultaneously provide
-    increased data storage capacities and data access throughput
-  \item Most genomic analysis tasks can be mapped onto quasi-relational
-    primitives that can be executed in parallel.
-  \item By building upon widely used open-source distributed processing
-    architectures, genomics can benefit from contributions from a broader swath
-    of engineering.
-  \end{itemize}
-\item To this end, we propose the \textsc{ADAM} architecture:
-  \begin{itemize}
-  \item Define schemas for core genomic datatypes, that serve as the ``narrow
-    waist'' in a decoupled stack architecture.
-  \item At the highest levels of the stack, provide APIs that make it simple for
-    computational biologists and bioinformaticians to express their analyses in
-    parallel.
-  \item Within the stack, provide efficient implementations of these queries,
-    and swap in support for a broad range of deployment architectures and data
-    sources.
-  \end{itemize}
+\item \textsc{Cannoli}, which parallelizes single node genomic data processing
+  tools. \textsc{Cannoli} is used in our pipeline for alignment.
+\item The \textsc{ADAM} read transformations, which correct for errors in the
+  aligned reads.
+\item \textsc{Avocado}, a fully parallelized variant caller.
 \end{itemize}
+
+This pipeline is able to call variants on a high coverage ($60\times$) whole
+genome in under one hour when running on commodity cloud computing resources.
+This represents a dramatic improvement in performance over the widely used
+Genome Analysis Toolkit~(GATK, see DePristo et al.~\cite{depristo11}), which
+needed over 100 hours to call variants on the same sample. These tools
+demonstrate how \textsc{ADAM}'s APIs enable bioinformatics analyses to be
+written at a high level, while also allowing for the reuse of code from legacy
+bioinformatics tools.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.95\linewidth]{graphs/bdgenomics-stack.pdf}
+\end{center}
+\caption{The Big Data Genomics ecosystem. Our work on \textsc{ADAM} has
+  built a framework for scalable genomics using external projects like
+  \textsc{Apache Spark}~\cite{zaharia12} and \textsc{Apache
+  Parquet}~\cite{parquet}. On top of \textsc{ADAM}'s core APIs, we have
+  built a broad ecosystem of tools~\cite{tu16, morrow17, linderman17}
+  demonstrating how \textsc{Apache Spark} can accelerate genomic data
+  analysis. To enable the reproducible use of \textsc{Apache Spark} in
+  scientific data analysis workloads, we have contributed to novel,
+  cloud-native workflow systems~\cite{vivian17}.}
+\label{fig:bdg}
+\end{figure}
+
+In this dissertation, we begin by describing the deluge of genomic data and the
+tools that are used to process, manipulate, and store genomic data. In part two,
+we then describe the requirements for a distributed genomic data analysis
+framework and introduce \textsc{ADAM}'s architecture. Part three describes how
+we built the \textsc{Cannoli}-\textsc{ADAM}-\textsc{Avocado} variant calling
+pipeline on top of \textsc{ADAM}'s architecture, and the novel algorithms and
+architectural refinements that were needed. We then validate the accuracy of
+this pipeline in part four using ground truth datasets~\cite{zook15} and a large
+scale sequencing project~\cite{mallick16}. We conclude by describing open
+problems and future directions for this research, as well as the impact of the
+Big Data Genomics/\textsc{ADAM} project.
 
 \section{Economic Trends and Population Scale Sequencing}
 \label{sec:economic-trends-population-scale}
