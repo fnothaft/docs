@@ -525,23 +525,47 @@ nothaft15} libraries.
 \subsection{Genomic Data Representations}
 \label{sec:genomic-data-representations}
 
+Currently, genomic data are stored in a myriad of file formats that largely
+descend from formats that were developed during the 1,000 Genomes
+project~\cite{1kg}. Some of these formats are much older; many genomic feature
+file formats descend from the development of the University of California,
+Santa Cruz's (UCSC) Genome Browser~\cite{kent02}, which was developed as part
+of the Human Genome Project~\cite{lander01}, and informal specificiations for
+the FASTQ~\cite{cock09} and FASTA formats date back to at least the nineties,
+through their use in the \textsc{phred}~\cite{ewing98} and
+\textsc{FASTA}/\textsc{FASTP}~\cite{pearson90} tools.
+
+The file formats developed during the 1,000 Genomes project stored high
+throughput sequencing data in tab separated value~(TSV) files. These
+formats included the \textsc{Sequence Alignment/Mapping}~(SAM)
+format~\cite{li09}, which represents genomic reads and the \textsc{Variant Call
+  Format}~(VCF) format~\cite{danecek11}, which was defined to store variants
+and genotypes. The 1000 Genomes project also made significant use of the
+TSV \textsc{Browser Extensible Data}~(BED) format for storing genomic feature
+data. While the BED format had been introduced earlier, the introduction of
+\textsc{BEDTools}~\cite{quinlan10} during the 1,000 Genomes Project drove
+the further use of the BED format. A plethora of textual file formats exist for
+storing genomic feature data, such as the \textsc{NarrowPeak} format, a
+specialized variant of BED that is used by the \textsc{MACS}~\cite{zhang08}
+tool; the \textsc{IntervalList} format, which is used extensively by the
+\textsc{GATK}~\cite{depristo11}; and the \textsc{General Feature Format}~(GFF),
+which is used extensively in sequence annotation projects like the Sequence
+Ontology~\cite{eilbeck05}.
+
+Over time, some of these formats have been replaced by binary variants that
+provide improved compression and performance. SAM has been largely replaced
+in practice by the \textsc{Binary Alignment/Mapping}~(BAM) format, and the
+binary VCF~(BCF) has entered use for storing variant data. In practice,
+textual file formats are still broadly used for storing variant and feature
+data, but they are often compressed using a block-compressed codec, such as
+BGZF~\cite{li11tabix}. There has been significant research towards developing
+compressed storage formats for alignment data~\cite{kozanitis11, fritz11}.
+The CRAM codec has achieved the broadest use, and uses reference-based
+compression to avoid storing read sequence that matches the reference genome.
+Additionally, CRAM can apply lossy compression schemes---such as base quality
+score binning---to achieve further compression.
+
 \begin{itemize}
-\item Widely used formats were developed mostly during the 1,000 Genomes
-  project.
-  \begin{itemize}
-  \item The \textsc{Sequence Alignment/Mapping}~(SAM) format was developed as
-    a way to represent genomic reads.
-  \item The \textsc{Variant Call Format}~(VCF) format was defined to store
-    variants and genotypes.
-  \item Both are tab delimited text file formats that store semistructured data.
-  \end{itemize}
-\item These formats begat later binary versions that provide improved
-  compression and performance.
-  \begin{itemize}
-  \item SAM/VCF were supplanted by binary variants (BAM/BCF)
-  \item Additionally, there was significant interest in compressed storage
-    formats for genomic data (most significantly, CRAM)
-  \end{itemize}
 \item Schemas for representing genomic data:
   \begin{itemize}
   \item GA4GH APIs
