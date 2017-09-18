@@ -341,28 +341,177 @@ As a result, \textsc{ADAM} improves over conventional genomics tools by providin
 \section{Genome Sequencing Technologies}
 \label{sec:genome-sequencing}
 
-\begin{itemize}
-\item How are reads sequenced?
-  \begin{itemize}
-  \item Illumina uses a sequencing-by-synthesis approach.
-  \item Dyes are attached to nucleotides.
-  \item The dyes are imaged, washed off, and new dyes are attached.
-  \item Image to go here.
-  \end{itemize}
-\item Where does the DNA come from?
-  \begin{itemize}
-  \item Sample prep and extraction...
-  \item Details to be added, depending on amount of detail suggested.
-  \end{itemize}
-\item Data characteristics:
-  \begin{itemize}
-  \item Relative error rates, bias patterns, etc...
-  \item Differences between whole genome, whole exome.
-  \end{itemize}
-\end{itemize}
+Since the Human Genome Project released the first assembly of the Human genome
+in 2001~\cite{lander01}, biochemical and algorithmic advancements have enabled
+the broad analysis of biological phenomena through sequencing. Although the
+full spectrum of sequencing-based analyses is beyond the scope of this
+manuscript, these assays rely on encoding a biological phenomena into DNA, which
+is then sequenced and analyzed statistically. In this section, we provide a
+brief introduction to the sequencing process before focusing on the algorithmic
+approaches used to determine the sequence variants in a single genome. We will
+focus on data generated using Illumina sequencers, as this sequencing modality
+is commonly used for genomic variant detection.
+
+To run a sequencing assay, we start by preparing a sequencing library, which is
+then run through a sequencer. This stage creates genomic ``reads'', which
+include a string of bases~(in the A, C, G, T alphabet used by DNA) along with
+estimates of the probability that a single base was read correctly. The library
+preparation stage converts the biological sample into DNA fragments, which we
+can sequence. In the simplest case~(sequencing a genome), we start by extract
+DNA from a collection of cells. We then slice the long DNA strands into shorter
+fragments, before selecting fragments of a certain length (``size selection'').
+The size of fragments collected depends on both the sequencing instrument that
+is being used, and the biological assay being conducted. Common variants on this
+process include exome sequencing (where we start from DNA, but select the regions
+of the genome that encode genes before fragmenting and size selecting reads),
+RNA-seq (where we start by converting single stranded RNA into DNA, which is
+then fragmented and size selected, see~\cite{mortazavi08}). There are many
+biological assays that can be encoded as sequencing and a full review is beyond
+the scope of this manuscript; we refer readers to Soon et al~\cite{soon13} for a
+more comprehensive overview.
+
+Many modern variant analysis pipelines use paired reads from Illumina
+sequencers. Depending on the specific sequencer model and chemistry, Illumina
+sequencers support read lengths ranging from 75 to 300 bases. All reads from an
+Illumina sequencer have the same length, as the length of the read is determined
+by the number of cycles that the sequencer is run. ``Paired''  means that we
+generate two reads from each DNA fragment; we read one read from each strand of
+the DNA, with the two reads coming from opposite ends of the DNA fragment.
+In a conventional sequencing libraries, the DNA fragments include bases that are
+not sequenced; these bases are typically referred to as the ``insert'', and the
+number of bases not sequenced (``insert size'') are controlled through the
+size selection process. For example, if we wanted to prepare a paired sequencing
+library where the read length was 250 bases with an average insert size of 500
+bases, we would select all fragments that were approximately 1,000 bases long
+(250 bases for the first read, approximately 500 bases between the first and
+second read, 250 bases for the second read). There are many variants on this
+process, including those that have negative insert sizes, and ``mate pair''
+libraries that have very long insert sizes~\cite{mardis13}. Additionally,
+library preparation varies tremendously between sequencing vendors. For long
+read sequencers such as the Pacific Biosciences sequencers~\cite{eid09} or
+the Oxford Nanopore sequencers~\cite{clarke09}, the libraries include long DNA
+fragments~(>5,000 bases) that generate a single, full length read.
+
+Illumina sequencers generate reads through a sequencing-by-synthesis approach.
+In this process, flourescent dyes are attached to the DNA bases. The sequencer
+then takes an image of the dyes, which is then converted into the called bases.
+This process runs for a fixed number of cycles, which sets the length of the
+sequenced reads. To ensure that the bases from a single read show up in the same
+locations in the image betwen cycles, the ends of the reads are attached to
+knobs that protrude from glass plates. At the end of each cycle, the dyes are
+washed off of the end of the read, which exposes the next base in the read for
+a new round of dyes to attach to. The probability that a base was sequenced
+correctly is determined by looking at the color and intensity of the base on
+the captured image. Illumina platforms are susceptible to single base substition
+errors, which occur to a 0.5--2\% of bases. This error rate is problematic for
+variant calling, as we expect a variant to occur at one in every one thousand
+bases.
+
+Many of the analyses that use reads generated from Illumina sequencers are
+analyzed with mapping-based approaches. In this class of approaches, we rely on
+the existence of a ``reference genome'' for an organization. This is a curated
+dataset that consists of the DNA sequences for all of the chromosomes in the
+genome of a species. For humans, the first reference genome was generated
+through the Human Genome Project~\cite{lander01}. New genome references are
+released every several years and include corrections to prior reference genomes
+and new assemblies for areas of the genome that are hard to sequence (typically
+caused by the genome being highly repetitive in a single area). The most recent
+release of the human genome~(GRCh38, see~\cite{church15}) was released at the
+end of 2014. A reference genome defines a two dimensional coordinate space, with
+one coordinate selecting the chromosome and the second coordinate defining the
+position on this chromosome.
 
 \section{Genomic Analysis Tools and Architectures}
 \label{sec:genomic-analysis}
+
+In a mapping-based approach, the reads are mapped to a location of the reference
+genome, and then locally aligned. Mappers query subsequences from a read against
+an index built from the reference genome. This process will identify the ranges
+in the genome that the read could plausibly align to. Once these ranges have
+been identified, the mapper will then locally align the read sequence against
+the genomic sequences from these ranges, using an edit calculation algorithm such
+as Smith-Waterman~\cite{smith81}, Ukkonen's algorithm~\cite{ukkonen85}, or a
+pairwise sequence alignment Hidden Markov Model~(HMM,~\cite{durbin98}). Widely
+used mappers include \textsc{BWA}~\cite{li09}, which builds an index using the
+Burrows-Wheeler transform~\cite{burrows94}; \textsc{Bowtie}~\cite{langmead09},
+which builds an FM-index~\cite{ferragina00}; and \textsc{SNAP}~\cite{zaharia11},
+which builds a hash-based index. Several projects have applied hardware acceleration
+to alignment, including \textsc{cloud-scale-bwamem}~\cite{chen15, chen16}, Ahmed
+et al~\cite{ahmed15}, and unpublished work out of Microsoft
+Azure~\cite{msr16}.
+
+Variant calling is one such mapping-based approach. To identify variants between
+the genomes of two individuals, we compute the difference of each individual
+against the reference genome, and then compute the transitive difference between
+the two individuals. To compute the variations between a single individual and
+the reference, we start by aligning the reads to the reference genome. From
+here, we can then look at each site in the genome to see if there are reads that
+support an sequence edit. This is typically done by applying a statistical model
+to the reads that looks at the base error probabilities attached to the reads
+that contain the reference sequence and the reads that contain the proposed
+sequence variant. Examples of the models used include the \textsc{SAMTools
+mpileup} variant caller~\cite{li11}, and the \textsc{GATK
+UnifiedGenotyper}~\cite{depristo11}. However, the aligned reads frequently
+include errors that can lead to incorrect variant calls. To eliminate these
+errors, we rely on several preprocessing stages that are run between mapping and
+variant calling. In this paper, we will focus on three preprocessing stages:
+duplicate removal, local realignment, and base quality score recalibration.
+The variant calling pipeline has been targeted for hardware acceleration in the
+unpublished Edico \textsc{DRAGEN} processor~\cite{dragen}.
+
+The duplicate removal stage identifies DNA fragments that were duplicated during
+library preparation. If we are starting from a biological sample that contains
+very little DNA, we will commonly use a polymerase chain reaction~(PCR) during
+library preparation. This reaction will take our input DNA and replicate it,
+thereby increasing the amount of DNA that we can provide to the sequencer.
+However, as part of the PCR process, some fragments will be excessively
+replicated. This can lead to a single fragment being replicated 100 times. If
+this fragment contains a sequence variant or a sequence that is susceptible to
+being sequenced incorrectly, this can bias the genomic region where the read is
+located and lead to an incorrect variant being identified.
+
+Local realignment is typically run after duplicate marking and addresses an
+issue inherent to the mapping process. Specifically, if there are larger
+sequence variants (e.g., multi-base insertions or deletions) into a read, the
+mapping process will commonly identify the correct genomic region that a read
+should map to, but will locally misalign the read relative to other reads that
+contain the same underlying sequence variant~\cite{depristo11}. During local
+realignment, we start by identifying all possible insertion/deletion~(INDEL)
+variants in our reads. For every region that contains an INDEL, we then look
+at the reads that map to that region. We identify the most common sequence
+variant in the set of reads and rewrite the local read alignments ensure that
+all reads that contain a single sequence variant are aligned with a consistent
+representation. This step is necessary because the algorithms used to compute
+the pairwise alignment of two sequences are fundamentally
+probabilistic~\cite{durbin98, smith81, ukkonen85}, which can lead to
+inconsistent representations for equivalent sequence edits~\cite{li14}.
+
+The final preprocessing stage is base quality recalibration. As mentioned
+earlier, when the reads are sequenced, the sequencer estimates the probability
+that a single base was sequenced in error from the color and intensity of the
+light emitted from the floursecent dye. In practice, sequencing errors correlate
+with various factors, including sequence context (the bases around the base that
+is being sequenced) and the stage when the base was sequenced (due to errors
+with the sequencing chemistry during that sequencing cycle). The base quality
+recalibration stage associated each base with error covariates, and then
+calculates the empirical error rate for the bases in that covariate by measuring
+the frequency with which bases in that covariate mismatch the reference genome.
+These error rates are then converted back into probabilites, which replace the
+probabilities attached to the reads.
+
+We have chosen to focus on the read preprocessing algorithms used for variant
+calling for several reasons. First and foremost, variant calling is the most
+widely used analysis across contemporary genomics, and is a core part of large
+population-scale studies such as the 1,000 Genomes Project~\cite{1kg12, 1kg},
+the Exome Aggregation Consortium~\cite{lek16}, and The Cancer Genome
+Atlas~\cite{weinstein13}. Additionally, the read preprocessing stages are
+tremendously computationally expensive. For a single human genome sequenced with
+an average of 60 reads covering each genomic position, it takes over 160 hours
+to align the reads, preprocess the reads, and call variants, with approximately
+110 of the hours spent preprocessing the reads. Finally, implementations of thes
+algorithms are available as part of the widely used \textsc{Genome Analysis
+Toolkit}~\cite{mckenna10, depristo11} and \textsc{ADAM}~\cite{massie13,
+nothaft15} libraries.
 
 \subsection{Genomic Data Representations}
 \label{sec:genomic-data-representations}
