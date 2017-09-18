@@ -700,31 +700,78 @@ approximation, and hope to study these characteristics in more detail in future 
 \subsection{Distributed Genomic Analysis Tools}
 \label{sec:distributed-genome-analysis}
 
-\begin{itemize}
-\item Tools retrofitted on top of distributed computing:
-  \begin{itemize}
-  \item CloudBurst
-  \item CrossBow
-  \item CloudScale-BWAMem
-  \item Halvalde
-  \end{itemize}
-\item Genomics tools designed for distributed computing:
-  \begin{itemize}
-  \item SparkSeq
-  \item VariantSpark    
-  \item Query models for Genomics on distributed computing: SeqPig, BioPig
-  \item OpenCB
-  \item GATK4
-  \item Hail
-  \end{itemize}
-\item Genome assembly and HPC architectures:
-  \begin{itemize}
-  \item Won't discuss much in this paper, but genome assembly has different
-    access patterns, more amenable to HPC
-  \item AbYSS on MPI
-  \item PGAS approaches to de Bruijn graph traversal
-  \end{itemize}
-\end{itemize}
+Genomics tools that leverage commodity distributed computing have typically
+taken one of two approaches: either they wrap a single-node tool so that it can
+be parallelized using a distributed computing framework, or they define a
+distributed query model for a single area/tool of focus. Beyond these two
+approaches, some tools have been built on distributed computing technologies
+from the HPC ecosystem. Additionally, cloud-friendly workflow management
+systems have entered broad usage.
+
+There have been three waves of development focused on integrating single-node
+tools with distributed computing platforms. The first wave of development used
+\textsc{Apache Hadoop Streaming} as a simple mechanism for parallelising tools
+that had well defined chunking patterns. Examples of this approach include the
+\textsc{CloudBurst} aligner~\cite{schatz09}, which parallelized the
+\textsc{RMAP} aligner~\cite{smith08}, and
+\textsc{CrossBow}~\cite{langmead09crossbow}, which integrates the
+\textsc{Bowtie}~\cite{langmead09bowtie} aligner with the
+\textsc{SoapSNP}~\cite{li09snp} variant caller. The second wave of approaches
+built more fully featured applications on top of the \textsc{Apache Hadoop}
+framework that did not just rely on the streaming APIs. These applications
+include the \textsc{SEAL}~\cite{pireddu11} aligner, which extracted the
+\textsc{BWA}~\cite{li09} aligner into a Python library which was executed
+on the \textsc{PyDoop}~\cite{leo10} bindings for \textsc{Hadoop};
+\textsc{BigBWA}~\cite{abuin15}, which parallelizes \textsc{BWA}~\cite{li09}
+using the Java Native Interface~(JNI) on top of \textsc{Apache Hadoop}; and
+\textsc{Halvade}~\cite{decap15}, which parallelized the complex dataflow in
+the \textsc{GATK}~\cite{depristo11} using \textsc{Apache Hadoop}. The third
+wave of wrappers has been built around \textsc{Apache Spark} and includes
+\textsc{SparkBWA}~\cite{abuin16}, a successor to \textsc{BigBWA}~\cite{abuin15},
+\textsc{CloudScale-BWA MEM}~\cite{chen16}, which parallelizes
+\textsc{BWA} through the JNI, with the ability to support \textsc{FPGA}
+acceleration; and \textsc{SparkGA}~\cite{mushtaq17}, which uses a similar
+approach as \textsc{Halvade} to parallelize the \textsc{GATK}, but is
+implemented on \textsc{Spark}.
+
+Several tools have implemented genomic analyses directly on top of distributed
+analysis tools from the \textsc{Apache Hadoop} and \textsc{Spark} ecosystem.
+Many of these tools build on top of the \textsc{Hadoop-BAM}
+library~\cite{niemenmaa12}, which provides \textsc{Hadoop}-compatible parallel
+I/O libraries. The first generation of tools built query models for accessing
+genomic data through the \textsc{Pig}~\cite{olston08} scripting language.
+This was implemented in two separate tools: \textsc{BioPig}~\cite{nordberg13}
+and \textsc{SeqPig}~\cite{schumacher14}. Additionally, the \textsc{OpenCB}
+project has built \textsc{Hadoop}-based tools for manipulating genomic data via
+the \textsc{hpg-bigdata} project~\cite{opencb}. Recent work has moved on to
+\textsc{Apache Spark}. Beyond \textsc{ADAM} and the \textsc{Big Data Genomics}
+ecosystem, \textsc{Spark} has been used in the
+\textsc{SparkSeq}~\cite{wiewiorka14} and \textsc{VariantSpark}~\cite{obrien15}
+tools. \textsc{SparkSeq} is geared towards RNA-seq analysis, and has been
+paired with \textsc{SparkBwa}~\cite{abuin16} to build the
+\textsc{Falco}~\cite{yang16} single-cell RNA-seq pipeline which runs end-to-end
+on \textsc{Apache Spark}. \textsc{VariantSpark} includes novel methods for
+statistically analyzing genotype data on \textsc{Spark}, including an efficient
+implementation of random forests for wide-but-flat genomic data. There is
+increasing adoption of \textsc{Apache Spark} in genomics, with two large
+unpublished projects coming out of the Broad Institute. The first is the fourth
+edition of the \textsc{GATK}~\cite{gatk4}, which is reimplemented on
+\textsc{Spark}. The second project is \textsc{Hail}~\cite{hail}, which is a
+reimplementation of the \textsc{PLINK} population genomics~\cite{purcell07}
+toolkit on \textsc{Spark}.
+
+We do not extensively discuss non-resequencing pipelines for de novo genome
+assembly in this dissertation, but genome assembly has different access patterns
+that are more amenable to HPC-styled distributed implementations. Specifically,
+since de novo assembly operates on highly connected graphs, efficiently mapping
+de novo assembly to a graph-parallel framework like
+\textsc{GraphX}~\cite{gonzalez14} is difficult. The \textsc{ABySS}
+assembler~\cite{simpson09} uses the Message Passing Interface~(MPI) to
+parallelize genome assembly across an HPC cluster. A new and exciting avenue
+of work is using HPC systems that support a parallel global address space~(PGAS)
+and Remote Direct Memory Access~(RDMA) to achieve extremely fine grained
+parallelism~\cite{georganas14, georganas15hipmer, georganas15meraligner,
+  georganas17}.
 
 \part{Architecture and Infrastructure}
 
