@@ -328,15 +328,24 @@ As a result, \textsc{ADAM} improves over conventional genomics tools by providin
 \chapter{Background and Related Work}
 \label{chap:background}
 
-\begin{itemize}
-\item This dissertation focuses on the ``genome resequencing'' pipeline.
-  \begin{itemize}
-  \item I.e., given a known genome assembly, identify the edits between this
-    individual and the assembly.
-  \item We assume short reads.
-  \item 
-  \end{itemize}
-\end{itemize}
+While there are many ways to collect and then process genomic data, this
+dissertation focuses on the ``genome resequencing'' pipeline. In resequencing,
+we start with a known genome assembly, and identify the edits between an
+individual genome and the genome assembly for their species. In practice, a
+genome resequencing analysis pipeline will typically take short sequenced
+reads~(100-300 base pairs, bp), align them to the reference genome, perform
+preprocessing on the reads to eliminate errors, and then probabilistically
+identify true variation from the reads. In this chapter, we will start by
+describing how the reads are sequenced~(\S\ref{sec:genome-sequencing}) and
+analyzed~(\S\ref{sec:genomic-analysis}). We will then dive deeper into the
+representations of genomic data~(\S\ref{sec:genomic-data-representations}),
+and the architectures used to process this
+data~(\S\ref{sec:genomic-architectures}). Then, we will review the variant
+identification algorithms~(\S\ref{sec:variant-calling-approaches}). Finally,
+we will discuss the emergence of commodity distributed computing
+frameworks~(\S\ref{sec:distributed-computing}) and how researchers have
+approached parallelizing genome resequencing
+pipelines~(\ref{sec:distributed-genome-analysis})
 
 \section{Genome Sequencing Technologies}
 \label{sec:genome-sequencing}
@@ -568,7 +577,6 @@ nothaft15} libraries.
 
 \subsection{Variant Calling Approaches}
 \label{sec:variant-calling-approaches}
-
 
 The accuracy of insertion and deletion~(INDEL) variant discovery has been improved by the development
 of variant callers that couple local reassembly with haplotype-based statistical models to recover INDELs
