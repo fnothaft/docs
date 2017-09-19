@@ -100,7 +100,7 @@ population health research projects and clinical practice. As a result,
 the total volume of sequencing data produced is expected to exceed that
 of YouTube by 2021~\cite{stephens15}.
 
-The massive scale of the sequencing data this is being acquired enables
+The massive scale of the sequencing data that is being acquired enables
 novel insight into biological phenomena. The Exome Aggregation
 project~(ExAC,~\cite{lek16})--now gnomAD--provides an especially powerful
 demonstration: by sequencing more than 60,000 exomes, we have been able
@@ -113,7 +113,7 @@ and the focus of many researchers~\cite{fritz11, kozanitis11} and standards
 organizations~\cite{paten15}. Not only is the volume of data large, but
 expensive processing is needed to analyze the data. Due to historical design
 decisions, much of this processing is currently restricted to single node
-architectures that assume POSIX storage APIs. As a result, it can take well
+architectures that assume POSIX storage APIs. As a result, it can take
 upwards of 100 hours to analyze the raw read data from a single genome.
 
 We believe that distributed computing architectures are a good match for
@@ -121,12 +121,12 @@ genomic data analysis. Horizontally scalable storage architectures can
 simultaneously provide increased data storage capacities, data access
 throughput, and reduced storage cost. Because most genomic analyses are centered
 on analyzing the genomic data at disparate genomic loci without coordination
-betwen loci, most genomic analysis tasks can be executed in parallel. Even more
+between loci, most genomic analysis tasks can be executed in parallel. Even more
 importantly, these analysis patterns cleanly map onto quasi-relational primitives
 that are powerful and can be executed in parallel. Finally, by building upon
 widely used open-source distributed processing architectures like \textsc{Apache
 Spark}~\cite{zaharia12} and \textsc{Hadoop}~\cite{hadoop}, genomics can benefit
-from engineering contributions from a broader swath of engineering.
+from the engineering contributions that advance these large open source projects.
 
 In this thesis, we introduce \textsc{ADAM}, an application programming
 interface~(API) for processing genomic data using Apache Spark. \textsc{ADAM}
@@ -324,6 +324,13 @@ As a result, \textsc{ADAM} improves over conventional genomics tools by providin
 \item A simple API for parallelizing single node genomic tools with a minimal
   amount of code.
 \end{itemize}
+
+In the rest of this dissertation, we explain the design goals behind 
+\textsc{ADAM}. By reviewing the architecture and implementation of
+\textsc{ADAM}, we explain how these goals have shifted over time, informed by
+our development experiences. We then demonstrate the \textsc{ADAM} architecture
+through the \textsc{Cannoli} and \textsc{Avocado} tools, which implement the
+\textsc{Big Data Genomics} variant calling pipeline.
 
 \chapter{Background and Related Work}
 \label{chap:background}
