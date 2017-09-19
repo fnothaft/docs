@@ -565,39 +565,48 @@ compression to avoid storing read sequence that matches the reference genome.
 Additionally, CRAM can apply lossy compression schemes---such as base quality
 score binning---to achieve further compression.
 
-\begin{itemize}
-\item Schemas for representing genomic data:
-  \begin{itemize}
-  \item GA4GH APIs
-  \item OpenCB APIs
-  \end{itemize}
-\end{itemize}
-
 \subsection{Genomic Analysis Architectures}
 \label{sec:genomic-architectures}
 
-\begin{itemize}
-\item The main genomic analysis architecture out there is the GATK.
-  \begin{itemize}
-  \item Uses an iterator-based model called a ``walker'' to traverse over
-    data aligned to reference genome coordinates.
-  \item Puports a map-reduce style API, but historically only provided single
-    node execution (multithreaded).
-  \item Multi-node execution was provided through the Queue workflow manager.
-  \item Revisit this in the context of the GATK4.
-  \end{itemize}
-\item Several alternative approaches have included the Google Genomics and
-  OpenCB approaches.
-  \begin{itemize}
-    \item Google Genomics is built heavily on top of BigQuery.
-  \end{itemize}
-\item Workflow management as an alternate paradigm?
-  \begin{itemize}
-  \item How much can genomics be ``parallel-by-sample''?
-  \item See GATK Queue.
-  \item Toil, Cromwell, CWL, WDL, NextFlow...
-  \end{itemize}
-\end{itemize}
+Although there exist myriad tools for analyzing genomic data, very few tools
+espouse a systematic architecture for traversing and processing genomic data.
+Instead, most tools are built around a UNIX-inspired philosophy that asserts
+that ``a tool should do a single task well''~\cite{rodriguez11}, and simply
+traverse a stream of data. The most promiment example of a genomic analysis
+architecture is the quasi-map-reduce architecture employed by the legacy
+versions of the GATK~\cite{mckenna10}. This architecture uses an iterator-based
+model called a ``walker'' to traverse over data aligned to reference genome
+coordinates. The ``map-reduce'' nature of this API describes how chunks of
+genome aligned data can be parallelized, with a reduce operation supported
+for summarizing tables of data across threads, as is used for combining
+Base Quality Score Recalibration~(BQSR) tables. While this API could
+conceptually be used in a distributed setting, the GATK has historically
+only run as a multithreaded application on a single node. Instead,
+multi-node execution was provided through the \textsc{Queue}~\cite{depristo11}
+workflow manager.
+
+While the UNIX-like design philosophy espoused by many bioinformatics tools
+allows for the creation of tools with well defined boundaries, this seems to be
+fundamentally at odds with the reality of complex genomics workflows, where many
+tools must be cascaded one-after-the-other. As a result, genomics has embraced
+workflow management as an alternate paradigm, where tools are composed into an
+abstract workflow, which is then executed by the management system. A popular
+early system was the \textsc{Galaxy}~\cite{goecks10} tool, which provided a
+graphical user interface for defining workflows and tool invocations. Recently,
+a set of novel workflow management systems have been developed, such as
+\textsc{Toil}~\cite{vivian17}, \textsc{NextFlow}~\cite{ditommaso17},
+\textsc{Rabix}~\cite{kaushik16}, \textsc{Cromwell}~\cite{cromwell},
+and \textsc{Cuneiform}~\cite{brandt15}. These systems exploit many-task
+parallelism, and are well suited to analyses where a cohort of many samples
+should be analyzed independently by sample. These systems differ in their
+approach to expressing workflows. Several efforts to standardize workflow
+descriptions have emerged, with the most prominent community being around the
+\textsc{Common Workflow Language}~\cite{cwl}. \textsc{Toil} is implemented as
+a Python library that allows for workflows to be natively defined in Python,
+and can also run workflows written in CWL, or in \textsc{Cromwell}'s WDL
+dialect. \textsc{Rabix} executes CWL. \textsc{NextFlow} and \textsc{Cuneiform}
+both take a clean slate approach to implementing a workflow language, using
+dataflow and functional approaches to describe workflows.
 
 \subsection{Variant Calling Approaches}
 \label{sec:variant-calling-approaches}
@@ -720,6 +729,28 @@ approximation, and hope to study these characteristics in more detail in future 
 
 \section{Distributed Computing Platforms}
 \label{sec:distributed-computing}
+
+Google described the use of large clusters of commodity computers in their
+\textsc{MapReduce} system~\cite{dean04, dean08} in 2004. Since then, there has
+been a surge of activity focusing on the development of distributed data
+analysis tools. In the open source world, this has spawned the \textsc{Apache
+  Hadoop} project~\cite{hadoop}, which started as a open source reimplementation
+of Google's \textsc{MapReduce}. \textsc{Hadoop} led to the development of
+scripting languages like \textsc{Pig}~\cite{olston08}, query systems like
+\textsc{Hive}~\cite{thusoo09}, and resource management frameworks like
+\textsc{YARN}~\cite{vavilapalli13} and \textsc{Mesos}~\cite{hindman11}. While
+traditional map-reduce platforms were well suited to extract, transform,
+load~(ETL) pipelines that made a single pass over a large dataset, they were
+a poor fit to ``advanced analytics'' applications---like machine learning, or
+graph processing---that made several passes over a dataset. This was due to
+their reliance on the output of every computational phase being written to
+disk to ensure fault tolerance. A new set of distributed data processing tools
+were designed to address this problem by storing data in memory, and relying
+on different models for fault resilience. These systems include
+\textsc{Spark}~\cite{zaharia10, zaharia12} and \textsc{Flink}~\cite{carbone15}.
+Additionally, a set of highly efficient query engines came out, such as
+\textsc{Cloudera Impala}~\cite{kornacker15} and \textsc{Spark
+  SQL}~\cite{armbrust15}.
 
 \subsection{Distributed Genomic Analysis Tools}
 \label{sec:distributed-genome-analysis}
