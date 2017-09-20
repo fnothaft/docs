@@ -904,6 +904,89 @@ impractical to run.
 \subsection{Expressiveness of APIs}
 \label{sec:api-levels}
 
+Traditionally, APIs for manipulating genomic data have been very low level.
+Typically, tools follow the ``walker'' pattern, which provides a sorted
+iterator over the genome. The user then implements any traversal that they need.
+This approach is undesirable for two reasons:
+
+\begin{enumerate}
+\item Due to the very low level nature of the API, programmers must implement
+  their own complex transforms, such as grouping together reads that start at a
+  single genomic position. This can lead to errors in user code.
+\item A natural consequence of the first point is that low level APIs obscure
+  the actual query pattern that is being implemented. For example, a duplicate
+  marker typically groups together all reads that aligned to a single genomic
+  locus. This pattern is clear when duplicate marking is written as a high
+  level algorithm, but is unclear from a low level implementation of duplicate
+  marking on a sorted iterator.
+\end{enumerate}
+
+These two issues translate into two obvious consequences. First, a low level API
+increases the complexity of implementing a query, and thus necessitates increased
+developer effort. This introduces more locations where queries can be
+implemented incorrectly. We identified two concrete examples of this when
+working on the read preprocessing pipeline in \textsc{ADAM}. Specifically, we
+identified that the \textsc{Picard} duplicate marker and the \textsc{GATK}
+base quality recalibrator incorrectly process reads that come from sequenced
+fragments whose insert size violates undocumented invariants that are internal
+to each tool.
+
+The second obvious consequence is that monolithic queries are difficult to
+automatically optimize. To examine this consequence, we can look again at the
+duplicate marking kernel. If we are calling variants in a whole exome
+sequencing~(WES) dataset, we would run a query pattern with several steps:
+
+\begin{enumerate}
+\item Align reads
+\item Sort reads
+\item Mark duplicates by grouping by alignment position
+\item Filter out reads mapped outside of the exome
+\item Call variants by aggregating statistics at each position covered by an
+  aligned read
+\end{enumerate}
+
+A query planner that is aware of the structure of the genome could apply several
+optimizations:
+
+\begin{itemize}
+\item Since the duplicate marker groups by position, sorting and duplicate
+  marking can be combined into a single phase. This optimization can also be
+  applied to variant calling.
+\item Since we will filter out reads mapped outside of the exome, we can push
+  this predicate up to after alignment.
+\end{itemize}
+
+In the absence of the ability to optimize the variant calling query plan
+end-to-end, most genomics tools achieve performance benefits by enforcing
+sort order or grouping invariants. For example, the
+\textsc{Picard}~\cite{picard} and \textsc{Sambamba}~\cite{tarasov15}
+duplicate markers require read inputs to be coordinate sorted, while the
+\textsc{SAMBLASTER}~\cite{faust14} duplicate marker requires the read data to
+be queryname grouped. These invariants are necessary for efficiency but come at
+the cost of increased complexity when integrating multiple tools together into
+a monolithic pipeline.
+
+The combination of these two issues yields a final problem: it is difficult for
+a domain scientist to parallelize these queries. To parallelize single node
+tools across a large cluster, existing tools typically use a ``scatter-gather''
+pattern~(see discussion of many-task workflow patterns in Zheng et
+al.~\cite{zhang15, zhang16}) that chunks a genomic dataset into many small
+parts~(contiguous ranges of the genome) that are then processed independently.
+This presents several problems:
+
+\begin{itemize}
+\item Due to bias caused by repeated sequence in the genome, we cannot achieve
+  optimal load balance with a partitioner that na\"{i}vely partitions the genome
+  into uniformly sized ranges~\cite{chiang15}.
+\item This query pattern is restricted to storage systems that support efficient
+  ranged access into files, and may not be efficient to implement on cloud-based
+  shared-nothing stores~\cite{vivian17}.
+\item This approach makes it difficult to implement queries that need to run an
+  all-reduce over the data. Examples of this include the base quality score
+  recalibration kernel~(see~\S\ref{sec:bqsr-implementation}), or genome-wide
+  machine learning methods~\cite{morrow17cks}.
+\end{itemize}
+  
 \subsection{Support for Parallel I/O}
 \label{sec:parallel-io}
 
