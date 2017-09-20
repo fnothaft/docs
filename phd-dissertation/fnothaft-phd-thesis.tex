@@ -840,24 +840,130 @@ parallelism~\cite{georganas14, georganas15hipmer, georganas15meraligner,
 \chapter{Design Principles for Scalable Genomics}
 \label{chap:design}
 
+When we started designing \textsc{ADAM} in 2013, \textsc{Apache Spark} was still
+in early development, and few organizations were actively working with massive
+genomics data sets. At the time, we believed that the major pain points in
+working with large scale genomics datasets centered around low-level APIs that
+made it difficult to represent complex genomic data manipulations and the use of
+file formats that were difficult to access in parallel and that had imprecise
+specifications. This led to the initial goals for the \textsc{ADAM} project:
+
 \begin{itemize}
-\item Initially, \textsc{ADAM} had several goals:
-  \begin{itemize}
-  \item Provide clean APIs for writing large scale genomic data analyses
-  \item Raise abstraction by centering data manipulation around schemas instead
-    of file formats
-  \item Allow these APIs to be exposed across commonly used languages
-  \end{itemize}
-\item To do this, \textsc{ADAM} used a decoupled, stack-oriented architecture
-\item Over time, these goals grew in scope to include:
-  \begin{itemize}
-  \item Support coordinate-space joins with genomic data
-  \item Support exploratory data analysis on genomic datasets
-  \item Allow people to reuse their existing genomic analysis tools on Spark with
-    minimal modifications
-  \end{itemize}
-\item Supporting these goals was enabled by \textsc{ADAM}'s decoupled architecture
+\item Provide clean APIs for writing large scale genomic data analyses
+\item Raise abstraction by centering data manipulation around schemas instead
+  of file formats
+\item Allow these APIs to be exposed across commonly used languages
+\item Efficiently execute non-reference oriented query patterns
 \end{itemize}
+
+To achieve these goals, we designed a decoupled, stack-oriented architecture
+that was centered around schemas that provided a logical view over the genomic
+data that was being manipulated. This architecture was implemented on top of
+\textsc{Apache Spark}'s RDD APIs, and provided the user with a distributed
+collection of genomic data which were encoded in \textsc{Apache
+  Avro}~\cite{avro}. This allowed for queries to be described at a high level
+through \textsc{Spark}'s RDD APIs, which would execute the queries rapidly by
+running parallel scans over the data. Over time, our goals grew in scope to
+include:
+
+\begin{itemize}
+\item Support coordinate-space joins with genomic data
+\item Support exploratory data analysis on genomic datasets
+\item Allow people to reuse their existing genomic analysis tools on Spark with
+  minimal modifications
+\end{itemize}
+
+Because of \textsc{ADAM}'s decoupled architecture, we were able to easily
+enhance \textsc{ADAM} to support these query patterns. By refactoring how
+\textsc{ADAM} tracked data partitioning, the coordinate-space
+joins~(\S\ref{sec:query-patterns}) and the \textsc{pipe} API for supporting
+legacy genomics tools~(\S\ref{sec:query-patterns}) were added to \textsc{ADAM}'s
+core APIs. The \textsc{Mango} project enhanced \textsc{ADAM}'s ability to run
+interactive queries against genomic data by improving support for pushing down
+ranged predicates to disk~\cite{tu16} and by adding a spatial- and temporal-
+locality-aware in-memory caching layer~\cite{morrow17}. These modifications
+replaced \textsc{ADAM}'s default query and data access layers with layer
+implementations better suited to the query patterns at hand.
+
+In this section, we will revisit the pain points we asserted, and describe
+how our understanding of these pain points changed over time. From these pain
+points, we then reify a set of functional requirements for a distributed data
+analysis platform for manipulating genomic data. We then introduce
+\textsc{ADAM}'s stack architecture, and explain how it addresses these needs.
+
+\section{Pain Points with Single Node Genomics Tools}
+\label{sec:pain-points}
+
+Most current genomic pipelines are built entirely out of single-node tools,
+and often single threaded tools. We believe that the barriers to making
+use of distributed tools are caused by the computational patterns used when
+building traditional single node tools. As the size and scope of genomic data
+continues to increase, single node analyses will become inconvenient or
+impractical to run.
+
+\subsection{Expressiveness of APIs}
+\label{sec:api-levels}
+
+\subsection{Support for Parallel I/O}
+\label{sec:parallel-io}
+
+While most of the file formats used for genomics do not preclude parallel I/O,
+their structure makes parallel I/O difficult to implement in an efficient
+manner. This is caused by two primary factors:
+
+\begin{enumerate}
+\item The files are often expensive to split, in the absence of an index.
+\item Due to the emphasis on chaining tools into streams or transformations upon
+  a single file, all output must be serialized.
+\end{enumerate}
+
+To demonstrate the source of costs for performing parallel reads, let us look at
+\textsc{Hadoop-BAM}~\cite{niemenmaa12}, a popular library used for loading
+genomics data into \textsc{Apache Hadoop} or \textsc{Spark}. To split a BAM file,
+\textsc{Hadoop-BAM} implements \textsc{Hadoop}'s InputFormat class. When a file
+is opened for read, \textsc{Hadoop} provides \textsc{Hadoop-BAM} with approximate
+ranges that the file should be split into. However, a BAM file cannot be
+arbitrarily split; we must find the first valid BAM record after the start of
+this file range. To do this, \textsc{Hadoop-BAM} must scan through the file,
+looking for a sequence of bytes that indicates the start of a record. Currently,
+this is implemented sequentially per split in a file. For a typical block size
+of 128MB, a BAM from a high coverage whole genome sequencing run will have
+500--1500 splits. The cost of computing the splits can be very high, especially
+if the data is stored in a remote file store, as is common on cloud computing
+vendors. To eliminate this issue, \textsc{Hadoop-BAM} supports a proprietary
+index that stores valid split start positions. Recently, support was added that
+uses the linear BAM index to validate split start positions. An additional issue
+is that \textsc{Hadoop-BAM} does not always pick valid positions to begin
+reading. To address this issue, the \textsc{Spark-BAM}~\cite{sparkbam} project
+has begun rewriting parts of \textsc{Hadoop-BAM} to add more stringent record
+validation tests. These more stringent tests reduce the number of false positive
+record start positions to 0.
+
+A general exception is files compressed with the GZIP codec, which is not
+splittable. GZIP is used in bioinformatics because of its high compression rate,
+which is useful for storing textual read data, such as FASTQ files. To allow
+splitting, many tools use the BGZF codec~\cite{li11tabix}, which is splittable.
+BGZF incurs a small performance and compression overhead relative to the raw
+GZIP codec. Similar to the example with BAM files given above, BGZF also has
+high overhead for splitting without an index.
+
+As mentioned above, another general issue is that genomics tools often assume
+that data is being processed as I/O streams, or that there is a single file that
+corresponds to data from a single sample. The architectural implication of this
+trend is that I/O must be serialized, which leads to a typical I/O subsystem
+loading data in through a single thread, which delegates the data to multiple
+decompression threads. The data are then decompressed, processed, and compressed
+again, at which point the writes to a disk or to a stream are serialized. This
+creates contention at both ends of the tool. The impact of this can easily be
+seen in a highly efficient tool, like the \textsc{Salmon} RNA-seq quantification
+engine~\cite{patro17}. Due to I/O contention, \textsc{Salmon} is unable to scale
+beyond 32 cores.
+
+\subsection{Proliferation of Genomic File Formats}
+\label{sec:file-formats}
+
+\section{Goals for a Scalable Genomics Library}
+\label{sec:goals}
 
 \section{A Stack Architecture for Scientific Data Processing}
 \label{sec:stack-architecture}
@@ -2225,6 +2331,15 @@ However, we will add this functionality soon.
   \end{itemize}
 \item How can we easily accomodate UDFs?
 \end{itemize}
+
+\section{Improved Metadata Management for Genomics}
+\label{sec:metadata-future}
+
+\section{Efficient Consensus Methods}
+\label{sec:efficient-consensus}
+
+\section{Improving Debugging Capabilities for Distributed Systems}
+\label{sec:improving-debug}
 
 \chapter{Conclusion}
 \label{chap:conclusion}
