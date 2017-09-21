@@ -1045,6 +1045,132 @@ beyond 32 cores.
 \section{Goals for a Scalable Genomics Library}
 \label{sec:goals}
 
+From the pain points we described above, we can assemble a set of goals for a
+clean slate genomic analysis platform. In this section, we describe both the
+original goals that we adopted when building \textsc{ADAM}, as well as the goals
+that evolved for the \textsc{ADAM} ecosystem over time. From our original set
+of goals, we designed the stack architecture that we introduce in the next
+section~(\S\ref{sec:stack-architecture}). As we will see, the stack architecture
+made it easier for us accomodate the goals that evolved during the course of
+the project.
+
+\subsection{Original Goals for \textsc{ADAM}}
+\label{sec:original-goals}
+
+In the original \textsc{ADAM} technical report~\cite{massie13}, we introduced an
+architecture that presented fairly minimalistic wrappers around the
+\textsc{Apache Spark} APIs, but that was built out of technical components that
+were optimized for batch processing over large genomic datasets. This original
+architecture addressed the goals described in this section, and paved the way
+for supporting the goals introduced in the next section.
+
+Our overarching goal was to abstract away from APIs that derived directly from
+the genomic file formats, towards higher level APIs for manipulating genomic
+data. In doing this, we had several specific goals:
+
+\begin{enumerate}
+\item Minimize the amount of code needed to implement a query.
+\item Eliminate the need for sort order invariants.
+\item Make it more efficient to execute queries that only touched a subset of
+  genomic data.
+\item Make our APIs usable across multiple languages.
+\item Make it possible to easily query data using other parallel analysis tools
+  than \textsc{Apache Spark}.
+\end{enumerate}
+
+Because of the stack smashing described in~\S\ref{sec:api-levels}, genomics
+libraries like \textsc{htslib}~(the base for \textsc{samtools}~\cite{li09}) and
+\textsc{htsjdk}~(the base for \textsc{Picard}~\cite{picard} and the
+\textsc{GATK}~\cite{mckenna10}) provide APIs that iterate directly across a
+file. As a comparison, \textsc{Apache Spark} is built on top of the RDD API,
+which describes a collection of records which is parallelized across nodes in a
+cluster. Because the abstractions provided by the \textsc{htslib} and
+\textsc{htsjdk} systems were guided by the file formats themselves, idioms from
+data traversal~(iterating across a collection) and I/O~(closing a stream) became
+intermingled. Additionally, the behavior of a row in a collection was influenced
+by the I/O process. This is because all extant genomics file formats are row
+oriented, which means that the only way to improve the performance of a query
+that does not access all of the fields in a record was to lazily parse the
+fields as they were accessed.
+
+Instead of bleeding abstractions from the I/O layer through the stack, we
+decided to introduce schemas that represented the major genomic datatypes. This
+enforces a strict separation between the I/O layer and the end-user API. This
+naturally supports the many file formats that can describe a given class of
+genomic data, since we can provide a view between the genomic file format and
+the schemas. Additionally, since a schema is fundamentally a logical
+representation of a record, our schemas need not be language-specific, and
+should be reusable across a large set of languages.
+
+To eliminate the need for sort order invariants, we proposed a two pronged
+approach. First, since we were building on a system that enabled parallel I/O,
+we would be able to achieve high query performance by running full scans over
+the dataset in parallel. Additionally, by providing APIs for filtering by row
+when reading from the file system, or for selecting the specific columns that
+we were interested in parsing, we could minimize the amount of data read from
+disk. To further accelerate these queries, we used the \textsc{Apache
+  Parquet}~\cite{parquet} columnar storage system, which enabled cheap column
+projections and predicates that could be pushed down into the storage system.
+Since \textsc{Parquet} was gaining broader adoption across the analytics
+ecosystem, storing data in \textsc{Parquet} meant that it could be accessed
+and manipulated with tools such as \textsc{Apache Hive}~\cite{thusoo09}
+and \textsc{Cloudera Impala}~\cite{kornacker15}.
+
+\subsection{Goals That Evolved Over Time}
+\label{sec:evolved-goals}
+
+Over the course of building out the \textsc{ADAM} project and the surrounding
+\textsc{Big Data Genomics} ecosystem, we added several design goals. These
+included:
+
+\begin{enumerate}
+\item Supporting interactive latency for exploratory queries and data
+  visualization.
+\item Being able to optimize queries to take advantage of presorted data.
+\item Allowing legacy tools to be reused and parallelized.
+\end{enumerate}
+
+There were several reasons that we added these design goals. We had
+originally intended \textsc{ADAM} to mainly support batch analyses, and deferred
+support for interactive analysis to query engines like \textsc{Impala}. However,
+we felt that there was a good opportunity to reshape interactive genomic data
+analysis by enabling exploratory data analysis using \textsc{ADAM}'s APIs. To do
+this, we needed a way to lower the latency of typical \textsc{Spark} queries. We
+did this in the \textsc{Mango} project~\cite{tu16, morrow17}, which introduced
+better support for using primary indices on genomic position, as well as an
+efficient in-memory caching layer. These implementations replaced the default
+implementations of two levels of our stack.
+
+As noted in the previous paragraph, interactive query was one reason we wanted
+to take advantage of data being sorted at query time. Additionally, as we built
+out \textsc{ADAM}'s read preprocessing transformations~(see
+Chapter~\ref{chap:adam}), we realized that many of these queries depended on
+joining genomic data against other overlapping data~(such as joining aligned
+reads against variants during BQSR's masking phase), or aggregating at a single
+genomic locus~(as in duplicate marking). In our SIGMOD article~\cite{nothaft15},
+we introduced the region join to \textsc{ADAM}. This join provided functionality
+similar to \textsc{BEDTools}~\cite{quinlan10}, and could be implemented using
+both a broadcast and a sort-merge strategy. While our goal was to eliminate the
+need for sort-order invariants, we saw that there was a good opportunity to
+accelerate these join and aggregate patterns by eliminating shuffles whenever
+a dataset was already sorted. We describe the extensions we made to
+\textsc{ADAM} to support these optimizations in~\S\ref{sec:query-patterns}.
+
+Finally, while we feel that \textsc{ADAM}'s APIs provide a significant
+improvement over traditional genomic query models, we realized over time that it
+was an unrealistic goal to supplant these APIs due to their widespread usage.
+Additionally, the experiences of our coworkers during the \textsc{SNAP}
+project~\cite{zaharia11} led us to realize that \textsc{Spark}'s APIs were not
+a good fit to all genomic data analysis problems. Specifically, the large
+indices used during short read alignment are difficult to manage efficiently in
+the Java Virtual Machine's~(JVM) managed memory model. Additionally, the prior
+work which used \textsc{Hadoop} or \textsc{Spark} to manually wrap and
+parallelize legacy tools~\cite{schatz09, langmead09crossbow, abuin15, abuin16,
+  chen15, chen16} led us to believe that there was interest in having a general
+API for parallelizing genomics tools. This led to the introduction of ADAM's
+\textsc{pipe} API, and the \textsc{Cannoli} tool, which is described in
+Chapter~\ref{chap:cannoli}.
+
 \section{A Stack Architecture for Scientific Data Processing}
 \label{sec:stack-architecture}
 
@@ -1063,6 +1189,14 @@ matching of different protocols, all of which existed at different functional le
 networking stack model can largely be attributed to the ``narrow waist'' of the stack, which simplified the
 integration of a new protocol or technology by ensuring that the protocol only needed to implement a
 single interface to be compatible with the rest of the stack.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics{graphs/expanded-stack-2.pdf}
+\end{center}
+\caption{A stack model for scientific computing}
+\label{fig:stack-model}
+\end{figure}
 
 Unlike conventional scientific systems that leverage custom data formats like BAM or SAM~\cite{li09},
 or CRAM~\cite{fritz11}, we believe that the use of an explicit schema for data interchange is critical.
