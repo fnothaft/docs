@@ -1263,7 +1263,7 @@ and makes the system less general.
 
 Deep stacks like the OSI stack~\cite{zimmermann80} are generally simplified for practical use. Conceptually,
 the stack we propose is no exception. In practice, we combine layers one and two, and layers five and six.
-There are several reasons for these mergers. First, in \texttt{Hadoop}-based systems, the system does not have practical visibility
+There are several reasons for these mergers. First, in \textsc{Hadoop}-based systems, the system does not have practical visibility
 below layer two, thus there is no reason to split layers one and two except as a philosophical exercise.
 Layers five and six are commingled because some of the enriched presentation objects are used to
 implement functionality in the evidence access layer. This normally happens when a key is needed, such as
@@ -1275,10 +1275,10 @@ when repartitioning the dataset, or when reducing or grouping values.
 Due to both the growing volume of genomic sequencing data and the large size of these datasets,
 sequencing centers face the increasingly difficult task of turning around genomic data analyses in a
 reasonable timeframe~\cite{schadt10, stein10}. While the per-run latency of current genomic pipelines
-such as the \texttt{GATK} can be improved by manually partitioning the input dataset and distributing
+such as the \textsc{GATK} can be improved by manually partitioning the input dataset and distributing
 work, native support for distributed computing is not provided. As a stopgap solution, projects like
-\texttt{Cloudburst}~\cite{schatz09} and \texttt{Crossbow}~\cite{langmead09} have ported individual
-analytics tools to run on top of \texttt{Hadoop}. While this approach has served well for proofs of concept,
+\textsc{Cloudburst}~\cite{schatz09} and \textsc{Crossbow}~\cite{langmead09} have ported individual
+analytics tools to run on top of \textsc{Hadoop}. While this approach has served well for proofs of concept,
 it provides poor abstractions for application developers and makes it difficult to create novel distributed
 genomic analyses, and does little to attack sources of inefficiency or incorrectness in distributed
 genomics pipelines.
@@ -1289,12 +1289,12 @@ These architectures are designed to efficiently run current algorithms on single
 systems, but impose significant restrictions. These restrictions include:
 
 \begin{itemize}
-\item These implementations are locked to a single node processing model. Even the \texttt{GATK}'s
-``map-reduce'' styled \texttt{walker} API~\cite{mckenna10} is limited to natively support processing on
+\item These implementations are locked to a single node processing model. Even the \textsc{GATK}'s
+``map-reduce'' styled \textsc{walker} API~\cite{mckenna10} is limited to natively support processing on
 a single node. While these jobs can be manually partitioned and run in a distributed setting, manual
 partitioning can lead to imbalance in work distribution and makes it difficult to run algorithms that
 require aggregating data across all partitions, and lacks the fault tolerance provided by modern
-distributed systems such as \texttt{Hadoop} or \texttt{Spark}~\cite{zaharia12}.
+distributed systems such as \textsc{Hadoop} or \textsc{Spark}~\cite{zaharia12}.
 \item Most of these implementations \emph{assume} invariants about the sorted order of records on
 disk. This ``stack smashing'' (specifically, the layout of data is used to ``accelerate'' a processing stage)
 can lead to bugs when data does not cleanly map to the assumed sort order. Additionally, since these
@@ -1307,7 +1307,7 @@ a full shuffle and resort of the dataset. Additionally, a sort is required after
 \end{itemize}
 
 As noted above, current implementations are locked to a single node model. Projects like
-\texttt{Hadoop-BAM}~\cite{niemenmaa12}, \texttt{SeqPig}~\cite{schumacher14}, and \texttt{BioPig}~\cite{nordberg13}
+\textsc{Hadoop-BAM}~\cite{niemenmaa12}, \textsc{SeqPig}~\cite{schumacher14}, and \textsc{BioPig}~\cite{nordberg13}
 have attempted to build a distributed processing environment on top of current single node genomics APIs.
 However, several problems must be solved in order to make distributed processing of genomic data productive:
 
@@ -1318,15 +1318,15 @@ metadata is centralized, it must be replicated to all machines.
 bioinformatician productivity, we need to define APIs that allow developers to conveniently express algorithms.
 \end{itemize}
 
-In \texttt{ADAM}, we have taken a more aggressive approach to the design of APIs for processing genomic data
+In \textsc{ADAM}, we have taken a more aggressive approach to the design of APIs for processing genomic data
 in a distributed system. Although modern genomics pipelines are built as monolithic applications, we have
-chosen a layered decomposition for \texttt{ADAM}, that uses a schema as a ``narrow waist''. Instead of using
-a flat file format, as is traditional in genomics, we are using this schema with \texttt{Parquet}~(a commodity columnar
+chosen a layered decomposition for \textsc{ADAM}, that uses a schema as a ``narrow waist''. Instead of using
+a flat file format, as is traditional in genomics, we are using this schema with \textsc{Parquet}~(a commodity columnar
 store~\cite{parquet}) to store genomic data in a way that both allows efficient distributed read/write and that
 achieves high compression. On top of this, we have added primitives that implement common genomic traversals
-in a distributed manner. We have then used \texttt{ADAM} to implement common preprocessing stages from
-commonly used genomics pipelines. \texttt{ADAM}'s preprocessing stages are between 1-5$\times$ faster than the
-equivalent \texttt{GATK} preprocessing stages, and achieve linear scaling out to 128 nodes.
+in a distributed manner. We have then used \textsc{ADAM} to implement common preprocessing stages from
+commonly used genomics pipelines. \textsc{ADAM}'s preprocessing stages are between 1-5$\times$ faster than the
+equivalent \textsc{GATK} preprocessing stages, and achieve linear scaling out to 128 nodes.
 
 \section{Realizing A Decoupled Stack Architecture In \textsc{ADAM}}
 \label{sec:realizing-stack-architecture}
@@ -1467,8 +1467,8 @@ might assess the validity of a variant using the quality characteristics of all 
 
 To support these algorithms, we provide a ``region'' or ``spatial'' join primitive. The algorithm used is described
 in algorithm~\ref{alg:region-join} and takes as input two sets (RDDs, see Zaharia et al~\cite{zaharia12}) of
-\texttt{ReferenceRegions}, a data structure that represents intervals along the 1-D genomics coordinate
-space. It produces the set of all overlapping \texttt{ReferenceRegion} pairs. The $hulls$ variable contains
+\textsc{ReferenceRegions}, a data structure that represents intervals along the 1-D genomics coordinate
+space. It produces the set of all overlapping \textsc{ReferenceRegion} pairs. The $hulls$ variable contains
 the set of convex hulls and is broadcasted to all compute nodes during the join.
 
 \begin{algorithm}
@@ -1495,7 +1495,7 @@ distributed convex hull computation problem is important because it is used both
 for partitioning during a region join and for performing INDEL realignment.
 
 While the join described above is a broadcast join, a region join can also be implemented via a straightforward
-shuffle-based approach, which is described in Algorithm~\ref{alg:shuffle-region-join}. The \texttt{partitionJoinFn}
+shuffle-based approach, which is described in Algorithm~\ref{alg:shuffle-region-join}. The \textsc{partitionJoinFn}
 function maintains two iterators (one each from both the left and right collections), along with a buffer. This buffer is
 used to track all key-value pairs from the right collection iterator that \emph{could} match to a future key-value pair
 from the left collection iterator. We prune this buffer every time that we advance the left collection iterator. For
@@ -1511,7 +1511,7 @@ partition boundaries. In our implementation, we replicate keys that cross partit
 \STATE $partitions \leftarrow left$.getPartitions()
 \STATE $left \leftarrow left$.repartitionAndSort($partitions$)
 \STATE $right \leftarrow right$.repartitionAndSort($partitions$)
-\STATE $joined \leftarrow left$.zipPartitions($right$, \texttt{partitionJoinFn})
+\STATE $joined \leftarrow left$.zipPartitions($right$, \textsc{partitionJoinFn})
 \RETURN $joined$
 \end{algorithmic}
 \end{algorithm}
@@ -1521,226 +1521,405 @@ multi-region joins are common in genomics, and can be easily implemented using t
 We are currently working to implement further parallel spatial functions such as sliding windows, using techniques
 similar to the shuffle-based join. We are working to characterize the performance differences between the two
 join strategies described above. In the future, we hope to enable the use of the region join in a SQL based system
-such as \texttt{Spark SQL}~\cite{armbrust15}.
+such as \textsc{Spark SQL}~\cite{armbrust15}.
 
 \section{Schema Design for Representing Genomic Data}
 \label{sec:schema-design}
 
 A common criticism of bioinformatics as a field surrounds the proliferation of file formats. Short read data alone is
-stored in four common formats: \texttt{FASTQ}~\cite{cock10}, \texttt{SAM}~\cite{li09}, \texttt{BAM}, and
-\texttt{CRAM}~\cite{fritz11}. While these formats all represent different layouts of data on disk, they tend to be
-logically harmonious. Due to this logical congruency of the different formats, we chose to build \texttt{ADAM}
-on top of a logical schema, instead of a binary format on disk. While we do use Apache \texttt{Parquet}~\cite{parquet} to
-materialize data on disk, the Apache \texttt{Avro}~\cite{avro} schema is used as a narrow waist in the system,
-that enables ``legacy'' formats to be processed identically to data stored in \texttt{Parquet} with modest performance
+stored in four common formats: \textsc{FASTQ}~\cite{cock10}, \textsc{SAM}~\cite{li09}, \textsc{BAM}, and
+\textsc{CRAM}~\cite{fritz11}. While these formats all represent different layouts of data on disk, they tend to be
+logically harmonious. Due to this logical congruency of the different formats, we chose to build \textsc{ADAM}
+on top of a logical schema, instead of a binary format on disk. While we do use Apache \textsc{Parquet}~\cite{parquet} to
+materialize data on disk, the Apache \textsc{Avro}~\cite{avro} schema is used as a narrow waist in the system,
+that enables ``legacy'' formats to be processed identically to data stored in \textsc{Parquet} with modest performance
 degradation.
 
-We made several high level choices when designing the schemas used in \texttt{ADAM}. First, the schemas are fully
-denormalized, which reduces the cost of metadata access and simplifies metadata distribution. We are able to
-get these benefits without greatly increasing the cost of memory access because our backing store~(\texttt{Parquet})
-makes use of run length and dictionary encoding, which allows for a single object to be allocated for highly repetitive
-elements on read. Another key design choice was to require that all fields in the schema are nullable; by enforcing
-this requirement, we enable arbitrary user specified projections. Arbitrary projections can be used to accelerate
-common sequence quality control algorithms such as Flagstat~\cite{massie13, nothaft15}.
+We made several high level choices when designing the schemas used in
+\textsc{ADAM}~\cite{massie13}. Over time, we have gone backwards on some of
+these design decisions. First, the schemas were originally fully denormalized.
+Our rationale for thie decision was that this would reduce the cost of metadata
+access while simplifying metadata distribution. We believed we would be able to
+gain these benefits without greatly increasing the cost of memory access because
+our backing store~(\textsc{Parquet}) made use of run length and dictionary
+encoding, which allows for a single object to be allocated for highly repetitive
+elements on read. As we discuss in~\S\ref{sec:metadata}, this decision wound up
+being costly, and we reversed this decision as the \textsc{ADAM} schemas
+progressed. Another key design choice was to require that all fields in the
+schema are nullable; by enforcing this requirement, we enable arbitrary user
+specified projections. Arbitrary projections can be used to accelerate
+common sequence quality control algorithms such as Flagstat~\cite{massie13,
+  nothaft15}. We have still maintained this requirement.
+
+We have reproduced the schemas used to describe reads, features, variants, and
+genotypes below. \textsc{ADAM} also contains schemas for describing assembled
+contigs, but we have not included them in this section. We discuss the current
+schemas, as well as their evolution over the course of the \textsc{ADAM}
+project.
 
 \subsection{Read Schemas}
 \label{sec:read-schemas}
 
-We have reproduced the schemas used to describe reads, variants, and genotypes below. \texttt{ADAM} also
-contains schemas for describing assembled contigs, genomic features, and variant annotations, but we have
-not included them in this section.
+Our read schema maps closely to the logical layout of data presented by
+\textsc{SAM} and \textsc{BAM}.
 
-\begin{lstlisting}[caption=\texttt{ADAM} read schema]
+\begin{lstlisting}[caption=\textsc{ADAM} read schema]
 record AlignmentRecord {
-  /** Alignment position and quality */
-  Contig contig;
-  long start;
-  long oldPosition;
-  long end;
+ 
+  union { int, null } readInFragment = 0;
 
-  /** read ID, sequence, and quality */
-  string readName;
-  string sequence;
-  string qual;
-  
-  /** alignment details */
-  string cigar;
-  string oldCigar;
-  int mapq;
-  int basesTrimmedFromStart;
-  int basesTrimmedFromEnd;
-  boolean readNegativeStrand;
-  boolean mateNegativeStrand;
-  boolean primaryAlignment;
-  boolean secondaryAlignment;
-  boolean supplementaryAlignment;
-  string mismatchingPositions;
-  string origQual;
+  union { null, string } contigName = null;
+  union { null, long } start = null;
+  union { null, long } oldPosition = null;
+  union { null, long } end = null;
 
-  /** Read status flags */
-  boolean readPaired;
-  boolean properPair;
-  boolean readMapped;
-  boolean mateMapped;
-  boolean firstOfPair;
-  boolean secondOfPair;
-  boolean failedVendorQualityChecks;
-  boolean duplicateRead;
+  union { null, int } mapq = null;
 
-  /** optional attributes */
-  string attributes;
+  union { null, string } readName = null;
 
-  /** record group metadata */
-  string recordGroupName;
-  string recordGroupSequencingCenter;
-  string recordGroupDescription;
-  long recordGroupRunDateEpoch;
-  string recordGroupFlowOrder;
-  string recordGroupKeySequence;
-  string recordGroupLibrary;
-  int recordGroupPredictedMedianInsertSize;
-  string recordGroupPlatform;
-  string recordGroupPlatformUnit;
-  string recordGroupSample;
+  union { null, string } sequence = null;
+  union { null, string } qual = null;
 
-  /** Mate pair alignment information */
-  long mateAlignmentStart;
-  long mateAlignmentEnd;
-  Contig mateContig;
+  union { null, string } cigar = null;
+  union { null, string } oldCigar = null;
+
+  union { int, null } basesTrimmedFromStart = 0;
+  union { int, null } basesTrimmedFromEnd = 0;
+
+  union { boolean, null } readPaired = false;
+  union { boolean, null } properPair = false;
+  union { boolean, null } readMapped = false;
+  union { boolean, null } mateMapped = false;
+  union { boolean, null } failedVendorQualityChecks = false;
+  union { boolean, null } duplicateRead = false;
+
+  union { boolean, null } readNegativeStrand = false;
+  union { boolean, null } mateNegativeStrand = false;
+  union { boolean, null } primaryAlignment = false;
+  union { boolean, null } secondaryAlignment = false;
+  union { boolean, null } supplementaryAlignment = false;
+
+  union { null, string } mismatchingPositions = null;
+  union { null, string } origQual = null;
+
+  union { null, string } attributes = null;
+
+  union { null, string } recordGroupName = null;
+  union { null, string } recordGroupSample = null;
+
+  union { null, long } mateAlignmentStart = null;
+  union { null, string } mateContigName = null;
+
+  union { null, long } inferredInsertSize = null;
 }
 \end{lstlisting}
 
-Our read schema maps closely to the logical layout of data presented by \texttt{SAM} and \texttt{BAM}.
-The main modifications relate to how we represent metadata, which has been denormalized across the record.
-All of the metadata from the sequencing run and prior processing steps are packed into the record
-group metadata fields. The program information describes the processing lineage of the sample and
-is expected to be uniform across all records, thus it compresses extremely well. The record group
-information is not guaranteed to be uniform across all records, but there are a limited number number
-of record groups per sequencing dataset. This
-metadata is string heavy, which benefits from column-oriented decompression and makes proper deserialization from disk important. Although the
-information consumes less than 5\% of space on disk, a poor deserializer implementation may replicate
-a string per field per record, which greatly increases the amount of memory allocated and the garbage
-collection~(GC) load.
+Additionally, we support a schema that groups together all of th ereads from a
+single sequenced fragment. This fragment enables a traversal over read data that
+is similar to \textsc{SAM}'s read-name grouping.
 
-\begin{lstlisting}[caption=\texttt{ADAM} variant and genotype schemas]
-enum StructuralVariantType {
-  DELETION,
-  INSERTION,
-  INVERSION,
-  MOBILE_INSERTION,
-  MOBILE_DELETION,
-  DUPLICATION,
-  TANDEM_DUPLICATION
-}
+\begin{lstlisting}[caption=\textsc{ADAM} fragment schema]
+record Fragment {
 
-record StructuralVariant {
-  StructuralVariantType type;
-  string assembly;
+  union { null, string } readName = null;
 
-  boolean precise;
-  int startWindow;
-  int endWindow;
-}
+  union { null, string } instrument = null;
+  union { null, string } runId = null;
 
-record Variant {
-  Contig contig;
-  long start;
-  long end;
+  union { null, int } fragmentSize = null;
 
-  string referenceAllele;
-  string alternateAllele;
-  StructuralVariant svAllele;
-
-  boolean isSomatic;
-}
-
-enum GenotypeAllele {
-  Ref,
-  Alt,
-  OtherAlt,
-  NoCall
-}
-
-record VariantCallingAnnotations {
-  float variantCallErrorProbability;
-
-  array<string> variantFilters;
-
-  int readDepth;
-  boolean downsampled;
-  float baseQRankSum;
-  float clippingRankSum;
-  float fisherStrandBiasPValue = null;
-  float haplotypeScore;
-  float inbreedingCoefficient;
-  float rmsMapQ;
-  int mapq0Reads;
-  float mqRankSum;
-  float variantQualityByDepth;
-  float readPositionRankSum;
-
-  array<int> genotypePriors;
-  array<int> genotypePosteriors;
-
-  float vqslod;
-  string culprit;
-  boolean usedForNegativeTrainingSet;
-  boolean usedForPositiveTrainingSet;
-
-  map<string> attributes;
-}
-
-record Genotype {
-  Variant variant;
-  VariantCallingAnnotations variantCallingAnnotations;
-
-  string sampleId;
-  string sampleDescription;
-  string processingDescription;
-
-  array<GenotypeAllele> alleles;
-
-  float expectedAlleleDosage;
-  int referenceReadDepth;
-  int alternateReadDepth;
-  int readDepth;
-  int minReadDepth;
-  int genotypeQuality;
-  array<int> genotypeLikelihoods;
-  array<int> nonReferenceLikelihoods;
-  array<int> strandBiasComponents;
-
-  boolean splitFromMultiAllelic;
-
-  boolean isPhased;
-  int phaseSetId;
-  int phaseQuality;
+  array<AlignmentRecord> alignments = [];
 }
 \end{lstlisting}
+
+\subsection{Variation Schemas}
+\label{sec:variation-schemas}
 
 The variant and genotype schemas present a larger departure from the representation used by the Variant Call
-Format~(\texttt{VCF}). The most noticeable difference is that we have migrated away from \texttt{VCF}'s variant oriented
+Format~(\textsc{VCF}). The most noticeable difference is that we have migrated away from \textsc{VCF}'s variant oriented
 representation to a matrix representation. Instead of the variant record serving to group together genotypes, the
 variant record is embedded within the genotype. Thus, a record represents the genotype assigned to a sample,
-as opposed to a \texttt{VCF} row, where all individuals are collected together. The second major modification is to assume
+as opposed to a \textsc{VCF} row, where all individuals are collected together. The second major modification is to assume
 a biallelic representation\footnote{In a biallelic representation, we describe the genotype of a sample at a position or
 interval as the composition of a reference allele and a single alternate allele. If multiple alternate alleles segregate at
 the site (e.g., there are two known SNPs in a population at this site), we create multiple biallelic variants for the site.}.
-This differs from \texttt{VCF}, which allows multiallelic records. By limiting
+This differs from \textsc{VCF}, which allows multiallelic records. By limiting
 ourselves to a biallelic representation, we are able to clarify the meaning of many of the variant calling annotations. If a
-site contains a multiallelic variant (e.g., in \texttt{VCF} parlance this could be a \texttt{1/2} genotype), we split the
+site contains a multiallelic variant (e.g., in \textsc{VCF} parlance this could be a \textsc{1/2} genotype), we split the
 variant into two or more biallelic records. The sufficient statistics for each allele should then be computed under
-a reference model similar to the model used in genome \texttt{VCF}s. If the sample does contain a multiallelic variant at
-the given site, this multiallelic variant is represented by referencing to another record via the \texttt{OtherAlt}
+a reference model similar to the model used in genome \textsc{VCF}s. If the sample does contain a multiallelic variant at
+the given site, this multiallelic variant is represented by referencing to another record via the \textsc{OtherAlt}
 enumeration.
 
+\begin{lstlisting}[caption=\textsc{ADAM} variant and genotype schemas]
+record TranscriptEffect {
+  union { null, string } alternateAllele = null;
+
+  array<string> effects = [];
+
+  union { null, string } geneName = null;
+  union { null, string } geneId = null;
+  union { null, string } featureType = null;
+  union { null, string } featureId = null;
+  union { null, string } biotype = null;
+
+  union { null, int } rank = null;
+  union { null, int } total = null;
+
+  union { null, string } genomicHgvs = null;
+  union { null, string } transcriptHgvs = null;
+  union { null, string } proteinHgvs = null;
+
+  union { null, int } cdnaPosition = null;
+  union { null, int } cdnaLength = null;
+
+  union { null, int } cdsPosition = null;
+  union { null, int } cdsLength = null;
+
+  union { null, int } proteinPosition = null;
+  union { null, int } proteinLength = null;
+
+  union { null, int } distance = null;
+
+  array<VariantAnnotationMessage> messages = [];
+}
+
+record VariantAnnotation {
+
+  union { null, string } ancestralAllele = null;
+
+  union { null, int } alleleCount = null;
+
+  union { null, int } readDepth = null;
+  union { null, int } forwardReadDepth = null;
+  union { null, int } reverseReadDepth = null;
+  union { null, int } referenceReadDepth = null;
+  union { null, int } referenceForwardReadDepth = null;
+  union { null, int } referenceReverseReadDepth = null;
+
+  union { null, float } alleleFrequency = null;
+
+  union { null, string } cigar = null;
+
+  union { null, boolean } dbSnp = null;
+  union { null, boolean } hapMap2 = null;
+  union { null, boolean } hapMap3 = null;
+  union { null, boolean } validated = null;
+  union { null, boolean } thousandGenomes = null;
+
+  union { boolean, null } somatic = false;
+
+  array<TranscriptEffect> transcriptEffects = [];
+
+  map<string> attributes = {};
+}
+
+record Variant {
+
+  union { null, string } contigName = null;
+  union { null, long } start = null;
+  union { null, long } end = null;
+
+  array<string> names = [];
+
+  union { boolean, null } splitFromMultiAllelic = false;
+
+  union { null, string } referenceAllele = null;
+  union { null, string } alternateAllele = null;
+
+  union { null, double } quality = null;
+
+  union { null, boolean } filtersApplied = null;
+  union { null, boolean } filtersPassed = null;
+  array<string> filtersFailed = [];
+
+  union { null, VariantAnnotation } annotation = null;
+}
+
+enum GenotypeAllele {
+  REF,
+  ALT,
+  OTHER_ALT,
+  NO_CALL
+}
+
+record VariantCallingAnnotations {
+
+  union { null, boolean } filtersApplied = null;
+  union { null, boolean } filtersPassed = null;
+  array<string> filtersFailed = [];
+
+  union { null, boolean } downsampled = null;
+
+  union { null, float } baseQRankSum = null;
+  union { null, float } fisherStrandBiasPValue = null;
+  union { null, float } rmsMapQ = null;
+  union { null, int } mapq0Reads = null;
+  union { null, float } mqRankSum = null;
+  union { null, float } readPositionRankSum = null;
+
+  array<float> genotypePriors = [];
+  array<float> genotypePosteriors = [];
+
+  union { null, float } vqslod = null;
+  union { null, string } culprit = null;
+
+  map<string> attributes = {};
+}
+
+record Genotype {
+
+  union { null, Variant } variant = null;
+  union { null, string } contigName = null;
+  union { null, long } start = null;
+  union { null, long } end = null;
+
+  union { null, VariantCallingAnnotations } variantCallingAnnotations = null;
+
+  union { null, string }  sampleId = null;
+  union { null, string }  sampleDescription = null;
+  union { null, string }  processingDescription = null;
+
+  array<GenotypeAllele> alleles = [];
+
+  union { null, float } expectedAlleleDosage = null;
+  union { null, int } referenceReadDepth = null;
+  union { null, int } alternateReadDepth = null;
+  union { null, int } readDepth = null;
+  union { null, int } minReadDepth = null;
+
+  union { null, int } genotypeQuality = null;
+  array<double> genotypeLikelihoods = [];
+  array<double> nonReferenceLikelihoods = [];
+
+  array<int> strandBiasComponents = [];
+
+  union { boolean, null } splitFromMultiAllelic = false;
+
+  union { boolean, null } phased = false;
+  union { null, int } phaseSetId = null;
+  union { null, int } phaseQuality = null;
+}
+\end{lstlisting}
+
 These representations achieve high compression versus the legacy formats. We provide a detailed breakdown of
-compression in~\S\ref{sec:compression}. \texttt{ADAM} data stored in \texttt{Parquet} achieves an
-approximately 25\% reduction in file size over compressed \texttt{BAM} for read data, and a 66\% reduction
-over \texttt{GZIP}ped \texttt{VCF} for variant data.
+compression in~\S\ref{sec:compression}. \textsc{ADAM} data stored in \textsc{Parquet} achieves an
+approximately 25\% reduction in file size over compressed \textsc{BAM} for read data, and a 66\% reduction
+over \textsc{GZIP}ped \textsc{VCF} for variant data.
+
+\subsection{Feature Schemas}
+\label{sec:feature-schemas}
+
+\begin{lstlisting}[caption=\textsc{ADAM}'s feature schemas]
+enum Strand {
+  FORWARD,
+  REVERSE,
+  INDEPENDENT,
+  UNKNOWN
+}
+
+record Dbxref {
+  union { null, string } db = null;
+  union { null, string } accession = null;
+}
+
+record OntologyTerm {
+  union { null, string } db = null;
+  union { null, string } accession = null;
+}
+
+record Feature {
+
+  union { null, string } featureId = null;
+  union { null, string } name = null;
+
+  union { null, string } source = null;
+
+  union { null, string } featureType = null;
+
+  union { null, string } contigName = null;
+  union { null, long } start = null;
+  union { null, long } end = null;
+
+  union { null, Strand } strand = null;
+
+  union { null, int } phase = null;
+  union { null, int } frame = null;
+
+  union { null, double } score = null;
+
+  union { null, string } geneId = null;
+  union { null, string } transcriptId = null;
+  union { null, string } exonId = null;
+  array<string> aliases = [];
+  array<string> parentIds = [];
+
+  union { null, string } target = null;
+
+  union { null, string } gap = null;
+
+  union { null, string } derivesFrom = null;
+
+  array<string> notes = [];
+
+  array<Dbxref> dbxrefs = [];
+
+  array<OntologyTerm> ontologyTerms = [];
+
+  union { null, boolean } circular = null;
+
+  map<string> attributes = {};
+}
+\end{lstlisting}
 
 \subsection{Managing Genomic Metadata}
 \label{sec:metadata}
+
+A major evolution of the \textsc{ADAM} schemas relates to how we manage and
+store metadata. In our original schemas, the metdata was denormalized across the
+record. For example, all of the metadata from the sequencing run and prior
+processing steps were packed into record group metadata fields, as opposed to
+being stored in a file header. Our rationale was that this metadata describes
+the processing lineage of the sample and is expected to have limited cardinality
+across all records, and thus would compresses extremely well.
+
+This metadata is string heavy, and benefitted strongly from column-oriented
+decompression on disk. However, proper deserialization from disk proved to be
+difficult. Although the information consumes less than 5\% of space on disk, a
+poor deserializer implementation may replicate a string per field per record,
+which greatly increased the amount of memory allocated and the garbage
+collection~(GC) load. With this metadata included in each record, a dataset
+that was 200GB on disk would balloon into more than 5TB in memory. Additionally,
+implementing the deserializer conflicted with \textsc{Apache Spark}'s
+serialization architecture. \textsc{Spark} assumes that deserializers have
+limited state, and write to a stream that does not support seeks. While this is
+a reasonable assertion for row-oriented serialization techinques, this made it
+extremely difficult to implement a column-oriented serialization. Prior to
+eliminating the denormalized metadata from our schemas, this meant that we would
+have very efficient memory utilization immediately after reading from disk, as
+\textsc{Apache Parquet} would only allocate a single string per replicated
+element. However, we would then see the memory explosion after the first shuffle
+in our query.
+
+This memory explosion led to a major refactor of the \textsc{ADAM} schemas and
+the introduction of the \textsc{GenomicRDD} hierarchy. Originally, since the
+metadata was consolidated in each record, the \textsc{ADAMContext} load methods
+would return \textsc{RDD}s containing our \textsc{Apache Avro}~\cite{avro}
+schema objects. The methods that made up the presentation layer~(6) of our stack
+would be added at compile-time using \textsc{Scala}'s implicit methods. When we
+refactored the schemas, we introduced the \textsc{GenomicRDD} classes as a way
+to track metadata alongside the \textsc{Apache Spark} RDD, moved the
+presentation layer methods into the implementations of the \textsc{GenomicRDD}
+classes, and eliminated the implicit conversions. Long term, we believe that the
+ideal mechanism for storing this metadata is a database designed for storing
+metadata, such as the \textsc{Ground} store~\cite{hellerstein17}. We discuss the
+longterm metadata managment needs in~\S\ref{sec:metadata-future}.
+
+\subsection{Evaluating Compression Techniques}
+\label{sec:compression}
+
+\section{Multi-Language Processing in \textsc{ADAM}}
+\label{sec:multi-language}
 
 \part{Algorithms and Tools}
 
@@ -1772,7 +1951,7 @@ over \texttt{GZIP}ped \texttt{VCF} for variant data.
   \end{itemize}
 \item Two part architecture:
   \begin{itemize}
-  \item \texttt{pipe} API in \textsc{ADAM}: auto-parallelization architecture
+  \item \textsc{pipe} API in \textsc{ADAM}: auto-parallelization architecture
   \item Tool wrappers in \textsc{Cannoli}
   \end{itemize}
 \item Is it a truly general approach?
@@ -1784,7 +1963,7 @@ over \texttt{GZIP}ped \texttt{VCF} for variant data.
   \end{itemize}
 \end{itemize}
 
-\section{Accomodating Single-node Tools in \textsc{ADAM} With the \texttt{pipe} API}
+\section{Accomodating Single-node Tools in \textsc{ADAM} With the \textsc{pipe} API}
 \label{sec:pipe-api}
 
 \begin{itemize}
@@ -1815,7 +1994,7 @@ over \texttt{GZIP}ped \texttt{VCF} for variant data.
 \begin{itemize}
 \item Approach:
   \begin{itemize}
-  \item Delegate to \texttt{pipe} API as much as possible
+  \item Delegate to \textsc{pipe} API as much as possible
   \item Transparently support both local and ``remote'' reference files
   \item Support native executables, but default to Docker for convenience of packaging
   \end{itemize}
@@ -1843,8 +2022,8 @@ over \texttt{GZIP}ped \texttt{VCF} for variant data.
 \chapter{Scalable Alignment Preprocessing with \textsc{ADAM}}
 \label{chap:adam}
 
-In \texttt{ADAM}, we have implemented the three most-commonly used pre-processing stages from the
-\texttt{GATK} pipeline~\cite{depristo11}. In this section, we describe the stages that we have
+In \textsc{ADAM}, we have implemented the three most-commonly used pre-processing stages from the
+\textsc{GATK} pipeline~\cite{depristo11}. In this section, we describe the stages that we have
 implemented, and the techniques we have used to improve performance and accuracy when running on
 a distributed system. These pre-processing stages include:
 
@@ -1865,7 +2044,7 @@ on disk, we are able to properly handle chimeric read pairs.
 \item \textbf{Local Realignment:} In local realignment, we correct areas where variant alleles cause reads to be
 locally misaligned from the reference genome.\footnote{This is typically caused by the presence of
 insertion/deletion (INDEL) variants; see DePristo et al~\cite{depristo11}.} In this algorithm, we first identify regions
-as targets for realignment. In the \texttt{GATK}, this identification is done by traversing sorted read alignments. In our implementation,
+as targets for realignment. In the \textsc{GATK}, this identification is done by traversing sorted read alignments. In our implementation,
 we fold over partitions where we generate targets, and then we merge the tree of targets. This process allows us
 to eliminate the data shuffle needed to achieve the sorted ordering. As part of this fold, we must
 compute the convex hull of overlapping regions in parallel. We discuss this in more detail later in this section.
@@ -1945,8 +2124,8 @@ covariate. Algorithms~\ref{alg:emit-observations} and \ref{alg:create-table} dem
 \end{algorithmic}
 \end{algorithm}
 
-In Algorithm~\ref{alg:emit-observations}, the \texttt{Observation} class stores the number of bases seen
-and the number of errors seen. For example, \texttt{Observation(1, 1)} creates an \texttt{Observation} object
+In Algorithm~\ref{alg:emit-observations}, the \textsc{Observation} class stores the number of bases seen
+and the number of errors seen. For example, \textsc{Observation(1, 1)} creates an \textsc{Observation} object
 that has seen one base, which was an erroneous base.
 
 Once we have computed the observations that correspond to each covariate, we estimate the observed base
@@ -1955,7 +2134,7 @@ Binomial likelihood and a Beta(1, 1) prior.
 
 \begin{equation}
 \label{eqn:bqsr-err}
-\mathbf{E}(P_{err}|{cov}) = \frac{\texttt{\#errors}(cov) + 1}{\texttt{\#observations}(cov) + 2}
+\mathbf{E}(P_{err}|{cov}) = \frac{\textsc{\#errors}(cov) + 1}{\textsc{\#observations}(cov) + 2}
 \end{equation}
 
 After these probabilities are estimated, we go back across the input read dataset and reconstruct the quality
@@ -2016,9 +2195,9 @@ algorithm for finding the maximal convex hulls that describe a genomic dataset.
 \end{algorithmic}
 \end{algorithm}
 
-The \texttt{generateTarget} function projects each datapoint into a Red-Black tree that contains a
+The \textsc{generateTarget} function projects each datapoint into a Red-Black tree that contains a
 single region. The performance of the fold depends on the efficiency of the merge function. We achieve
-efficient merges with the tail-call recursive \texttt{mergeTargetSets} function that is described in
+efficient merges with the tail-call recursive \textsc{mergeTargetSets} function that is described in
 Algorithm~\ref{alg:join-targets}.
 
 \begin{algorithm}
@@ -2246,8 +2425,8 @@ previously unseen $k$-mers. This is the only possible explanation for the two in
 paths between $s_1$ and $s_2$.
 \end{proof}
 
-To visualize the graph corresponding to a substitution, take the two example sequences \texttt{CCACTGT}
-and \texttt{CCAATGT}. These two sequences differ by a \texttt{C} $\leftrightarrow$ \texttt{A} edit at
+To visualize the graph corresponding to a substitution, take the two example sequences \textsc{CCACTGT}
+and \textsc{CCAATGT}. These two sequences differ by a \textsc{C} $\leftrightarrow$ \textsc{A} edit at
 position three. With $k$-mer length $k = 3$, this corresponds to the graph in Figure~\ref{fig:sne}.
 
 \begin{figure}[h]
@@ -2292,7 +2471,7 @@ $s_1$ and $s_2$.
 \end{proof}
 
 To visualize the graph corresponding to a canonical INDEL, take the two example sequences
-\texttt{CACTGT} and \texttt{CACCATGT}. Here, we have a \texttt{CA} insertion after position two. With
+\textsc{CACTGT} and \textsc{CACCATGT}. Here, we have a \textsc{CA} insertion after position two. With
 $k$-mer length $k = 3$, this corresponds to the graph in Figure~\ref{fig:indel}.
 
 \begin{figure}[h]
@@ -2344,7 +2523,7 @@ for each read~\cite{li09}. We do this by:
 \item Iterating over each operator in the CIGAR string. We coalesce the operators
 into a structure that we call an ``alignment block'':
 \begin{itemize}
-\item If the operator is a sequence match~(CIGAR \texttt{=}, or CIGAR \texttt{M}
+\item If the operator is a sequence match~(CIGAR \textsc{=}, or CIGAR \textsc{M}
 with MD tag indicating an exact sequence match) that is longer than our $k$-mer
 length, we can create an alignment block that indicates a convergence in the
 indexed de Bruijn block~(a sequence match block).
@@ -2358,7 +2537,7 @@ each side. We call these blocks realignment blocks.
 \end{itemize}
 \item We then loop over each alignment block. Since the sequence match blocks
 are exact sequence matches, they do not need any further processing and can be
-directly emitted as a CIGAR \texttt{=} operator. If the block is a realignment
+directly emitted as a CIGAR \textsc{=} operator. If the block is a realignment
 block, we then apply the observations from~\S\ref{sec:formulation}. Again, we
 can apply our approaches without building de Bruijn graphs for the bubble.
 Specifically, both of the canonical placement rules that we formulate
@@ -2366,14 +2545,14 @@ in~\S\ref{sec:formulation} indicate that the variant in a bubble can be recovere
 by trimming any matching flanking sequence. We begin by trimming the matching
 sequences from the reference and read, starting from the right, followed
 by the left. We then emit a CIGAR insertion, deletion, or sequence
-mismatch~(\texttt{X}) operator for this block, along with a match operator if
+mismatch~(\textsc{X}) operator for this block, along with a match operator if
 either side of the flanking sequence was longer than $k$.
 \end{itemize}
 
 This process is very efficient, as it can be done wholly with standard string
 operators in a single loop over the read. To avoid the cost of looking up the
 reference sequence from a reference genome, we require that all reads are
-tagged with the SAM \texttt{MD} tag. This allows us to reconstruct the
+tagged with the SAM \textsc{MD} tag. This allows us to reconstruct the
 reference sequence for a bubble from the read sequence and CIGAR.
 
 One problem with this method is that it can be misled by sequencing errors
@@ -2387,7 +2566,7 @@ and then we used our variant discovery algorithm~(see~\S\ref{sec:discovery})
 with filtration disabled to collect all canonical INDELs. We then fed these
 INDELs and our input reads into \textsc{ADAM}'s INDEL realignment
 engine~\cite{massie13, nothaft15}. This tool is based on the algorithms used in
-the \texttt{GATK}'s INDEL realigner~\cite{depristo11}, and calculates the quality-score
+the \textsc{GATK}'s INDEL realigner~\cite{depristo11}, and calculates the quality-score
 weighted Hamming edit distance between a set of reads, a consensus sequence~(a
 haplotype containing a potential INDEL variant), and the reference sequence. If
 the sum weighted edit distance between the reads and the consensus sequence
@@ -2426,7 +2605,7 @@ our pipeline~(see~\S\ref{sec:variant-filtration}).
 To identify a set of variants to score, we scan over all of the input reads,
 and generate a set of variants per read where each variant is tagged with the
 mean quality score of all bases in the read that were in this variant. We then
-use \textsc{Apache Spark}'s \texttt{reduceByKey} functionality to compute
+use \textsc{Apache Spark}'s \textsc{reduceByKey} functionality to compute
 the number of times each variant was observed with high quality. We do this
 to discard sequence variants that were observed in a read that represent a
 sequencing error, and not a true variant. In our evaluation, we set the quality
@@ -2520,7 +2699,7 @@ to storing the likelihood vector per read/variant pair, this record contains dat
 necessary to compute several genotype annotations that are used for variant
 filtration~(such as strand bias observations, mapping quality, etc.,
 see~\S\ref{sec:variant-filtration}). We use \textsc{Apache Spark}'s
-\texttt{reduceByKey} function to merge all of the observations for a given
+\textsc{reduceByKey} function to merge all of the observations for a given
 locus. Once we have merged all of the observations for a given site, we call the
 genotype state by taking the genotype state with the highest likelihood. In single
 sample mode, we assume no prior probability. We support a joint variant calling
@@ -2561,7 +2740,7 @@ However, we will add this functionality soon.
 \part{Conclusion and Future Work}
 
 \chapter{Future Work}
-\label{sec:future-work}
+\label{chap:future-work}
 
 \begin{itemize}
 \item What were our overarching the goals?
