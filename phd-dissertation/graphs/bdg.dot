@@ -1,0 +1,681 @@
+digraph UML {
+node [
+	shape=plaintext
+]
+
+org_bdgenomics_formats_avro_Read [label=<
+<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4' bgcolor='#002060' color='#002060'>
+	<TR>
+		<TD COLSPAN='2' bgcolor='#79A6FF' border='3'><FONT POINT-SIZE='20' color='white'>Read</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='name'><FONT color='white'>- name</FONT></TD>
+		<TD align='left' port='length'><FONT color='white'>- length</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='description'><FONT color='white'>- description</FONT></TD>
+		<TD align='left' port='qualityScores'><FONT color='white'>- qualityScores</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='alphabet'><FONT color='white'>- alphabet</FONT></TD>
+		<TD align='left' port='qualityScoreVariant'><FONT color='white'>- qualityScoreVariant</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='sequence'><FONT color='white'>- sequence</FONT></TD>
+		<TD align='left' port='attributes'><FONT color='white'>- attributes</FONT></TD>
+	</TR>
+</TABLE>>];
+
+org_bdgenomics_formats_avro_Contig [label=<
+<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4' bgcolor='#002060' color='#002060'>
+	<TR>
+		<TD COLSPAN='2' bgcolor='#79A6FF' border='3'><FONT POINT-SIZE='20' color='white'>Contig</FONT><BR/><FONT POINT-SIZE='15' color='white'>Genomic reference metadata</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='contigName'><FONT color='white'>- contigName</FONT></TD>
+		<TD align='left' port='assembly'><FONT color='white'>- assembly</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='contigLength'><FONT color='white'>- contigLength</FONT></TD>
+		<TD align='left' port='species'><FONT color='white'>- species</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='contigMD5'><FONT color='white'>- contigMD5</FONT></TD>
+		<TD align='left' port='referenceIndex'><FONT color='white'>- referenceIndex</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='referenceURL'><FONT color='white'>- referenceURL</FONT></TD>
+	</TR>
+</TABLE>>];
+
+org_bdgenomics_formats_avro_QualityScoreVariant [label=<
+<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4' bgcolor='#002060' color='#002060'>
+	<TR>
+		<TD COLSPAN='2' bgcolor='#79A6FF' border='3'><FONT POINT-SIZE='20' color='white'>QualityScoreVariant</FONT></TD>
+	</TR>
+</TABLE>>];
+
+org_bdgenomics_formats_avro_Feature [label=<
+<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4' bgcolor='#002060' color='#002060'>
+	<TR>
+		<TD COLSPAN='2' bgcolor='#79A6FF' border='3'><FONT POINT-SIZE='20' color='white'>Feature</FONT><BR/><FONT POINT-SIZE='15' color='white'>Generic genomic feature</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='featureId'><FONT color='white'>- featureId</FONT></TD>
+		<TD align='left' port='transcriptId'><FONT color='white'>- transcriptId</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='name'><FONT color='white'>- name</FONT></TD>
+		<TD align='left' port='exonId'><FONT color='white'>- exonId</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='source'><FONT color='white'>- source</FONT></TD>
+		<TD align='left' port='aliases'><FONT color='white'>- aliases</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='featureType'><FONT color='white'>- featureType</FONT></TD>
+		<TD align='left' port='parentIds'><FONT color='white'>- parentIds</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='contigName'><FONT color='white'>- contigName</FONT></TD>
+		<TD align='left' port='target'><FONT color='white'>- target</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='start'><FONT color='white'>- start</FONT></TD>
+		<TD align='left' port='gap'><FONT color='white'>- gap</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='end'><FONT color='white'>- end</FONT></TD>
+		<TD align='left' port='derivesFrom'><FONT color='white'>- derivesFrom</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='strand'><FONT color='white'>- strand</FONT></TD>
+		<TD align='left' port='notes'><FONT color='white'>- notes</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='phase'><FONT color='white'>- phase</FONT></TD>
+		<TD align='left' port='dbxrefs'><FONT color='white'>- dbxrefs</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='frame'><FONT color='white'>- frame</FONT></TD>
+		<TD align='left' port='ontologyTerms'><FONT color='white'>- ontologyTerms</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='score'><FONT color='white'>- score</FONT></TD>
+		<TD align='left' port='circular'><FONT color='white'>- circular</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='geneId'><FONT color='white'>- geneId</FONT></TD>
+		<TD align='left' port='attributes'><FONT color='white'>- attributes</FONT></TD>
+	</TR>
+</TABLE>>];
+
+org_bdgenomics_formats_avro_NucleotideContigFragment [label=<
+<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4' bgcolor='#002060' color='#002060'>
+	<TR>
+		<TD COLSPAN='2' bgcolor='#79A6FF' border='3'><FONT POINT-SIZE='20' color='white'>NucleotideContigFragment</FONT><BR/><FONT POINT-SIZE='15' color='white'>A fragment of a contig</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='contigName'><FONT color='white'>- contigName</FONT></TD>
+		<TD align='left' port='start'><FONT color='white'>- start</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='contigLength'><FONT color='white'>- contigLength</FONT></TD>
+		<TD align='left' port='end'><FONT color='white'>- end</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='description'><FONT color='white'>- description</FONT></TD>
+		<TD align='left' port='length'><FONT color='white'>- length</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='sequence'><FONT color='white'>- sequence</FONT></TD>
+		<TD align='left' port='fragments'><FONT color='white'>- fragments</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='index'><FONT color='white'>- index</FONT></TD>
+	</TR>
+</TABLE>>];
+
+org_bdgenomics_formats_avro_AlignmentRecord [label=<
+<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4' bgcolor='#002060' color='#002060'>
+	<TR>
+		<TD COLSPAN='2' bgcolor='#79A6FF' border='3'><FONT POINT-SIZE='20' color='white'>AlignmentRecord</FONT><BR/><FONT POINT-SIZE='15' color='white'>Genomic read description</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='readInFragment'><FONT color='white'>- readInFragment</FONT></TD>
+		<TD align='left' port='mateMapped'><FONT color='white'>- mateMapped</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='contigName'><FONT color='white'>- contigName</FONT></TD>
+		<TD align='left' port='failedVendorQualityChecks'><FONT color='white'>- failedVendorQualityChecks</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='start'><FONT color='white'>- start</FONT></TD>
+		<TD align='left' port='duplicateRead'><FONT color='white'>- duplicateRead</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='oldPosition'><FONT color='white'>- oldPosition</FONT></TD>
+		<TD align='left' port='readNegativeStrand'><FONT color='white'>- readNegativeStrand</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='end'><FONT color='white'>- end</FONT></TD>
+		<TD align='left' port='mateNegativeStrand'><FONT color='white'>- mateNegativeStrand</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='mapq'><FONT color='white'>- mapq</FONT></TD>
+		<TD align='left' port='primaryAlignment'><FONT color='white'>- primaryAlignment</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='readName'><FONT color='white'>- readName</FONT></TD>
+		<TD align='left' port='secondaryAlignment'><FONT color='white'>- secondaryAlignment</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='sequence'><FONT color='white'>- sequence</FONT></TD>
+		<TD align='left' port='supplementaryAlignment'><FONT color='white'>- supplementaryAlignment</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='qual'><FONT color='white'>- qual</FONT></TD>
+		<TD align='left' port='mismatchingPositions'><FONT color='white'>- mismatchingPositions</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='cigar'><FONT color='white'>- cigar</FONT></TD>
+		<TD align='left' port='origQual'><FONT color='white'>- origQual</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='oldCigar'><FONT color='white'>- oldCigar</FONT></TD>
+		<TD align='left' port='attributes'><FONT color='white'>- attributes</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='basesTrimmedFromStart'><FONT color='white'>- basesTrimmedFromStart</FONT></TD>
+		<TD align='left' port='recordGroupName'><FONT color='white'>- recordGroupName</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='basesTrimmedFromEnd'><FONT color='white'>- basesTrimmedFromEnd</FONT></TD>
+		<TD align='left' port='recordGroupSample'><FONT color='white'>- recordGroupSample</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='readPaired'><FONT color='white'>- readPaired</FONT></TD>
+		<TD align='left' port='mateAlignmentStart'><FONT color='white'>- mateAlignmentStart</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='properPair'><FONT color='white'>- properPair</FONT></TD>
+		<TD align='left' port='mateContigName'><FONT color='white'>- mateContigName</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='readMapped'><FONT color='white'>- readMapped</FONT></TD>
+		<TD align='left' port='inferredInsertSize'><FONT color='white'>- inferredInsertSize</FONT></TD>
+	</TR>
+</TABLE>>];
+
+org_bdgenomics_formats_avro_Genotype [label=<
+<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4' bgcolor='#002060' color='#002060'>
+	<TR>
+		<TD COLSPAN='2' bgcolor='#79A6FF' border='3'><FONT POINT-SIZE='20' color='white'>Genotype</FONT><BR/><FONT POINT-SIZE='15' color='white'>Genotype call</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='variant'><FONT color='white'>- variant</FONT></TD>
+		<TD align='left' port='alternateReadDepth'><FONT color='white'>- alternateReadDepth</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='contigName'><FONT color='white'>- contigName</FONT></TD>
+		<TD align='left' port='readDepth'><FONT color='white'>- readDepth</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='start'><FONT color='white'>- start</FONT></TD>
+		<TD align='left' port='minReadDepth'><FONT color='white'>- minReadDepth</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='end'><FONT color='white'>- end</FONT></TD>
+		<TD align='left' port='genotypeQuality'><FONT color='white'>- genotypeQuality</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='variantCallingAnnotations'><FONT color='white'>- variantCallingAnnotations</FONT></TD>
+		<TD align='left' port='genotypeLikelihoods'><FONT color='white'>- genotypeLikelihoods</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='sampleId'><FONT color='white'>- sampleId</FONT></TD>
+		<TD align='left' port='nonReferenceLikelihoods'><FONT color='white'>- nonReferenceLikelihoods</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='sampleDescription'><FONT color='white'>- sampleDescription</FONT></TD>
+		<TD align='left' port='strandBiasComponents'><FONT color='white'>- strandBiasComponents</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='processingDescription'><FONT color='white'>- processingDescription</FONT></TD>
+		<TD align='left' port='splitFromMultiAllelic'><FONT color='white'>- splitFromMultiAllelic</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='alleles'><FONT color='white'>- alleles</FONT></TD>
+		<TD align='left' port='phased'><FONT color='white'>- phased</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='expectedAlleleDosage'><FONT color='white'>- expectedAlleleDosage</FONT></TD>
+		<TD align='left' port='phaseSetId'><FONT color='white'>- phaseSetId</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='referenceReadDepth'><FONT color='white'>- referenceReadDepth</FONT></TD>
+		<TD align='left' port='phaseQuality'><FONT color='white'>- phaseQuality</FONT></TD>
+	</TR>
+</TABLE>>];
+
+org_bdgenomics_formats_avro_RecordGroup [label=<
+<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4' bgcolor='#002060' color='#002060'>
+	<TR>
+		<TD COLSPAN='2' bgcolor='#79A6FF' border='3'><FONT POINT-SIZE='20' color='white'>RecordGroup</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='name'><FONT color='white'>- name</FONT></TD>
+		<TD align='left' port='keySequence'><FONT color='white'>- keySequence</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='sample'><FONT color='white'>- sample</FONT></TD>
+		<TD align='left' port='library'><FONT color='white'>- library</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='sequencingCenter'><FONT color='white'>- sequencingCenter</FONT></TD>
+		<TD align='left' port='predictedMedianInsertSize'><FONT color='white'>- predictedMedianInsertSize</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='description'><FONT color='white'>- description</FONT></TD>
+		<TD align='left' port='platform'><FONT color='white'>- platform</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='runDateEpoch'><FONT color='white'>- runDateEpoch</FONT></TD>
+		<TD align='left' port='platformUnit'><FONT color='white'>- platformUnit</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='flowOrder'><FONT color='white'>- flowOrder</FONT></TD>
+		<TD align='left' port='processingSteps'><FONT color='white'>- processingSteps</FONT></TD>
+	</TR>
+</TABLE>>];
+
+org_bdgenomics_formats_avro_VariantAnnotation [label=<
+<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4' bgcolor='#002060' color='#002060'>
+	<TR>
+		<TD COLSPAN='2' bgcolor='#79A6FF' border='3'><FONT POINT-SIZE='20' color='white'>VariantAnnotation</FONT><BR/><FONT POINT-SIZE='15' color='white'>Statistical/effect annotations on a variant</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='ancestralAllele'><FONT color='white'>- ancestralAllele</FONT></TD>
+		<TD align='left' port='cigar'><FONT color='white'>- cigar</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='alleleCount'><FONT color='white'>- alleleCount</FONT></TD>
+		<TD align='left' port='dbSnp'><FONT color='white'>- dbSnp</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='readDepth'><FONT color='white'>- readDepth</FONT></TD>
+		<TD align='left' port='hapMap2'><FONT color='white'>- hapMap2</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='forwardReadDepth'><FONT color='white'>- forwardReadDepth</FONT></TD>
+		<TD align='left' port='hapMap3'><FONT color='white'>- hapMap3</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='reverseReadDepth'><FONT color='white'>- reverseReadDepth</FONT></TD>
+		<TD align='left' port='validated'><FONT color='white'>- validated</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='referenceReadDepth'><FONT color='white'>- referenceReadDepth</FONT></TD>
+		<TD align='left' port='thousandGenomes'><FONT color='white'>- thousandGenomes</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='referenceForwardReadDepth'><FONT color='white'>- referenceForwardReadDepth</FONT></TD>
+		<TD align='left' port='somatic'><FONT color='white'>- somatic</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='referenceReverseReadDepth'><FONT color='white'>- referenceReverseReadDepth</FONT></TD>
+		<TD align='left' port='transcriptEffects'><FONT color='white'>- transcriptEffects</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='alleleFrequency'><FONT color='white'>- alleleFrequency</FONT></TD>
+		<TD align='left' port='attributes'><FONT color='white'>- attributes</FONT></TD>
+	</TR>
+</TABLE>>];
+
+org_bdgenomics_formats_avro_Sample [label=<
+<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4' bgcolor='#002060' color='#002060'>
+	<TR>
+		<TD COLSPAN='2' bgcolor='#79A6FF' border='3'><FONT POINT-SIZE='20' color='white'>Sample</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='sampleId'><FONT color='white'>- sampleId</FONT></TD>
+		<TD align='left' port='attributes'><FONT color='white'>- attributes</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='name'><FONT color='white'>- name</FONT></TD>
+		<TD align='left' port='processingSteps'><FONT color='white'>- processingSteps</FONT></TD>
+	</TR>
+</TABLE>>];
+
+org_bdgenomics_formats_avro_Slice [label=<
+<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4' bgcolor='#002060' color='#002060'>
+	<TR>
+		<TD COLSPAN='2' bgcolor='#79A6FF' border='3'><FONT POINT-SIZE='20' color='white'>Slice</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='name'><FONT color='white'>- name</FONT></TD>
+		<TD align='left' port='strand'><FONT color='white'>- strand</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='description'><FONT color='white'>- description</FONT></TD>
+		<TD align='left' port='length'><FONT color='white'>- length</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='alphabet'><FONT color='white'>- alphabet</FONT></TD>
+		<TD align='left' port='totalLength'><FONT color='white'>- totalLength</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='sequence'><FONT color='white'>- sequence</FONT></TD>
+		<TD align='left' port='index'><FONT color='white'>- index</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='start'><FONT color='white'>- start</FONT></TD>
+		<TD align='left' port='slices'><FONT color='white'>- slices</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='end'><FONT color='white'>- end</FONT></TD>
+		<TD align='left' port='attributes'><FONT color='white'>- attributes</FONT></TD>
+	</TR>
+</TABLE>>];
+
+org_bdgenomics_formats_avro_Sequence [label=<
+<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4' bgcolor='#002060' color='#002060'>
+	<TR>
+		<TD COLSPAN='2' bgcolor='#79A6FF' border='3'><FONT POINT-SIZE='20' color='white'>Sequence</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='name'><FONT color='white'>- name</FONT></TD>
+		<TD align='left' port='sequence'><FONT color='white'>- sequence</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='description'><FONT color='white'>- description</FONT></TD>
+		<TD align='left' port='length'><FONT color='white'>- length</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='alphabet'><FONT color='white'>- alphabet</FONT></TD>
+		<TD align='left' port='attributes'><FONT color='white'>- attributes</FONT></TD>
+	</TR>
+</TABLE>>];
+
+org_bdgenomics_formats_avro_VariantAnnotationMessage [label=<
+<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4' bgcolor='#002060' color='#002060'>
+	<TR>
+		<TD COLSPAN='2' bgcolor='#79A6FF' border='3'><FONT POINT-SIZE='20' color='white'>VariantAnnotationMessage</FONT></TD>
+	</TR>
+</TABLE>>];
+
+org_bdgenomics_formats_avro_GenotypeType [label=<
+<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4' bgcolor='#002060' color='#002060'>
+	<TR>
+		<TD COLSPAN='2' bgcolor='#79A6FF' border='3'><FONT POINT-SIZE='20' color='white'>GenotypeType</FONT></TD>
+	</TR>
+</TABLE>>];
+
+org_bdgenomics_formats_avro_ProcessingStep [label=<
+<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4' bgcolor='#002060' color='#002060'>
+	<TR>
+		<TD COLSPAN='2' bgcolor='#79A6FF' border='3'><FONT POINT-SIZE='20' color='white'>ProcessingStep</FONT><BR/><FONT POINT-SIZE='15' color='white'>Computational lineage</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='id'><FONT color='white'>- id</FONT></TD>
+		<TD align='left' port='previousId'><FONT color='white'>- previousId</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='programName'><FONT color='white'>- programName</FONT></TD>
+		<TD align='left' port='description'><FONT color='white'>- description</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='commandLine'><FONT color='white'>- commandLine</FONT></TD>
+		<TD align='left' port='version'><FONT color='white'>- version</FONT></TD>
+	</TR>
+</TABLE>>];
+
+org_bdgenomics_formats_avro_GenotypeAllele [label=<
+<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4' bgcolor='#002060' color='#002060'>
+	<TR>
+		<TD COLSPAN='2' bgcolor='#79A6FF' border='3'><FONT POINT-SIZE='20' color='white'>GenotypeAllele</FONT></TD>
+	</TR>
+</TABLE>>];
+
+org_bdgenomics_formats_avro_Fragment [label=<
+<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4' bgcolor='#002060' color='#002060'>
+	<TR>
+		<TD COLSPAN='2' bgcolor='#79A6FF' border='3'><FONT POINT-SIZE='20' color='white'>Fragment</FONT><BR/><FONT POINT-SIZE='15' color='white'>Sequenced fragment of one or more reads</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='readName'><FONT color='white'>- readName</FONT></TD>
+		<TD align='left' port='fragmentSize'><FONT color='white'>- fragmentSize</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='instrument'><FONT color='white'>- instrument</FONT></TD>
+		<TD align='left' port='alignments'><FONT color='white'>- alignments</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='runId'><FONT color='white'>- runId</FONT></TD>
+	</TR>
+</TABLE>>];
+
+org_bdgenomics_formats_avro_Strand [label=<
+<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4' bgcolor='#002060' color='#002060'>
+	<TR>
+		<TD COLSPAN='2' bgcolor='#79A6FF' border='3'><FONT POINT-SIZE='20' color='white'>Strand</FONT></TD>
+	</TR>
+</TABLE>>];
+
+org_bdgenomics_formats_avro_OntologyTerm [label=<
+<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4' bgcolor='#002060' color='#002060'>
+	<TR>
+		<TD COLSPAN='2' bgcolor='#79A6FF' border='3'><FONT POINT-SIZE='20' color='white'>OntologyTerm</FONT><BR/><FONT POINT-SIZE='15' color='white'>A term describing a feature</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='db'><FONT color='white'>- db</FONT></TD>
+		<TD align='left' port='accession'><FONT color='white'>- accession</FONT></TD>
+	</TR>
+</TABLE>>];
+
+org_bdgenomics_formats_avro_Alphabet [label=<
+<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4' bgcolor='#002060' color='#002060'>
+	<TR>
+		<TD COLSPAN='2' bgcolor='#79A6FF' border='3'><FONT POINT-SIZE='20' color='white'>Alphabet</FONT></TD>
+	</TR>
+</TABLE>>];
+
+org_bdgenomics_formats_avro_Dbxref [label=<
+<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4' bgcolor='#002060' color='#002060'>
+	<TR>
+		<TD COLSPAN='2' bgcolor='#79A6FF' border='3'><FONT POINT-SIZE='20' color='white'>Dbxref</FONT><BR/><FONT POINT-SIZE='15' color='white'>Feature cross reference</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='db'><FONT color='white'>- db</FONT></TD>
+		<TD align='left' port='accession'><FONT color='white'>- accession</FONT></TD>
+	</TR>
+</TABLE>>];
+
+org_bdgenomics_formats_avro_Variant [label=<
+<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4' bgcolor='#002060' color='#002060'>
+	<TR>
+		<TD COLSPAN='2' bgcolor='#79A6FF' border='3'><FONT POINT-SIZE='20' color='white'>Variant</FONT><BR/><FONT POINT-SIZE='15' color='white'>A genomic sequence change</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='contigName'><FONT color='white'>- contigName</FONT></TD>
+		<TD align='left' port='alternateAllele'><FONT color='white'>- alternateAllele</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='start'><FONT color='white'>- start</FONT></TD>
+		<TD align='left' port='quality'><FONT color='white'>- quality</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='end'><FONT color='white'>- end</FONT></TD>
+		<TD align='left' port='filtersApplied'><FONT color='white'>- filtersApplied</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='names'><FONT color='white'>- names</FONT></TD>
+		<TD align='left' port='filtersPassed'><FONT color='white'>- filtersPassed</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='splitFromMultiAllelic'><FONT color='white'>- splitFromMultiAllelic</FONT></TD>
+		<TD align='left' port='filtersFailed'><FONT color='white'>- filtersFailed</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='referenceAllele'><FONT color='white'>- referenceAllele</FONT></TD>
+		<TD align='left' port='annotation'><FONT color='white'>- annotation</FONT></TD>
+	</TR>
+</TABLE>>];
+
+org_bdgenomics_formats_avro_VariantCallingAnnotations [label=<
+<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4' bgcolor='#002060' color='#002060'>
+	<TR>
+		<TD COLSPAN='2' bgcolor='#79A6FF' border='3'><FONT POINT-SIZE='20' color='white'>VariantCallingAnnotations</FONT><BR/><FONT POINT-SIZE='15' color='white'>Statistics about a genotype call</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='filtersApplied'><FONT color='white'>- filtersApplied</FONT></TD>
+		<TD align='left' port='mqRankSum'><FONT color='white'>- mqRankSum</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='filtersPassed'><FONT color='white'>- filtersPassed</FONT></TD>
+		<TD align='left' port='readPositionRankSum'><FONT color='white'>- readPositionRankSum</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='filtersFailed'><FONT color='white'>- filtersFailed</FONT></TD>
+		<TD align='left' port='genotypePriors'><FONT color='white'>- genotypePriors</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='downsampled'><FONT color='white'>- downsampled</FONT></TD>
+		<TD align='left' port='genotypePosteriors'><FONT color='white'>- genotypePosteriors</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='baseQRankSum'><FONT color='white'>- baseQRankSum</FONT></TD>
+		<TD align='left' port='vqslod'><FONT color='white'>- vqslod</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='fisherStrandBiasPValue'><FONT color='white'>- fisherStrandBiasPValue</FONT></TD>
+		<TD align='left' port='culprit'><FONT color='white'>- culprit</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='rmsMapQ'><FONT color='white'>- rmsMapQ</FONT></TD>
+		<TD align='left' port='attributes'><FONT color='white'>- attributes</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='mapq0Reads'><FONT color='white'>- mapq0Reads</FONT></TD>
+	</TR>
+</TABLE>>];
+
+org_bdgenomics_formats_avro_TranscriptEffect [label=<
+<TABLE BORDER='0' CELLBORDER='1' CELLSPACING='0' CELLPADDING='4' bgcolor='#002060' color='#002060'>
+	<TR>
+		<TD COLSPAN='2' bgcolor='#79A6FF' border='3'><FONT POINT-SIZE='20' color='white'>TranscriptEffect</FONT><BR/><FONT POINT-SIZE='15' color='white'>The effect of a coding variant</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='alternateAllele'><FONT color='white'>- alternateAllele</FONT></TD>
+		<TD align='left' port='transcriptHgvs'><FONT color='white'>- transcriptHgvs</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='effects'><FONT color='white'>- effects</FONT></TD>
+		<TD align='left' port='proteinHgvs'><FONT color='white'>- proteinHgvs</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='geneName'><FONT color='white'>- geneName</FONT></TD>
+		<TD align='left' port='cdnaPosition'><FONT color='white'>- cdnaPosition</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='geneId'><FONT color='white'>- geneId</FONT></TD>
+		<TD align='left' port='cdnaLength'><FONT color='white'>- cdnaLength</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='featureType'><FONT color='white'>- featureType</FONT></TD>
+		<TD align='left' port='cdsPosition'><FONT color='white'>- cdsPosition</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='featureId'><FONT color='white'>- featureId</FONT></TD>
+		<TD align='left' port='cdsLength'><FONT color='white'>- cdsLength</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='biotype'><FONT color='white'>- biotype</FONT></TD>
+		<TD align='left' port='proteinPosition'><FONT color='white'>- proteinPosition</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='rank'><FONT color='white'>- rank</FONT></TD>
+		<TD align='left' port='proteinLength'><FONT color='white'>- proteinLength</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='total'><FONT color='white'>- total</FONT></TD>
+		<TD align='left' port='distance'><FONT color='white'>- distance</FONT></TD>
+	</TR>
+	<TR>
+		<TD align='left' port='genomicHgvs'><FONT color='white'>- genomicHgvs</FONT></TD>
+		<TD align='left' port='messages'><FONT color='white'>- messages</FONT></TD>
+	</TR>
+</TABLE>>];
+
+subgraph cluster_bdg_avdl {
+	style="rounded, filled";
+	color=lightgrey;
+	node [style=filled,color=white];
+	label = "bdg.avdl";
+	URL="https://github.com/bigdatagenomics/bdg-formats/blob/master/src/main/resources/avro/bdg.avdl";
+	org_bdgenomics_formats_avro_Contig;
+	org_bdgenomics_formats_avro_ProcessingStep;
+	org_bdgenomics_formats_avro_RecordGroup;
+	org_bdgenomics_formats_avro_AlignmentRecord;
+	org_bdgenomics_formats_avro_Fragment;
+	org_bdgenomics_formats_avro_NucleotideContigFragment;
+	org_bdgenomics_formats_avro_VariantAnnotationMessage;
+	org_bdgenomics_formats_avro_TranscriptEffect;
+	org_bdgenomics_formats_avro_VariantAnnotation;
+	org_bdgenomics_formats_avro_Variant;
+	org_bdgenomics_formats_avro_GenotypeAllele;
+	org_bdgenomics_formats_avro_GenotypeType;
+	org_bdgenomics_formats_avro_VariantCallingAnnotations;
+	org_bdgenomics_formats_avro_Genotype;
+	org_bdgenomics_formats_avro_Strand;
+	org_bdgenomics_formats_avro_Dbxref;
+	org_bdgenomics_formats_avro_OntologyTerm;
+	org_bdgenomics_formats_avro_Feature;
+	org_bdgenomics_formats_avro_Sample;
+	org_bdgenomics_formats_avro_Alphabet;
+	org_bdgenomics_formats_avro_Sequence;
+	org_bdgenomics_formats_avro_Slice;
+	org_bdgenomics_formats_avro_QualityScoreVariant;
+	org_bdgenomics_formats_avro_Read;
+}
+
+
+// Define containment edges
+edge [
+	dir=both
+	arrowtail=odiamond
+	arrowhead=none
+	color="#C55A11"
+	penwidth=2
+]
+
+org_bdgenomics_formats_avro_Fragment:alignments:w -> org_bdgenomics_formats_avro_AlignmentRecord
+org_bdgenomics_formats_avro_Feature:ontologyTerms:w -> org_bdgenomics_formats_avro_OntologyTerm
+org_bdgenomics_formats_avro_Variant:annotation:w -> org_bdgenomics_formats_avro_VariantAnnotation
+org_bdgenomics_formats_avro_RecordGroup:processingSteps:w -> org_bdgenomics_formats_avro_ProcessingStep
+org_bdgenomics_formats_avro_Genotype:variantCallingAnnotations:w -> org_bdgenomics_formats_avro_VariantCallingAnnotations
+org_bdgenomics_formats_avro_Genotype:alleles:w -> org_bdgenomics_formats_avro_GenotypeAllele
+org_bdgenomics_formats_avro_Sequence:alphabet:w -> org_bdgenomics_formats_avro_Alphabet
+org_bdgenomics_formats_avro_TranscriptEffect:messages:w -> org_bdgenomics_formats_avro_VariantAnnotationMessage
+org_bdgenomics_formats_avro_Feature:strand:w -> org_bdgenomics_formats_avro_Strand
+org_bdgenomics_formats_avro_Read:alphabet:w -> org_bdgenomics_formats_avro_Alphabet
+org_bdgenomics_formats_avro_Genotype:variant:w -> org_bdgenomics_formats_avro_Variant
+org_bdgenomics_formats_avro_Feature:dbxrefs:w -> org_bdgenomics_formats_avro_Dbxref
+org_bdgenomics_formats_avro_Slice:strand:w -> org_bdgenomics_formats_avro_Strand
+org_bdgenomics_formats_avro_Sample:processingSteps:w -> org_bdgenomics_formats_avro_ProcessingStep
+org_bdgenomics_formats_avro_Slice:alphabet:w -> org_bdgenomics_formats_avro_Alphabet
+org_bdgenomics_formats_avro_Read:qualityScoreVariant:w -> org_bdgenomics_formats_avro_QualityScoreVariant
+org_bdgenomics_formats_avro_VariantAnnotation:transcriptEffects:w -> org_bdgenomics_formats_avro_TranscriptEffect
+
+// Define references edges
+
+edge [
+	dir=both
+	arrowtail=none
+	arrowhead=vee
+	style=dashed
+	color="darkgreen"
+	penwidth=2
+]
+
+}

@@ -1423,7 +1423,7 @@ introduced in 2016, three years into the project. The introduction of the
   While these classes were useful for implementing some of the algorithms in the
   \textsc{ADAM} core, they ultimately proved difficult to understand the
   performance characteristics of. They leveraged the \textsc{Scala} language's
-  compile-time implicit conversion functionality~\cite{scala}, which allows for
+  compile-time implicit conversion functionality~\cite{odersky04}, which allows for
   the compile-time inclusion of a method that can satisfy a given type
   signature. Additionally, the enriched classes typically augmented the raw
   schemas by lazily computing expensive values, which could then be reused
@@ -1551,8 +1551,22 @@ specified projections. Arbitrary projections can be used to accelerate
 common sequence quality control algorithms such as Flagstat~\cite{massie13,
   nothaft15}. We have still maintained this requirement.
 
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.95\linewidth]{graphs/bdg.pdf}
+\end{center}
+\caption{A UML diagram showing the dependencies and structure of the ADAM
+  schemas. ADAM's read schema is fairly flat, which contrasts with the other
+  schemas which employ nesting. The variant and feature schemas are deeply
+  nested. This allows both rich annotation and the definition of the complex
+  feature hierarchies necessary for describing genomic
+  annotations~\cite{eilbeck05}.}
+\label{fig:schemas}
+\end{figure}
+
 We have reproduced the schemas used to describe reads, features, variants, and
-genotypes below. \textsc{ADAM} also contains schemas for describing assembled
+genotypes below. Figure~\ref{fig:schemas} is a UML diagram depicting how the
+schemas connect. \textsc{ADAM} also contains schemas for describing assembled
 contigs, but we have not included them in this section. We discuss the current
 schemas, as well as their evolution over the course of the \textsc{ADAM}
 project. While \textsc{ADAM}'s read schemas closely represent the \textsc{SAM}
@@ -1656,18 +1670,100 @@ Format~(\textsc{VCF}). The most noticeable difference is that we have migrated a
 representation to a matrix representation. Instead of the variant record serving to group together genotypes, the
 variant record is embedded within the genotype. Thus, a record represents the genotype assigned to a sample,
 as opposed to a \textsc{VCF} row, where all individuals are collected together. The second major modification is to assume
-a biallelic representation\footnote{In a biallelic representation, we describe the genotype of a sample at a position or
+a biallelic representation. In a biallelic representation, we describe the genotype of a sample at a position or
 interval as the composition of a reference allele and a single alternate allele. If multiple alternate alleles segregate at
-the site (e.g., there are two known SNPs in a population at this site), we create multiple biallelic variants for the site.}.
+the site (e.g., there are two known SNPs in a population at this site), we create multiple biallelic variants for the site.
 This differs from \textsc{VCF}, which allows multiallelic records. By limiting
 ourselves to a biallelic representation, we are able to clarify the meaning of many of the variant calling annotations. If a
 site contains a multiallelic variant (e.g., in \textsc{VCF} parlance this could be a \textsc{1/2} genotype), we split the
 variant into two or more biallelic records. The sufficient statistics for each allele should then be computed under
 a reference model similar to the model used in genome \textsc{VCF}s. If the sample does contain a multiallelic variant at
 the given site, this multiallelic variant is represented by referencing to another record via the \textsc{OtherAlt}
-enumeration.
+enumeration. A similar biallelic model is also used by the \textsc{Hail} project~\cite{hail}.
 
-\begin{lstlisting}[caption=\textsc{ADAM} variant and genotype schemas]
+\begin{lstlisting}[caption=\textsc{ADAM} core variant and genotype schemas]
+record Variant {
+
+  union { null, string } contigName = null;
+  union { null, long } start = null;
+  union { null, long } end = null;
+
+  array<string> names = [];
+
+  union { boolean, null } splitFromMultiAllelic = false;
+
+  union { null, string } referenceAllele = null;
+  union { null, string } alternateAllele = null;
+
+  union { null, double } quality = null;
+
+  union { null, boolean } filtersApplied = null;
+  union { null, boolean } filtersPassed = null;
+  array<string> filtersFailed = [];
+
+  union { null, VariantAnnotation } annotation = null;
+}
+
+enum GenotypeAllele {
+  REF,
+  ALT,
+  OTHER_ALT,
+  NO_CALL
+}
+
+record Genotype {
+
+  union { null, Variant } variant = null;
+  union { null, string } contigName = null;
+  union { null, long } start = null;
+  union { null, long } end = null;
+
+  union { null, VariantCallingAnnotations } variantCallingAnnotations = null;
+
+  union { null, string }  sampleId = null;
+  union { null, string }  sampleDescription = null;
+  union { null, string }  processingDescription = null;
+
+  array<GenotypeAllele> alleles = [];
+
+  union { null, float } expectedAlleleDosage = null;
+  union { null, int } referenceReadDepth = null;
+  union { null, int } alternateReadDepth = null;
+  union { null, int } readDepth = null;
+  union { null, int } minReadDepth = null;
+
+  union { null, int } genotypeQuality = null;
+  array<double> genotypeLikelihoods = [];
+  array<double> nonReferenceLikelihoods = [];
+
+  array<int> strandBiasComponents = [];
+
+  union { boolean, null } splitFromMultiAllelic = false;
+
+  union { boolean, null } phased = false;
+  union { null, int } phaseSetId = null;
+  union { null, int } phaseQuality = null;
+}
+\end{lstlisting}
+
+The variant and genotype schemas are the schemas that have evolved the most
+over the course of the \textsc{ADAM} project. When we wrote the original
+\textsc{ADAM} technical report~\cite{massie13}, the variant and genotype schemas
+were much narrower and closely mirrored the \textsc{VCF} specification.
+Since the VCF format contains many attributes that can be used to annotate both
+a genotype~(via a \textsc{Format} field) or a variant~(via an \textsc{Info}
+field), the original schemas largely contained overlapping field definitions.
+We refactored the two schemas to move to the biallelic-only variant model, and
+later, expanded the variant schema to include a nested structural variant
+description. This structural variant schema was removed during a large refactor
+after the ADAM SIGMOD paper that improved support for variant annotations. We
+have also played with flattening the variant schema out of the genotype schema
+for performance reasons. During our work on \textsc{Mango}~cite{tu16, morrow17},
+we realized that nesting the variant field decreased the performance of range
+queries by approximately an order of magnitude. In the variant annotation
+refactor, we added the schemas below.
+
+\begin{lstlisting}[caption=\textsc{ADAM} variant annotation schemas]
 record TranscriptEffect {
   union { null, string } alternateAllele = null;
 
@@ -1729,36 +1825,18 @@ record VariantAnnotation {
 
   map<string> attributes = {};
 }
+\end{lstlisting}
 
-record Variant {
+These schemas provide a faithful representation of the VCF/ANN specification,
+which adds a formal and rich variant annotation specification to
+VCF~\cite{ann}. This specification is used by both the \textsc{Ensembl Variant
+  Effect Predictor}~(VEP, see~\cite{mclaren10}) and \textsc{SnpEff}~\cite{cingolani12}.
+We have a separate schema for storing annotations on top of a genotype call; we
+refer to this object as a ``variant calling annotation'' instead of a ``genotype
+annotation,'' since the annotations are specific to the variant calling process
+and the reads observed at the site, as opposed to the called genotype.
 
-  union { null, string } contigName = null;
-  union { null, long } start = null;
-  union { null, long } end = null;
-
-  array<string> names = [];
-
-  union { boolean, null } splitFromMultiAllelic = false;
-
-  union { null, string } referenceAllele = null;
-  union { null, string } alternateAllele = null;
-
-  union { null, double } quality = null;
-
-  union { null, boolean } filtersApplied = null;
-  union { null, boolean } filtersPassed = null;
-  array<string> filtersFailed = [];
-
-  union { null, VariantAnnotation } annotation = null;
-}
-
-enum GenotypeAllele {
-  REF,
-  ALT,
-  OTHER_ALT,
-  NO_CALL
-}
-
+\begin{lstlisting}[caption=\textsc{ADAM} genotype annotation schema]
 record VariantCallingAnnotations {
 
   union { null, boolean } filtersApplied = null;
@@ -1782,46 +1860,13 @@ record VariantCallingAnnotations {
 
   map<string> attributes = {};
 }
-
-record Genotype {
-
-  union { null, Variant } variant = null;
-  union { null, string } contigName = null;
-  union { null, long } start = null;
-  union { null, long } end = null;
-
-  union { null, VariantCallingAnnotations } variantCallingAnnotations = null;
-
-  union { null, string }  sampleId = null;
-  union { null, string }  sampleDescription = null;
-  union { null, string }  processingDescription = null;
-
-  array<GenotypeAllele> alleles = [];
-
-  union { null, float } expectedAlleleDosage = null;
-  union { null, int } referenceReadDepth = null;
-  union { null, int } alternateReadDepth = null;
-  union { null, int } readDepth = null;
-  union { null, int } minReadDepth = null;
-
-  union { null, int } genotypeQuality = null;
-  array<double> genotypeLikelihoods = [];
-  array<double> nonReferenceLikelihoods = [];
-
-  array<int> strandBiasComponents = [];
-
-  union { boolean, null } splitFromMultiAllelic = false;
-
-  union { boolean, null } phased = false;
-  union { null, int } phaseSetId = null;
-  union { null, int } phaseQuality = null;
-}
 \end{lstlisting}
 
-These representations achieve high compression versus the legacy formats. We provide a detailed breakdown of
-compression in~\S\ref{sec:compression}. \textsc{ADAM} data stored in \textsc{Parquet} achieves an
-approximately 25\% reduction in file size over compressed \textsc{BAM} for read data, and a 66\% reduction
-over \textsc{GZIP}ped \textsc{VCF} for variant data.
+The variant calling annotations object includes annotations that we feel are
+useful during the variant calling process, but that should probably be omitted
+from a final callset that is used for annotation and statistical testing. Many
+of these variant annotations are useful for hard filtering, as described
+in~\S\ref{sec:variant-filtration}.
 
 \subsection{Feature Schemas}
 \label{sec:feature-schemas}
@@ -1934,6 +1979,11 @@ longterm metadata managment needs in~\S\ref{sec:metadata-future}.
 \subsection{Evaluating Compression Techniques}
 \label{sec:compression}
 
+These representations achieve high compression versus the legacy formats. We provide a detailed breakdown of
+compression in~\S\ref{sec:compression}. \textsc{ADAM} data stored in \textsc{Parquet} achieves an
+approximately 25\% reduction in file size over compressed \textsc{BAM} for read data, and a 66\% reduction
+over \textsc{GZIP}ped \textsc{VCF} for variant data.
+
 \section{Multi-Language Processing in \textsc{ADAM}}
 \label{sec:multi-language}
 
@@ -1951,19 +2001,19 @@ to port all of the logic in our stack~(mostly at the materialized data and
 presentation layers) over to other languages.
 
 Instead, we followed the approach used by \textsc{Apache Spark}'s
-\textsc{Python} and R bindings~\cite{venkatesan16} after \textsc{Spark SQL}
+\textsc{Python} and R bindings~\cite{venkataraman16} after \textsc{Spark SQL}
 was introduced~\cite{armbrust15}. Here, we created lightweight wrappers for
 the \textsc{ADAMContext} and \textsc{GenomicRDD} in the \textsc{Python} and
 R languages. These wrappers then called the JVM implementations of these classes
 through \textsc{Py4j}~\cite{py4j} or \textsc{SparkR}'s interoperability
-layer~\cite{venkatesan16}. Instead of exposing the underlying RDD, we exposed
+layer~\cite{venkataraman16}. Instead of exposing the underlying RDD, we exposed
 the parallel dataset through \textsc{Spark SQL}'s \textsc{DataFrame} API. We
 chose this for several reasons:
 
 \begin{itemize}
 \item The \textsc{DataFrame} API is a close match to the programming models
   commonly used in \textsc{Python} and R~\cite{armbrust15}, such as the
-  \textsc{Pandas}~\cite{pandas} and \textsc{Dyplr}~\cite{dyplr} libraries.
+  \textsc{Pandas}~\cite{mckinney10} and \textsc{Dyplr}~\cite{wickham15} libraries.
 \item A major performance pitfall in \textsc{PySpark} and \textsc{SparkR} was
   serializer performance. Specifically, to use \textsc{PySpark}, we would have
   needed to transform our binary \textsc{Avro} records into textual records that
