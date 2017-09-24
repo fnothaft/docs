@@ -1555,13 +1555,21 @@ We have reproduced the schemas used to describe reads, features, variants, and
 genotypes below. \textsc{ADAM} also contains schemas for describing assembled
 contigs, but we have not included them in this section. We discuss the current
 schemas, as well as their evolution over the course of the \textsc{ADAM}
-project.
+project. While \textsc{ADAM}'s read schemas closely represent the \textsc{SAM}
+specification, the variation and feature representations deviate significantly
+from the current state of representing genomic variation and features.
 
 \subsection{Read Schemas}
 \label{sec:read-schemas}
 
 Our read schema maps closely to the logical layout of data presented by
-\textsc{SAM} and \textsc{BAM}.
+\textsc{SAM} and \textsc{BAM}. Unlike the \textsc{SAM} format, we split the
+flags out from a single field into many fields. This makes it much simpler to
+extract state from a record. Additionally, we promote several commonly used
+fields from \textsc{SAM} attributes to fields. These fields include the original
+quality, position, and CIGAR fields, which are set during
+realignment~(see~\S\ref{sec:indel-realignment-implementation}) and base quality
+recalibration~(see~\S\ref{sec:bqsr-implementation}).
 
 \begin{lstlisting}[caption=\textsc{ADAM} read schema]
 record AlignmentRecord {
@@ -1614,7 +1622,7 @@ record AlignmentRecord {
 }
 \end{lstlisting}
 
-Additionally, we support a schema that groups together all of th ereads from a
+Additionally, we support a schema that groups together all of the reads from a
 single sequenced fragment. This fragment enables a traversal over read data that
 is similar to \textsc{SAM}'s read-name grouping.
 
@@ -1631,6 +1639,14 @@ record Fragment {
   array<AlignmentRecord> alignments = [];
 }
 \end{lstlisting}
+
+We feel that the fragment schema is preferable to the queryname sort order and
+query grouping invariants that \textsc{SAM} allows one to specify. By using this
+schema, we can reduce the cost of duplicate marking by
+50\%~(see~\S\ref{sec:benchmarking-duplicate-markers}). Additionally, this
+representation provides a useful alternative to the interleaved FASTQ format for
+streaming reads into an aligner. We demonstrate this usage in
+Chapter~\ref{chap:cannoli}.
 
 \subsection{Variation Schemas}
 \label{sec:variation-schemas}
@@ -2778,6 +2794,9 @@ However, we will add this functionality soon.
 
 \chapter{Benchmarking the \textsc{ADAM} Stack}
 \label{chap:benchmarking}
+
+\section{Benchmarking Duplicate Markers}
+\label{sec:benchmarking-duplicate-markers}
 
 \chapter{The Simons Genome Diversity Dataset Recompute}
 \label{chap:sgdd}
