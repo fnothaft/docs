@@ -1331,30 +1331,116 @@ equivalent \texttt{GATK} preprocessing stages, and achieve linear scaling out to
 \section{Realizing A Decoupled Stack Architecture In \textsc{ADAM}}
 \label{sec:realizing-stack-architecture}
 
+While a stack-based architecture provides many of the benefits we asserted in
+the previous section, these benefits can only be realized with careful API
+design. If the APIs are specified at too low of a level of abstraction, then the
+implementations of each layer will leak through, and the stack layers cannot be
+exchanged. If the APIs are specified at too high of a level of abstraction, then
+programmers who are implementing their applications on top of the APIs cannot
+meaningfully reason about the performance and semantics of the code that they
+are running.
+
+In \textsc{ADAM}, we ultimately extend two important APIs. The
+\textsc{ADAMContext} is the entrypoint to loading all data, while the
+\textsc{GenomicRDD} API provides an abstract wrapper for genomic datasets. We
+specialize the \textsc{GenomicRDD} API across the various genomic datatypes.
+Once data has been loaded using the \textsc{ADAMContext}, users largely interact
+with the data by transforming the data enclosed in a \textsc{GenomicRDD}, which
+is described by our schemas~(see~\S\ref{sec:schema-design}). These core APIs
+contribute to realizing the stack vision in the following ways:
+
 \begin{itemize}
-\item Implementing a stack architecture requires careful API design
-  \begin{itemize}
-  \item If APIs are too strictly specified, stack layers can't actually be exchanged
-  \item If APIs are too vaguely specified, system is unreliable
-  \end{itemize}
-\item \textsc{ADAM} ultimately extends two important APIs:
-  \begin{itemize}
-  \item The \textsc{ADAMContext}: the entrypoint to loading all data
-  \item The \textsc{GenomicRDD} abstraction: a wrapper for genomic datasets
-  \end{itemize}
-\item How are these APIs important in realizing the stack vision?
-  \begin{itemize}
-  \item Layers 1 and 2 are largely deferred to Apache Spark
-  \item Layer 3 is essentially a view; the \textsc{ADAMContext} provides the view
-    on load, \textsc{GenomicRDD} provides the view on save
-  \item Layer 4 is enclosed in the \textsc{GenomicRDD}
-  \item Layers 5 and 6 are implemented in the \textsc{GenomicRDD}; users can
-    specialize a \textsc{GenomicRDD} for their specific application/query pattern
-  \item Layer 7 is where the user builds their code, and this is built by
-    using the \textsc{ADAMContext} to load in a \textsc{GenomicRDD}, which is then
-    transformed and saved.
-  \end{itemize}
+\item The physical storage and data distribution layers~(1 and 2) are largely
+  deferred to \textsc{Apache Spark} and \textsc{Hadoop}. \textsc{ADAM} interacts
+  with these layers through their APIs. There are a few places where
+  \textsc{ADAM} specializes for a given file system; the primary example is when
+  concatenating output files together to create a large unified output file. The
+  \textsc{Hadoop Distributed File System}~(HDFS, see Shvachko et
+  al.~\cite{shvachko10}) and the Amazon Web Services \textsc{Simple Storage
+    System}~(AWS S3) provide APIs for concatenating sharded files, which allows
+  the file merging process to be accelerated.
+\item The materialized data and schema layers~(3 and 4) couple together in a
+  critical way. The schemas provide a logical description of a given genomic
+  datatype, and the materialized data layer provides a set of views between the
+  \textsc{ADAM} schemas and legacy genomics file formats. This view is applied
+  by the \textsc{ADAMContext} when loading data, and by the \textsc{GenomicRDD}
+  when saving data. This decomposition is critically important: a common early
+  misunderstanding of \textsc{ADAM} was that our schemas were introducing a new
+  file format for genomic data. Rather, by supporting views between common
+  formats to our schemas, we eliminate the need to know which file formats the
+  data was loaded from.
+\item The evidence access layer~(5) is largely implemented in the
+  \textsc{GenomicRDD}, but can also be specialized in downstream applications
+  for their specific application/query pattern. At a basic level, \textsc{ADAM}
+  uses \textsc{Apache Spark}~\cite{zaharia12} and \textsc{Spark
+    SQL}~\cite{armbrust15} for evidence access. Without any optimizations,
+  queries are implemented as scans over the full dataset. However, we apply
+  several optimizations for coordinate-based queries, as described
+  in~\S\ref{sec:query-patterns}. Additionally, since \textsc{ADAM} builds off of
+  \textsc{Spark}'s RDD API, any tools that optimize at the RDD level can be used
+  to enrich the evidence access layer~\cite{tu16, morrow17}.
+\item The presentation layer~(6) provides datatype~(e.g., read/feature/variant)
+  specific methods on top of the \textsc{GenomicRDD} API. This includes
+  many of the operations introduced in Chapter~\ref{chap:adam}.
+\item The application layer~(7) is where the user builds their code, and this is
+  built by using the \textsc{ADAMContext} to load in a \textsc{GenomicRDD},
+  which is then transformed and saved.
 \end{itemize}
+
+While many of these layers have been unchanged since we introduced our stack
+model in our original technical report~\cite{massie13} and our SIGMOD
+manuscript~\cite{nothaft15}, the evidence access and presentation layers~(5 and
+6) have changed. While the \textsc{ADAMContext} API has existed in \textsc{ADAM}
+since the beginning of the project, the \textsc{GenomicRDD} API was only
+introduced in 2016, three years into the project. The introduction of the
+\textsc{GenomicRDD} API was symbolic of larger changes, which included:
+
+\begin{itemize}
+\item The evidence access layer originally assumed that other query systems like
+  \textsc{Cloudera Impala}~\cite{kornacker15} would be able to interoperate with
+  the \textsc{ADAM} schemas to load data. While this is still true, we have
+  deemphasized this view. Specifically, once data has been loaded using the
+  \textsc{ADAM} schemas and saved into \textsc{Apache Parquet}, systems like
+  \textsc{Impala} can interoperate with the data through the \textsc{ADAM}
+  schemas. However, systems like \textsc{Impala} cannot interoperate with
+  the lower levels of \textsc{ADAM}'s stack, such as \textsc{ADAM}'s views to
+  and from legacy genomics file formats.
+\item Because the \textsc{Hadoop} ecosystem optimizes for full scans, we
+  originally assumed that all queries were executed as full scans over the
+  dataset, and these queries were executed without assuming any knowledge of the
+  layout of the data. One of the advantages of introducing the
+  \textsc{GenomicRDD} API is that we were better able to track the layout of
+  data, and to specialize queries given a known layout. We describe one such
+  mechanism for accelerating queries in the genomic coordinate space
+  in~\S\textsc{sec:query-patterns}.
+\item The presentation layer~(6) was originally implemented by enhancing the
+  schemas. Specifically, the \textsc{AlignmentRecord}
+  schema~(see~\S\ref{sec:read-schemas}) was accompanied by a
+  \textsc{RichAlignmentRecord} class, which provided convenience methods on top
+  of the schema. Similar ``enriched'' classes existed for the \textsc{Variant}
+  schema as well. While these enriched classes have not been eliminated from
+  \textsc{ADAM}, we have eliminated the public API exposure of these classes.
+  While these classes were useful for implementing some of the algorithms in the
+  \textsc{ADAM} core, they ultimately proved difficult to understand the
+  performance characteristics of. They leveraged the \textsc{Scala} language's
+  compile-time implicit conversion functionality~\cite{scala}, which allows for
+  the compile-time inclusion of a method that can satisfy a given type
+  signature. Additionally, the enriched classes typically augmented the raw
+  schemas by lazily computing expensive values, which could then be reused
+  across calculations. Unfortunately, the way these patterns intersected made it
+  very difficult to reason about when a state had been calculated, and thus what
+  the performance of a call to an enriched class would be. Additionally, the
+  implicit conversion pattern could not be supported across languages, and was
+  out of the scope of experise of the average bioinformatics programmer.
+  Instead, we surfaced transformations at the dataset level, which is closer to
+  the level of abstraction expected by our average user.
+\end{itemize}
+
+While the introduction of the \textsc{GenomicRDD} class has enabled the changes
+to our stack model that were described above, it was driven by other factors.
+The \textsc{ADAMContext} would originally return unwrapped \textsc{Spark} RDDs.
+The introduction of the \textsc{GenomicRDD} class was driven largely by the need
+for better management of genomic metadata, as described in~\S\ref{sec:metadata}.
 
 \section{Query Patterns for Genomic Data Analysis}
 \label{sec:query-patterns}
@@ -1456,6 +1542,9 @@ makes use of run length and dictionary encoding, which allows for a single objec
 elements on read. Another key design choice was to require that all fields in the schema are nullable; by enforcing
 this requirement, we enable arbitrary user specified projections. Arbitrary projections can be used to accelerate
 common sequence quality control algorithms such as Flagstat~\cite{massie13, nothaft15}.
+
+\subsection{Read Schemas}
+\label{sec:read-schemas}
 
 We have reproduced the schemas used to describe reads, variants, and genotypes below. \texttt{ADAM} also
 contains schemas for describing assembled contigs, genomic features, and variant annotations, but we have
@@ -1649,6 +1738,9 @@ These representations achieve high compression versus the legacy formats. We pro
 compression in~\S\ref{sec:compression}. \texttt{ADAM} data stored in \texttt{Parquet} achieves an
 approximately 25\% reduction in file size over compressed \texttt{BAM} for read data, and a 66\% reduction
 over \texttt{GZIP}ped \texttt{VCF} for variant data.
+
+\subsection{Managing Genomic Metadata}
+\label{sec:metadata}
 
 \part{Algorithms and Tools}
 
