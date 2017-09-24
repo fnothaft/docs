@@ -1921,6 +1921,51 @@ longterm metadata managment needs in~\S\ref{sec:metadata-future}.
 \section{Multi-Language Processing in \textsc{ADAM}}
 \label{sec:multi-language}
 
+One of the original goals in using \textsc{Apache Avro} was to allow the
+\textsc{ADAM} schemas to be used across more languages than just \textsc{Scala}
+and \textsc{Java}, as \textsc{Avro} has language bindings for commonly used
+languages like C/C++/C\#, \textsc{Python}, and \textsc{JavaScript}. However,
+this wound up not being a fruitful exercise. While \textsc{Avro} supported these
+languages, \textsc{Apache Parquet} did not, and since we used \textsc{Avro} to
+manage in-memory serialization but \textsc{Parquet} to manage on-disk
+serialization, users could not load our \textsc{Parquet} files from disk in
+non-JVM languages. Additionally, even if we had support for reading
+\textsc{Parquet} files from these other languages, it would've been prohibitive
+to port all of the logic in our stack~(mostly at the materialized data and
+presentation layers) over to other languages.
+
+Instead, we followed the approach used by \textsc{Apache Spark}'s
+\textsc{Python} and R bindings~\cite{venkatesan16} after \textsc{Spark SQL}
+was introduced~\cite{armbrust15}. Here, we created lightweight wrappers for
+the \textsc{ADAMContext} and \textsc{GenomicRDD} in the \textsc{Python} and
+R languages. These wrappers then called the JVM implementations of these classes
+through \textsc{Py4j}~\cite{py4j} or \textsc{SparkR}'s interoperability
+layer~\cite{venkatesan16}. Instead of exposing the underlying RDD, we exposed
+the parallel dataset through \textsc{Spark SQL}'s \textsc{DataFrame} API. We
+chose this for several reasons:
+
+\begin{itemize}
+\item The \textsc{DataFrame} API is a close match to the programming models
+  commonly used in \textsc{Python} and R~\cite{armbrust15}, such as the
+  \textsc{Pandas}~\cite{pandas} and \textsc{Dyplr}~\cite{dyplr} libraries.
+\item A major performance pitfall in \textsc{PySpark} and \textsc{SparkR} was
+  serializer performance. Specifically, to use \textsc{PySpark}, we would have
+  needed to transform our binary \textsc{Avro} records into textual records that
+  \textsc{PySpark} would pickle for use in \textsc{Python}.
+\item Additionally, the \textsc{Spark SQL} query engine~\cite{armbrust15} allows
+  \textsc{Python} and R users to write query plans that can then be optimized
+  and executed using optimized JVM implementations where possible. This is a
+  contrast to \textsc{Spark}'s RDD API, where both records and queries are black
+  boxes.
+\end{itemize}
+
+While building on \textsc{Spark SQL} enabled cross-language support, it was not
+a straightforward process. Specifically, \textsc{Spark SQL} leveraged several
+\textsc{Scala} language features that were incompatible with our \textsc{Avro}
+schema representation. To address this, we built automation that translates
+between \textsc{Spark SQL}'s desired representation and \textsc{Avro} at compile
+time.
+
 \part{Algorithms and Tools}
 
 \chapter{Automatic Parallelization of Legacy Tools with \textsc{Cannoli}}
