@@ -1479,87 +1479,6 @@ The \textsc{ADAMContext} would originally return unwrapped \textsc{Spark} RDDs.
 The introduction of the \textsc{GenomicRDD} class was driven largely by the need
 for better management of genomic metadata, as described in~\S\ref{sec:metadata}.
 
-\section{Query Patterns for Genomic Data Analysis}
-\label{sec:query-patterns}
-
-There are a wide array of experimental techniques and platforms in genome informatics, but many of these
-methods produce datapoints that are tied to locations in the genome through the use of genomic coordinates.
-Each cell contains a copy of the genome with one molecule per chromosome. Each molecule is a collection of
-DNA polymers coated with (and wrapped around) proteins and packed into the nucleus in a complex
-3-dimensional shape. In practice, computational biologists abstract this complexity by storing a single long
-string that represents the nucleotides of the chromosome. We can then connect a datapoint or observation to the
-genome by associating the data with the chromosome name and a point or interval on a 1-dimensional space.
-
-A platform for scientific data processing in genomics needs to understand these 1-dimensional coordinate
-systems because these become the basis on which data processing is parallelized. For example, when calling
-variants from sequencing data, the sequence data that is localized to a single genomic region (or ``locus'') can be 
-processed independently from the data localized to a different region, as long as the regions are far enough
-apart.
-
-Beyond parallelization, many of the core algorithms and methods for data aggregation in genomics are phrased
-in terms of geometric primitives on 1-D intervals and points where we compute distance, overlap, and
-containment.  An algorithm for calculating quality control metrics may try to calculate ``coverage,'' a count
-of how many reads overlap each base in the genome. A method for filtering and annotating potential variants
-might assess the validity of a variant using the quality characteristics of all reads that overlap the putative variant.
-
-To support these algorithms, we provide a ``region'' or ``spatial'' join primitive. The algorithm used is described
-in algorithm~\ref{alg:region-join} and takes as input two sets (RDDs, see Zaharia et al~\cite{zaharia12}) of
-\textsc{ReferenceRegions}, a data structure that represents intervals along the 1-D genomics coordinate
-space. It produces the set of all overlapping \textsc{ReferenceRegion} pairs. The $hulls$ variable contains
-the set of convex hulls and is broadcasted to all compute nodes during the join.
-
-\begin{algorithm}
-\caption{Partition And Join Regions via Broadcast}
-\label{alg:region-join}
-\begin{algorithmic}
-\STATE $left \leftarrow$ input dataset; left side of join
-\STATE $right \leftarrow$ input dataset; right side of join
-\STATE $regions \leftarrow left$.map($data \Rightarrow $generateRegion($data$))
-\STATE $regions \leftarrow regions$.groupBy($region \Rightarrow region$.$name$)
-\STATE $hulls \leftarrow regions$.findConvexHull()
-\STATE $hulls$.broadcast()
-\STATE $keyLeft \leftarrow left$.keyBy($data \Rightarrow $getHullId($data$, $hulls$))
-\STATE $keyRight \leftarrow right$.keyBy($data \Rightarrow $getHullId($data$, $hulls$))
-\STATE $joined \leftarrow keyLeft$.join($keyRight$)
-\STATE $truePositives \leftarrow joined$.filter($r1, r2 \Rightarrow r1$.overlaps($r2$))
-\RETURN $truePositives$
-\end{algorithmic}
-\end{algorithm}
-
-To find the maximal set of non-overlapping regions, we must find the convex hull of all regions emitted.
-We present a distributed algorithm for finding convex hulls in Appendix \ref{sec:convex-hull}. The
-distributed convex hull computation problem is important because it is used both for computing regions
-for partitioning during a region join and for performing INDEL realignment.
-
-While the join described above is a broadcast join, a region join can also be implemented via a straightforward
-shuffle-based approach, which is described in Algorithm~\ref{alg:shuffle-region-join}. The \textsc{partitionJoinFn}
-function maintains two iterators (one each from both the left and right collections), along with a buffer. This buffer is
-used to track all key-value pairs from the right collection iterator that \emph{could} match to a future key-value pair
-from the left collection iterator. We prune this buffer every time that we advance the left collection iterator. For
-simplicity, the description of Algorithm~\ref{alg:shuffle-region-join} ignores the complexity of processing keys that cross
-partition boundaries. In our implementation, we replicate keys that cross partition boundaries into both partitions.
-
-\begin{algorithm}
-\caption{Partition And Join Regions via Shuffle}
-\label{alg:shuffle-region-join}
-\begin{algorithmic}
-\STATE $left \leftarrow$ input dataset; left side of join
-\STATE $right \leftarrow$ input dataset; right side of join
-\STATE $partitions \leftarrow left$.getPartitions()
-\STATE $left \leftarrow left$.repartitionAndSort($partitions$)
-\STATE $right \leftarrow right$.repartitionAndSort($partitions$)
-\STATE $joined \leftarrow left$.zipPartitions($right$, \textsc{partitionJoinFn})
-\RETURN $joined$
-\end{algorithmic}
-\end{algorithm}
-
-These joins serve as a core that we can use to build other abstractions with. For example, self-region joins and
-multi-region joins are common in genomics, and can be easily implemented using the above implementations.
-We are currently working to implement further parallel spatial functions such as sliding windows, using techniques
-similar to the shuffle-based join. We are working to characterize the performance differences between the two
-join strategies described above. In the future, we hope to enable the use of the region join in a SQL based system
-such as \textsc{Spark SQL}~\cite{armbrust15}.
-
 \section{Schema Design for Representing Genomic Data}
 \label{sec:schema-design}
 
@@ -1908,6 +1827,14 @@ in~\S\ref{sec:variant-filtration}.
 \subsection{Feature Schemas}
 \label{sec:feature-schemas}
 
+\textsc{ADAM}'s feature schema provides an abstracted view of a genomic feature
+that can support most of the various genomic feature file formats, including
+\textsc{NarrowPeak}, BED, GTF/GFF2, GFF3, and \textsc{IntervalList}. We have
+full support for nested features, which are commonly used for describing genome
+annotations. Instead of nesting the features recursively inside of the feature
+record, we leverage the database cross reference schema, which is derived from
+the GTF/GFF2/GFF3 file format.
+
 \begin{lstlisting}[caption=\textsc{ADAM}'s feature schemas]
 enum Strand {
   FORWARD,
@@ -1970,6 +1897,16 @@ record Feature {
 }
 \end{lstlisting}
 
+\textsc{ADAM} originally contained an additional \textsc{GenomeRDD} subclass
+called the \textsc{GeneRDD}. This class would take the nested features contained
+in a \textsc{FeatureRDD} that described an annotated genome, and would perform
+all the joins and aggregations necessary to build out the fully nested
+annotation structure. Ultimately, we removed this class because the performance
+was poor, and most queries that would run on the nested structure could be
+refactored to run on the flattened feature hierarchy. This was possible due to
+the denormalized schema, which included the transcript and gene IDs in each
+feature record.
+
 \subsection{Managing Genomic Metadata}
 \label{sec:metadata}
 
@@ -2021,7 +1958,88 @@ compression in~\S\ref{sec:compression}. \textsc{ADAM} data stored in \textsc{Par
 approximately 25\% reduction in file size over compressed \textsc{BAM} for read data, and a 66\% reduction
 over \textsc{GZIP}ped \textsc{VCF} for variant data.
 
-\section{Multi-Language Processing in \textsc{ADAM}}
+\section{Query Patterns for Genomic Data Analysis}
+\label{sec:query-patterns}
+
+There are a wide array of experimental techniques and platforms in genome informatics, but many of these
+methods produce datapoints that are tied to locations in the genome through the use of genomic coordinates.
+Each cell contains a copy of the genome with one molecule per chromosome. Each molecule is a collection of
+DNA polymers coated with (and wrapped around) proteins and packed into the nucleus in a complex
+3-dimensional shape. In practice, computational biologists abstract this complexity by storing a single long
+string that represents the nucleotides of the chromosome. We can then connect a datapoint or observation to the
+genome by associating the data with the chromosome name and a point or interval on a 1-dimensional space.
+
+A platform for scientific data processing in genomics needs to understand these 1-dimensional coordinate
+systems because these become the basis on which data processing is parallelized. For example, when calling
+variants from sequencing data, the sequence data that is localized to a single genomic region (or ``locus'') can be 
+processed independently from the data localized to a different region, as long as the regions are far enough
+apart.
+
+Beyond parallelization, many of the core algorithms and methods for data aggregation in genomics are phrased
+in terms of geometric primitives on 1-D intervals and points where we compute distance, overlap, and
+containment.  An algorithm for calculating quality control metrics may try to calculate ``coverage,'' a count
+of how many reads overlap each base in the genome. A method for filtering and annotating potential variants
+might assess the validity of a variant using the quality characteristics of all reads that overlap the putative variant.
+
+To support these algorithms, we provide a ``region'' or ``spatial'' join primitive. The algorithm used is described
+in algorithm~\ref{alg:region-join} and takes as input two sets (RDDs, see Zaharia et al~\cite{zaharia12}) of
+\textsc{ReferenceRegions}, a data structure that represents intervals along the 1-D genomics coordinate
+space. It produces the set of all overlapping \textsc{ReferenceRegion} pairs. The $hulls$ variable contains
+the set of convex hulls and is broadcasted to all compute nodes during the join.
+
+\begin{algorithm}
+\caption{Partition And Join Regions via Broadcast}
+\label{alg:region-join}
+\begin{algorithmic}
+\STATE $left \leftarrow$ input dataset; left side of join
+\STATE $right \leftarrow$ input dataset; right side of join
+\STATE $regions \leftarrow left$.map($data \Rightarrow $generateRegion($data$))
+\STATE $regions \leftarrow regions$.groupBy($region \Rightarrow region$.$name$)
+\STATE $hulls \leftarrow regions$.findConvexHull()
+\STATE $hulls$.broadcast()
+\STATE $keyLeft \leftarrow left$.keyBy($data \Rightarrow $getHullId($data$, $hulls$))
+\STATE $keyRight \leftarrow right$.keyBy($data \Rightarrow $getHullId($data$, $hulls$))
+\STATE $joined \leftarrow keyLeft$.join($keyRight$)
+\STATE $truePositives \leftarrow joined$.filter($r1, r2 \Rightarrow r1$.overlaps($r2$))
+\RETURN $truePositives$
+\end{algorithmic}
+\end{algorithm}
+
+To find the maximal set of non-overlapping regions, we must find the convex hull of all regions emitted.
+We present a distributed algorithm for finding convex hulls in Appendix \ref{sec:convex-hull}. The
+distributed convex hull computation problem is important because it is used both for computing regions
+for partitioning during a region join and for performing INDEL realignment.
+
+While the join described above is a broadcast join, a region join can also be implemented via a straightforward
+shuffle-based approach, which is described in Algorithm~\ref{alg:shuffle-region-join}. The \textsc{partitionJoinFn}
+function maintains two iterators (one each from both the left and right collections), along with a buffer. This buffer is
+used to track all key-value pairs from the right collection iterator that \emph{could} match to a future key-value pair
+from the left collection iterator. We prune this buffer every time that we advance the left collection iterator. For
+simplicity, the description of Algorithm~\ref{alg:shuffle-region-join} ignores the complexity of processing keys that cross
+partition boundaries. In our implementation, we replicate keys that cross partition boundaries into both partitions.
+
+\begin{algorithm}
+\caption{Partition And Join Regions via Shuffle}
+\label{alg:shuffle-region-join}
+\begin{algorithmic}
+\STATE $left \leftarrow$ input dataset; left side of join
+\STATE $right \leftarrow$ input dataset; right side of join
+\STATE $partitions \leftarrow left$.getPartitions()
+\STATE $left \leftarrow left$.repartitionAndSort($partitions$)
+\STATE $right \leftarrow right$.repartitionAndSort($partitions$)
+\STATE $joined \leftarrow left$.zipPartitions($right$, \textsc{partitionJoinFn})
+\RETURN $joined$
+\end{algorithmic}
+\end{algorithm}
+
+These joins serve as a core that we can use to build other abstractions with. For example, self-region joins and
+multi-region joins are common in genomics, and can be easily implemented using the above implementations.
+We are currently working to implement further parallel spatial functions such as sliding windows, using techniques
+similar to the shuffle-based join. We are working to characterize the performance differences between the two
+join strategies described above. In the future, we hope to enable the use of the region join in a SQL based system
+such as \textsc{Spark SQL}~\cite{armbrust15}.
+
+\section{Supporting Multi-Language Processing in \textsc{ADAM}}
 \label{sec:multi-language}
 
 One of the original goals in using \textsc{Apache Avro} was to allow the
