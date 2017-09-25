@@ -2117,6 +2117,43 @@ schema representation. To address this, we built automation that translates
 between \textsc{Spark SQL}'s desired representation and \textsc{Avro} at compile
 time.
 
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.5\linewidth]{graphs/binding.pdf}
+\end{center}
+\caption{With the move to support \textsc{Spark SQL}, we added a binding scheme
+  to the \textsc{GenomicRDD} hierarchy. This figure depicts the alternative
+  bindings available for the \textsc{AlignmentRecordRDD}, which is
+  representative of the core \textsc{GenomicRDD} types. The dotted lines around
+  the concrete implementations of the abstract \textsc{AlignmentRecordRDD} class
+  signify that these classes are protected and cannot be instantiated outside of
+  the \textsc{ADAM} library.}
+\label{fig:binding}
+\end{figure}
+
+Since translating between a \textsc{Spark} RDD and a \textsc{Spark SQL}
+DataFrame requires a (de)serialization pass, we introduced a scheme that we call
+``lazy binding'' to minimize serialization overhead. In Figure~\ref{fig:grdd},
+you may have noticed that most of the core \textsc{GenomicRDD} types were
+sealed abstract classes. In practice, they are all implemented using the lazy
+binding scheme. Figure~\ref{fig:binding} depicts the bound variants of the
+\textsc{AlignmentRecordRDD} type. In this scheme, we track whether the last
+transformation applied to the \textsc{GenomicRDD} was applied to the DataFrame
+or RDD representation of the genomic data. The next phase of computation will
+run on top of the bound output of the prior stage. This can provide a major
+performance win if running \textsc{Spark SQL} queries, as the \textsc{Spark SQL}
+query optimizer performs major optimizations to amortize the method call
+overhead of chained transformations~\cite{armbrust15}. A further optimization
+deals with loading data from \textsc{Apache Parquet}. While data that is being
+loaded from legacy file formats like BAM or VCF must be loaded as an RDD,
+\textsc{Parquet} can be loaded as either an RDD or DataFrame, and \textsc{Spark
+  SQL} can make further optimizations if it knows that it is loading data from
+\textsc{Parquet}. To handle this, we added the ``unbound'' \textsc{GenomicRDD}.
+This datatype does not bind to the RDD or DataFrame representation of a
+\textsc{Parquet} table until a transformation is invoked. We believe that there
+are further opportunities to extend lazy binding to legacy genomic file formats,
+which we discuss in~\S\ref{sec:lazy-bind}.
+
 \part{Algorithms and Tools}
 
 \chapter{Automatic Parallelization of Legacy Tools with \textsc{Cannoli}}
@@ -3034,7 +3071,7 @@ over \textsc{GZIP}ped \textsc{VCF} for variant data.
 \label{sec:improving-debug}
 
 \section{Lazily Binding To Genomic File Formats}
-\label{sec:lazy-binding}
+\label{sec:lazy-bind}
 
 \chapter{Conclusion}
 \label{chap:conclusion}

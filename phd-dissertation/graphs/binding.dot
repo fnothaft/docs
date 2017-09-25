@@ -1,0 +1,13 @@
+digraph UML {
+
+AlignmentRecordRDD[shape=trapezium style=bold fillcolor=grey style=filled]
+
+ParquetUnboundAlignmentRecordRDD[shape=box style=dashed]
+RDDBoundAlignmentRecordRDD[shape=box style=dashed]
+DatasetBoundAlignmentRecordRDD[shape=box style=dashed]
+
+AlignmentRecordRDD -> ParquetUnboundAlignmentRecordRDD
+AlignmentRecordRDD -> RDDBoundAlignmentRecordRDD
+AlignmentRecordRDD -> DatasetBoundAlignmentRecordRDD
+
+}
