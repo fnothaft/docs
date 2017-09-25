@@ -1824,6 +1824,44 @@ from a final callset that is used for annotation and statistical testing. Many
 of these variant annotations are useful for hard filtering, as described
 in~\S\ref{sec:variant-filtration}.
 
+During the refactor that improved \textsc{ADAM}'s support for variant
+annotations, we refactored the conversion class that provided a view from the
+VCF format to \textsc{ADAM}'s genotype and variant records. In this refactor,
+we replaced the extant conversion code with a pure-functional converter. Our
+approach generated a collection of conversion functions. To convert between
+the \textsc{ADAM} and \textsc{htsjdk} representations of a variant/genotype,
+we would fold over this collection of functions. In turn, each function accesses
+the field they are converting, and mutates the new object that is being built
+during the conversion. The use of a pure-functional converter had several
+upsides:
+
+\begin{itemize}
+\item One of the difficulties in working with the VCF file format is that it is
+  semi-structured and user extensible. Beyond the info and format attributes
+  in the VCF specification, users can add any attributes they desire, restricted
+  only by the attribute types in the VCF specification. As part of this update,
+  we added the ability to generate attribute conversion functions from the VCF
+  header.
+\item Our new converter has a single function per field that is converted. As a
+  result, it is very easy to write highly directed functional tests to achieve a
+  very high level of test coverage for the converter. Since the functions are
+  all orthogonal and have no shared state, we can also guarantee that any two
+  functions that independently pass their directed tests can be called in a
+  chain correctly.
+\item A minor problem with our previous, monolithic converters was that they
+  could not support projecting out a subset of fields, unlike data stored in
+  \textsc{Apache Parquet} using the \textsc{ADAM} schemas. While we would
+  still need to read all of the data in a whole row, being able to limit the
+  number of fields projected would reduce the amount of parsing we need to do,
+  which can be quite costly for semi-structured text formats like VCF. The
+  pure-functional converter naturally supports user-specified projections, as we
+  can arbitrarily filter out any conversion functions that we do not want to
+  execute.
+\end{itemize}
+
+In the long term, we hope to apply this pure-functional conversion approach to
+all of our data converters. We discuss this more in~\S\ref{sec:lazy-bind}.
+
 \subsection{Feature Schemas}
 \label{sec:feature-schemas}
 
@@ -2994,6 +3032,9 @@ over \textsc{GZIP}ped \textsc{VCF} for variant data.
 
 \section{Improving Debugging Capabilities for Distributed Systems}
 \label{sec:improving-debug}
+
+\section{Lazily Binding To Genomic File Formats}
+\label{sec:lazy-binding}
 
 \chapter{Conclusion}
 \label{chap:conclusion}
