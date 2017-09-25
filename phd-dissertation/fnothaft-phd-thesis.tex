@@ -2180,45 +2180,64 @@ which we discuss in~\S\ref{sec:lazy-bind}.
 \chapter{Automatic Parallelization of Legacy Tools with \textsc{Cannoli}}
 \label{chap:cannoli}
 
-\begin{itemize}
-\item Will never be able to eliminate single node tools
-  \begin{itemize}
-  \item Most/all current widely used tools are designed for a single node
-  \item Certain tools (e.g., aligners) pay a steep performance penalty moving out of C/C++
-  \item Diversity of genomic workflows is too large ($>$100 sequencing assays)
-  \end{itemize}
-\item Several pipelines rely on manually chunking up tools to run in parallel:
-  \begin{itemize}
-  \item GATK Queue
-  \item SpeedSeq/FreeBayes Parallel
-  \end{itemize}
-\item Several tools have custom Hadoop Streaming/Spark wrappers:
-  \begin{itemize}
-  \item BWA through Seal, CS-BWAMEM, BWASpark
-  \item RNA-Rail
-  \item CrossBow, Cloudburst
-  \end{itemize}
-\item We should be able to automate this process:
-  \begin{itemize}
-  \item Many genomics tools are built around a streaming paradigm
-  \item If we can provide automated chunking and process setup, then we are good to go
-  \end{itemize}
-\item Two part architecture:
-  \begin{itemize}
-  \item \textsc{pipe} API in \textsc{ADAM}: auto-parallelization architecture
-  \item Tool wrappers in \textsc{Cannoli}
-  \end{itemize}
-\item Is it a truly general approach?
-  \begin{itemize}
-  \item No.
-  \item Tools that need an all-reduce aren't a good match (e.g., Kallisto/Sailfish/Salmon,
-    CNV callers).
-  \item However, this approach works well for the majority of tools.
-  \end{itemize}
-\end{itemize}
+While \textsc{ADAM} provides a general API for implementing genomic analyses
+using \textsc{Apache Spark}, we will never be able to fully eliminate single
+node tools from genomic workflows. Beyond the small set of tools discussed
+in~\S\ref{sec:distributed-genome-analysis}, the majority of genomics tools are
+designed to run on a single node. Additionally, due to memory access and
+allocation patterns, tools like aligners pay a steep performance penalty when
+moving out of C/C++ to the JVM. An example of this is the \textsc{SNAP} aligner,
+which was originally written on \textsc{Apache Spark}, before being rewritten in
+C++ for performance~\cite{zaharia11}. Finally, while it is possible to
+reimplement common genomic analyses like variant calling using \textsc{ADAM}, it
+is not feasible to do this across the hundreds of extant genomic analyses.
+
+As discussed in~\S\ref{sec:distributed-genome-analysis}, there are many tools
+that provide customized solutions to this problem. The GATK's \textsc{Queue}
+engine~\cite{depristo11} could be used to run the GATK in parallel, and the
+\textsc{FreeBayes} variant caller~\cite{garrison12} can be run in parallel
+through the \textsc{SpeedSeq} pipeline~\cite{chiang15}. Additionally, a variety
+of tools are parallelized by \textsc{Hadoop}-ecosystem wrappers. These include
+tools like the \textsc{Seal} tool which parallelizes \textsc{BWA} using
+\textsc{Pydoop}~\cite{leo10, pireddu11}, \textsc{Rail-RNA}~\cite{nellore16},
+which was built on top of \textsc{Hadoop}, and tools built on top of
+\textsc{Hadoop Streaming} like \textsc{CrossBow}~\cite{langmead09crossbow} for
+SNP calling and \textsc{Cloudburst}~\cite{schatz09} for alignment.
+Additionally, several tools have built on top of \textsc{Apache Spark},
+including \textsc{CloudScale-BWAMEM}~\cite{chen16} and
+\textsc{BWASpark}~\cite{abuin16}.
+
+Instead of expecting developers to create a proliferation of custom wrappers for
+parallelizing tools on distributed analysis systems, we should be able to build
+a general infrastructure to automatic this process. Since many genomics tools
+are built around a streaming paradigm, if we can provide automated chunking,
+process setup, distribution of reference files, and streaming data, we should
+be able to automatically parallelize a large number of genomic analysis tools.
+
+In this chapter, we introduce a two part architecture for automatically
+parallelizing genomic analyis tools. First, we describe ADAM's \textsc{pipe}
+API, which performs the automated chunking, resource distribution, and process
+coordination. Then, we describe the \textsc{Cannoli} tool, which contains
+wrappers for a set of common genomic analysis tools. This approach is general
+but not universal: while the \textsc{pipe} API can be used to parallelize the
+majority of analysis steps, it cannot be used for tools that require an
+all-reduce. This includes RNA-seq quantification tools like
+\textsc{Kallisto}~\cite{bray16} or \textsc{Salmon}~\cite{patro17}, or tools
+that perform a global normalization, like the XHMM copy number variant
+caller~\cite{fromer12}. However, this approach works well for tools whose
+computation can be described as mapping over unaligned reads, or mapping over
+data aligned to a genomic locus range.
 
 \section{Accomodating Single-node Tools in \textsc{ADAM} With the \textsc{pipe} API}
 \label{sec:pipe-api}
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.95\linewidth]{graphs/pipe.pdf}
+\end{center}
+\caption{The implementation of the \textsc{pipe} API.}
+\label{fig:pipe}
+\end{figure}
 
 \begin{itemize}
 \item The \textsc{pipe} API provides a simple API that autoparallelizes a command
