@@ -1991,62 +1991,81 @@ longterm metadata managment needs in~\S\ref{sec:metadata-future}.
 \section{Query Patterns for Genomic Data Analysis}
 \label{sec:query-patterns}
 
-There are a wide array of experimental techniques and platforms in genome informatics, but many of these
-methods produce datapoints that are tied to locations in the genome through the use of genomic coordinates.
-Each cell contains a copy of the genome with one molecule per chromosome. Each molecule is a collection of
-DNA polymers coated with (and wrapped around) proteins and packed into the nucleus in a complex
-3-dimensional shape. In practice, computational biologists abstract this complexity by storing a single long
-string that represents the nucleotides of the chromosome. We can then connect a datapoint or observation to the
-genome by associating the data with the chromosome name and a point or interval on a 1-dimensional space.
+There are a wide array of experimental techniques and platforms in genome
+informatics, but many of these methods produce datapoints that are tied to
+locations in the genome through the use of genomic coordinates. A platform
+for scientific data processing in genomics needs to understand these
+1-dimensional coordinate systems because these become the basis on which
+data processing is parallelized. For example, when calling variants from
+sequencing data, the sequence data that is localized to a single genomic
+locus can be processed independently from the data localized to a different
+region.
 
-A platform for scientific data processing in genomics needs to understand these 1-dimensional coordinate
-systems because these become the basis on which data processing is parallelized. For example, when calling
-variants from sequencing data, the sequence data that is localized to a single genomic region (or ``locus'') can be 
-processed independently from the data localized to a different region, as long as the regions are far enough
-apart.
+Beyond parallelization, many of the core algorithms and methods for data
+aggregation in genomics are phrased in terms of geometric primitives on 1-D
+intervals and points where we compute distance, overlap, and containment. An
+algorithm for calculating quality control metrics may try to calculate coverage,
+a count of how many reads overlap each base in the genome. A method for
+filtering and annotating potential variants might assess the validity of a
+variant using the quality characteristics of all reads that overlap the
+putative variant.
 
-Beyond parallelization, many of the core algorithms and methods for data aggregation in genomics are phrased
-in terms of geometric primitives on 1-D intervals and points where we compute distance, overlap, and
-containment.  An algorithm for calculating quality control metrics may try to calculate ``coverage,'' a count
-of how many reads overlap each base in the genome. A method for filtering and annotating potential variants
-might assess the validity of a variant using the quality characteristics of all reads that overlap the putative variant.
-
-To support these algorithms, we provide a ``region'' or ``spatial'' join primitive. The algorithm used is described
-in algorithm~\ref{alg:region-join} and takes as input two sets (RDDs, see Zaharia et al~\cite{zaharia12}) of
-\textsc{ReferenceRegions}, a data structure that represents intervals along the 1-D genomics coordinate
-space. It produces the set of all overlapping \textsc{ReferenceRegion} pairs. The $hulls$ variable contains
-the set of convex hulls and is broadcasted to all compute nodes during the join.
+To support these algorithms, we provide the region join primitive. The algorithm
+used is described in algorithm~\ref{alg:region-join} and takes as input two RDDs
+of \textsc{ReferenceRegions}, a data structure that represents intervals along
+the 1-D genomics coordinate space. It produces the set of all overlapping
+\textsc{ReferenceRegion} pairs. This join can be implemented using either a
+broadcast or sort-merge approach. Algorithm~\ref{alg:region-join} demonstrates
+the broadcast approach.
 
 \begin{algorithm}
-\caption{Partition And Join Regions via Broadcast}
+\caption{Join Regions via Broadcast}
 \label{alg:region-join}
 \begin{algorithmic}
 \STATE $left \leftarrow$ input dataset; left side of join
 \STATE $right \leftarrow$ input dataset; right side of join
-\STATE $regions \leftarrow left$.map($data \Rightarrow $generateRegion($data$))
-\STATE $regions \leftarrow regions$.groupBy($region \Rightarrow region$.$name$)
-\STATE $hulls \leftarrow regions$.findConvexHull()
-\STATE $hulls$.broadcast()
-\STATE $keyLeft \leftarrow left$.keyBy($data \Rightarrow $getHullId($data$, $hulls$))
-\STATE $keyRight \leftarrow right$.keyBy($data \Rightarrow $getHullId($data$, $hulls$))
-\STATE $joined \leftarrow keyLeft$.join($keyRight$)
-\STATE $truePositives \leftarrow joined$.filter($r1, r2 \Rightarrow r1$.overlaps($r2$))
-\RETURN $truePositives$
+\STATE $sortedLeft \leftarrow left$.sort()
+\STATE $collectedLeft \leftarrow sortedLeft$.collect()
+\STATE $tree \leftarrow collectedLeft$.buildTree()
+\STATE $broadcastTree \leftarrow tree$.broadcast()
+\STATE $joined \leftarrow right$.map($r \rightarrow broadcastTree$.overlaps($r$))
+\RETURN $joined$
 \end{algorithmic}
 \end{algorithm}
 
-To find the maximal set of non-overlapping regions, we must find the convex hull of all regions emitted.
-We present a distributed algorithm for finding convex hulls in Appendix \ref{sec:convex-hull}. The
-distributed convex hull computation problem is important because it is used both for computing regions
-for partitioning during a region join and for performing INDEL realignment.
+Our implementation of the broadcast region join has been refactored twice. The
+first implementation was described in our SIGMOD manuscript~\cite{nothaft15} and
+required the computation of the convex hulls of the left side of the dataset.
+This was done using an algorithm similar to the one described
+in~\S\ref{sec:convex-hull}. Additionally, this approach required both sides to
+be hash-partitioned. The first rewrite of the broadcast join was very similar to
+Algorithm~\ref{alg:region-join}. However, it used an interval
+tree~\cite{samet90} to store the left side of the join. We abandoned this
+approach because of the cost of serializing the interval tree. Instead, we
+introduced a new data structure, the interval array, which is a flattened
+representation of the interval tree. The interval array is an array whose
+elements are sorted by coordinate-order. To look up overlapping elements from an
+interval array, we begin by running binary search to find the first element that
+overlaps our search value. In the interval array, we also compute and store the
+length of the longest region in the array. We then search forward in the array
+until we have searched the distance of the longest element. Since this data
+structure is flat, it is inexpensive to (de)serialize. Binary search provides
+the same $\mathcal{O}(\log n)$ time complexity as searching into an interval
+tree. However, since we require an additional linear search, we can only
+guarantee the best case $\Theta(\log n)$ complexity for searching into our
+interval array.
 
-While the join described above is a broadcast join, a region join can also be implemented via a straightforward
-shuffle-based approach, which is described in Algorithm~\ref{alg:shuffle-region-join}. The \textsc{partitionJoinFn}
-function maintains two iterators (one each from both the left and right collections), along with a buffer. This buffer is
-used to track all key-value pairs from the right collection iterator that \emph{could} match to a future key-value pair
-from the left collection iterator. We prune this buffer every time that we advance the left collection iterator. For
-simplicity, the description of Algorithm~\ref{alg:shuffle-region-join} ignores the complexity of processing keys that cross
-partition boundaries. In our implementation, we replicate keys that cross partition boundaries into both partitions.
+While the join described above is a broadcast join, a region join can also be
+implemented via a straightforward shuffle-based approach, which is described in
+Algorithm~\ref{alg:shuffle-region-join}. The \textsc{partitionJoinFn} function
+maintains two iterators (one each from both the left and right collections),
+along with a buffer. This buffer is used to track all key-value pairs from the
+right collection iterator that \emph{could} match to a future key-value pair
+from the left collection iterator. We prune this buffer every time that we
+advance the left collection iterator. For simplicity, the description of
+Algorithm~\ref{alg:shuffle-region-join} ignores the complexity of processing
+keys that cross partition boundaries. In our implementation, we replicate keys
+that cross partition boundaries into both partitions.
 
 \begin{algorithm}
 \caption{Partition And Join Regions via Shuffle}
@@ -2062,12 +2081,14 @@ partition boundaries. In our implementation, we replicate keys that cross partit
 \end{algorithmic}
 \end{algorithm}
 
-These joins serve as a core that we can use to build other abstractions with. For example, self-region joins and
-multi-region joins are common in genomics, and can be easily implemented using the above implementations.
-We are currently working to implement further parallel spatial functions such as sliding windows, using techniques
-similar to the shuffle-based join. We are working to characterize the performance differences between the two
-join strategies described above. In the future, we hope to enable the use of the region join in a SQL based system
-such as \textsc{Spark SQL}~\cite{armbrust15}.
+These joins serve as a core that we can use to build other abstractions with.
+For example, self-region joins and multi-region joins are common in genomics,
+and can be easily implemented using the above implementations. We are currently
+working to implement further parallel spatial functions such as sliding windows,
+using techniques similar to the shuffle-based join. Additionally, we are working
+to improve the performance of these joins by eliminating shuffles of data that
+is already sorted on disk. We discuss these avenues for future work
+in~\S\ref{sec:extensions-adam}.
 
 \section{Supporting Multi-Language Processing in \textsc{ADAM}}
 \label{sec:multi-language}
