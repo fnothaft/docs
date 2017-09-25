@@ -1,0 +1,44 @@
+digraph UML {
+
+MultisampleAvroGenomicRDD[shape=trapezium]
+
+GenomicRDD -> MultisampleGenomicRDD -> MultisampleAvroGenomicRDD
+GenomicRDD -> GenomicDataset
+
+GenomicRDD -> GenomicRDDWithLineage
+
+AvroGenomicRDD[shape=trapezium]
+
+GenomicDataset -> AvroGenomicRDD -> MultisampleAvroGenomicRDD
+
+AvroRecordGroupGenomicRDD[shape=trapezium]
+
+ADAMRDDFunctions -> AvroGenomicRDD -> AvroRecordGroupGenomicRDD
+GenomicRDDWithLineage -> AvroRecordGroupGenomicRDD
+
+GenericGenomicRDD[shape=box fillcolor=grey style=filled]
+
+GenomicRDD -> GenericGenomicRDD
+
+NucleotideContigFragmentRDD[shape=trapezium style=bold fillcolor=grey style=filled]
+FeatureRDD[shape=trapezium style=bold fillcolor=grey style=filled]
+CoverageRDD[shape=trapezium style=bold fillcolor=grey style=filled]
+FragmentRDD[shape=trapezium style=bold fillcolor=grey style=filled]
+AlignmentRecordRDD[shape=trapezium style=bold fillcolor=grey style=filled]
+VariantRDD[shape=trapezium style=bold fillcolor=grey style=filled]
+GenotypeRDD[shape=trapezium style=bold fillcolor=grey style=filled]
+VariantContextRDD[shape=box fillcolor=grey style=filled]
+
+AvroGenomicRDD -> NucleotideContigFragmentRDD
+AvroGenomicRDD -> FeatureRDD
+
+GenomicDataset -> CoverageRDD
+
+AvroRecordGroupGenomicRDD -> FragmentRDD
+AvroRecordGroupGenomicRDD -> AlignmentRecordRDD
+
+AvroGenomicRDD -> VariantRDD
+MultisampleGenomicRDD -> VariantContextRDD
+MultisampleAvroGenomicRDD -> GenotypeRDD
+
+}

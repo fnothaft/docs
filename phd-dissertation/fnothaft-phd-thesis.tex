@@ -1272,61 +1272,98 @@ when repartitioning the dataset, or when reducing or grouping values.
 \chapter{The \textsc{ADAM} Architecture}
 \label{chap:architecture}
 
-Due to both the growing volume of genomic sequencing data and the large size of these datasets,
-sequencing centers face the increasingly difficult task of turning around genomic data analyses in a
-reasonable timeframe~\cite{schadt10, stein10}. While the per-run latency of current genomic pipelines
-such as the \textsc{GATK} can be improved by manually partitioning the input dataset and distributing
-work, native support for distributed computing is not provided. As a stopgap solution, projects like
-\textsc{Cloudburst}~\cite{schatz09} and \textsc{Crossbow}~\cite{langmead09} have ported individual
-analytics tools to run on top of \textsc{Hadoop}. While this approach has served well for proofs of concept,
-it provides poor abstractions for application developers and makes it difficult to create novel distributed
-genomic analyses, and does little to attack sources of inefficiency or incorrectness in distributed
-genomics pipelines.
+\textsc{ADAM}'s architecture was introduced as a response to the challenges
+processing the growing volume of genomic sequencing data in a reasonable
+timeframe~\cite{schadt10, stein10}. While the per-run latency of current genomic
+pipelines such as the \textsc{GATK} could be improved by manually partitioning
+the input dataset and distributing work, native support for distributed
+computing is not provided. As a stopgap solution, projects like
+\textsc{Cloudburst}~\cite{schatz09} and \textsc{Crossbow}~\cite{langmead09}
+have ported individual analytics tools to run on top of \textsc{Hadoop}. While
+this approach has served well for proofs of concept, this approach provides poor
+abstractions for application developers. These poor abstractions make it
+difficult for bioinformatics developers to create novel distributed genomic
+analyses, and does little to attack sources of inefficiency or incorrectness in
+distributed genomics pipelines.
 
-To address these problems, we need to reconsider how to build software for processing genomic data.
-Modern genome analysis pipelines are built around monolithic architectures and flat file formats.
-These architectures are designed to efficiently run current algorithms on single node processing
-systems, but impose significant restrictions. These restrictions include:
-
-\begin{itemize}
-\item These implementations are locked to a single node processing model. Even the \textsc{GATK}'s
-``map-reduce'' styled \textsc{walker} API~\cite{mckenna10} is limited to natively support processing on
-a single node. While these jobs can be manually partitioned and run in a distributed setting, manual
-partitioning can lead to imbalance in work distribution and makes it difficult to run algorithms that
-require aggregating data across all partitions, and lacks the fault tolerance provided by modern
-distributed systems such as \textsc{Hadoop} or \textsc{Spark}~\cite{zaharia12}.
-\item Most of these implementations \emph{assume} invariants about the sorted order of records on
-disk. This ``stack smashing'' (specifically, the layout of data is used to ``accelerate'' a processing stage)
-can lead to bugs when data does not cleanly map to the assumed sort order. Additionally, since these
-sort order invariants are rarely explicit and vary from tool to tool, pipelines assembled from disparate
-tools can be brittle. We discuss this more in~\S\ref{sec:read-preprocessing} and footnote 1.
-\item Additionally, while these invariants are intended to improve performance, it is not clear that these
-invariants \emph{actually} improve performance. There are two common sort invariants used in genomics:
-sort by reference position and sort by read name. Changing between these two sort orders entails
-a full shuffle and resort of the dataset. Additionally, a sort is required after alignment to establish a sort order.
-\end{itemize}
-
-As noted above, current implementations are locked to a single node model. Projects like
-\textsc{Hadoop-BAM}~\cite{niemenmaa12}, \textsc{SeqPig}~\cite{schumacher14}, and \textsc{BioPig}~\cite{nordberg13}
-have attempted to build a distributed processing environment on top of current single node genomics APIs.
-However, several problems must be solved in order to make distributed processing of genomic data productive:
+\textsc{ADAM}'s architecture reconsiders how we build software for processing
+genomic data by eliminating the monolithic architectures that are driven by the
+underlying flat file formats used in genomics. These architectures impose
+significant restrictions, including:
 
 \begin{itemize}
-\item Current genomics data formats rely on a centralized header for storing experiment metadata. Since the
-metadata is centralized, it must be replicated to all machines.
-\item A simple map-reduce or SQL-like API is insufficient for implementing genomic analyses. Rather, to enhance
-bioinformatician productivity, we need to define APIs that allow developers to conveniently express algorithms.
+\item These implementations are locked to a single node processing model. Even
+  the \textsc{GATK}'s ``map-reduce'' styled \textsc{walker} API~\cite{mckenna10}
+  is limited to natively support processing on a single node. While these jobs
+  can be manually partitioned and run in a distributed setting, manual
+  partitioning can lead to imbalance in work distribution and makes it difficult
+  to run algorithms that require aggregating data across all partitions, and
+  lacks the fault tolerance provided by modern distributed systems such as
+  \textsc{Apache Hadoop} or \textsc{Spark}~\cite{zaharia12}.
+\item Most of these implementations \emph{assume} invariants about the sorted
+  order of records on disk. This ``stack smashing'' (specifically, the layout
+  of data is used to ``accelerate'' a processing stage) can lead to bugs when
+  data does not cleanly map to the assumed sort order. Additionally, since these
+  sort order invariants are rarely explicit and vary from tool to tool,
+  pipelines assembled from disparate tools can be brittle. We discuss this more
+  in Chapter~\ref{chap:adam}.
+\item Additionally, while these invariants are intended to improve performance,
+  they do this at the cost of opacity. If we can express the query patterns that
+  are accelerated by these invariants at a higher level, then we can achieve
+  both a better programming environment and enable various query optimizations.
 \end{itemize}
 
-In \textsc{ADAM}, we have taken a more aggressive approach to the design of APIs for processing genomic data
-in a distributed system. Although modern genomics pipelines are built as monolithic applications, we have
-chosen a layered decomposition for \textsc{ADAM}, that uses a schema as a ``narrow waist''. Instead of using
-a flat file format, as is traditional in genomics, we are using this schema with \textsc{Parquet}~(a commodity columnar
-store~\cite{parquet}) to store genomic data in a way that both allows efficient distributed read/write and that
-achieves high compression. On top of this, we have added primitives that implement common genomic traversals
-in a distributed manner. We have then used \textsc{ADAM} to implement common preprocessing stages from
-commonly used genomics pipelines. \textsc{ADAM}'s preprocessing stages are between 1-5$\times$ faster than the
-equivalent \textsc{GATK} preprocessing stages, and achieve linear scaling out to 128 nodes.
+At the core of \textsc{ADAM}, users use the \textsc{ADAMContext} to load data as
+\textsc{GenomicRDD}s, which they can then manipulate. Figure~\ref{fig:grdd}
+depicts the \textsc{GenomicRDD} class hierarchy. In this class hierarchy, we
+provide several classes that contain functionality that is applicable to all
+genomic datatypes, such as the coordinate-space primitives described
+in~\S\ref{sec:query-patterns} and the \textsc{pipe} primitive described
+in~\S\ref{sec:pipe-api}, and the genomic metadata management described
+in~\S\ref{sec:metadata}.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.95\linewidth]{graphs/grdd.pdf}
+\end{center}
+\caption{The \textsc{GenomicRDD} class hierarchy. Ovals are traits, trapezoids
+  are abstract classes, rectangles are classes, and a bold border means that the
+  abstract class is sealed. In \textsc{Scala}, sealing a class/trait restricts
+  which classes can extend this class/mix-in this trait. The shaded classes are
+  the types returned from the \textsc{ADAMContext} load methods and from the
+  \textsc{GenomicRDD} methods.}
+\label{fig:grdd}
+\end{figure}
+
+While the \textsc{ADAMContext} API has existed since the beginning of the
+\textsc{ADAM} project, the \textsc{GenomicRDD} API is a fairly recent
+introduction, having been added in 2016, three years into the project. Despite
+its recent addition, the \textsc{GenomicRDD} API has been critical to achieving
+the vision behind \textsc{ADAM}:
+
+\begin{itemize}
+\item The \textsc{GenomicRDD} wraps the \textsc{Apache Spark}
+  RDD~\cite{zaharia12} and \textsc{Spark SQL} DataFrame~\cite{armbrust15} APIs
+  with genomics-specific and genomic-datatype specific functionality. This
+  enables the use of both generic~(RDD/DataFrame) and specialized APIs~(the
+  region join and \textsc{pipe} APIs) to process genomic data in a natively
+  distributed manner.
+\item The rich \textsc{GenomicRDD} type hierarchy enables methodical management
+  of genomics metadata. We support metadata management at a read group, sample,
+  and computational lineage level.
+\item By building upon APIs from \textsc{Spark SQL}, the \textsc{GenomicRDD} API
+  can be exposed in the \textsc{Python} and R languages, which enables the use
+  of \textsc{ADAM} outside of the JVM.
+\end{itemize}
+
+In the rest of this chapter, we explain the design decisions behind the
+\textsc{ADAM} architecture, with an eye towards how the architecture has
+evolved over the four years of the project. We discuss the specific tradeoffs
+we needed to make in order to realize the stack architecture we had introduced,
+before diving into the schema design that we used to decouple \textsc{ADAM} from
+the genomics file formats. We review the genomics-specific query patterns
+supported in \textsc{ADAM}, and explain how we have broadened \textsc{ADAM}'s
+APIs to support multiple languages.
 
 \section{Realizing A Decoupled Stack Architecture In \textsc{ADAM}}
 \label{sec:realizing-stack-architecture}
