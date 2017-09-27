@@ -2306,7 +2306,7 @@ add the local path to this file into their command, which we know at runtime.
 
 To demonstrate how concise the API is, Listings~\ref{lst:pipe-bwa}
 and~\ref{lst:pipe-freebayes} demonstrate how to use the \textsc{pipe}
-API to call BWA~\cite{li10} from \textsc{Python} and
+API to call BWA~\cite{li09bwa} from \textsc{Python} and
 \textsc{FreeBayes}~\cite{garrison12} from R.
 
 \begin{lstlisting}[caption=Calling BWA using the \textsc{Python pipe} API, label=lst:pipe-bwa]
@@ -2356,33 +2356,36 @@ would leverage this pattern in~\S\ref{sec:efficient-consensus}.
 \section{Packaging Parallelized Single-node Tools in \textsc{Cannoli}}
 \label{sec:parallelizing-in-cannoli}
 
+To make the automated parallelization of the \textsc{pipe} API more accessible
+to users, we introduced the \textsc{Cannoli} tool, which provides a command line
+interface~(CLI) for executing common tools using the \textsc{pipe} API. Our
+goals were to provide a minimal wrapper around the \textsc{pipe} API that would:
+
 \begin{itemize}
-\item Approach:
-  \begin{itemize}
-  \item Delegate to \textsc{pipe} API as much as possible
-  \item Transparently support both local and ``remote'' reference files
-  \item Support native executables, but default to Docker for convenience of packaging
-  \end{itemize}
-\item Tools supported:
-  \begin{itemize}
-  \item Aligners:
-    \begin{itemize}
-    \item BWA
-    \item Bowtie2
-    \item SNAP
-    \end{itemize}
-  \item Variant callers:
-    \begin{itemize}
-    \item FreeBayes
-    \item SAMTools mpileup
-    \end{itemize}
-  \item Annotation tools:
-    \begin{itemize}
-    \item SNPEff
-    \item BEDTools
-    \end{itemize}
-  \end{itemize}
+\item Allow the user to use reference files that were already present locally on
+  all nodes in the cluster, or automatically distribute the necessary reference
+  files to all nodes.
+\item Support running the tool from a locally installed executable or a
+  \textsc{Docker} container, as \textsc{Docker} is becoming a widely used method
+  for distributing pre-built genomic analysis tools~\cite{vivian17}.
 \end{itemize}
+
+To support this, we have control logic that parses out the arguments passed to
+the CLI. If the user has requested that we distribute all of the files to the
+workers, we then elaborate out the paths needed by the tool and add the files
+to the \textsc{pipe} call. We do this since many tools that require prebuilt
+resources use a multitude of resource files that are all at a base path. For
+example, BWA~\cite{li09bwa} uses seven index files, SNAP~\cite{zaharia11} uses
+four index files, and \textsc{SnpEff}~\cite{cingolani12} uses a large directory of
+resource files. If the user has requested to run the tool via a \textsc{Docker}
+container, we then ensure that the directory containing the distributed
+index files are accessible within the container. Currently, we support a list of
+tools including but not limited to BWA, SNAP, and
+\textsc{Bowtie2}~\cite{langmead09bowtie} for alignment;
+\textsc{FreeBayes}~\cite{garrison12} and \textsc{mpileup}~\cite{li11} for
+variant calling; and \textsc{SnpEff} and \textsc{BEDTools}~\cite{quinlan10} for
+annotation. We evaluate the performance and concordance of the tools implemented
+in \textsc{Cannoli} in~\S\ref{sec:benchmarking-cannoli}.
 
 \chapter{Scalable Alignment Preprocessing with \textsc{ADAM}}
 \label{chap:adam}
@@ -3109,6 +3112,9 @@ These representations achieve high compression versus the legacy formats. We pro
 compression in~\S\ref{sec:compression}. \textsc{ADAM} data stored in \textsc{Parquet} achieves an
 approximately 25\% reduction in file size over compressed \textsc{BAM} for read data, and a 66\% reduction
 over \textsc{GZIP}ped \textsc{VCF} for variant data.
+
+\section{Benchmarking \textsc{Cannoli}}
+\label{sec:benchmarking-cannoli}
 
 \chapter{The Simons Genome Diversity Dataset Recompute}
 \label{chap:sgdd}
