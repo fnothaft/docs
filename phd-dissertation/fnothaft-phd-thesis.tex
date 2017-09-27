@@ -173,7 +173,7 @@ bioinformatics tools.
     built a framework for scalable genomics using external projects like
     \textsc{Apache Spark}~\cite{zaharia12} and \textsc{Apache
       Parquet}~\cite{parquet}. On top of \textsc{ADAM}'s core APIs, we have
-    built a broad ecosystem of tools~\cite{tu16, morrow17, linderman17}
+    built a broad ecosystem of tools~\cite{linderman17, morrow17, tu16}
     demonstrating how \textsc{Apache Spark} can accelerate genomic data
     analysis. To enable the reproducible use of \textsc{Apache Spark} in
     scientific data analysis workloads, we have contributed to novel,
@@ -251,7 +251,7 @@ Moore's law at its peak, and is a rate of increase approximately four times
 greater than current estimates of Moore's law, which peg the doubling of
 transistor counts to occur approximately every two years. As a result of
 this growth in the volume of sequencing data, legacy tools are struggling to
-handle genome-scale analyses across cohorts~\cite{schadt10, linderman17}.
+handle genome-scale analyses across cohorts~\cite{linderman17, schadt10}.
 We believe that distributed computing is a natural solution to these problems.
 
 As asserted in the original GATK manuscript that proposed a single-node
@@ -278,7 +278,7 @@ strong assumptions about the cost of making random accesses into a POSIX file
 system, and present low level abstractions to users. While there have been
 several attempts to retrofit legacy tools onto distributed
 computing~(\textsc{CloudBurst}~\cite{schatz09}
-and~\textsc{Crossbow}~\cite{langmead09}), these approaches have typically used
+and~\textsc{Crossbow}~\cite{langmead09crossbow}), these approaches have typically used
 custom wrappers around \textsc{Apache Hadoop Streaming} and have been
 non-general. There have also been several attempts to retrofit genomics-specific
 file formats onto distributed query
@@ -312,7 +312,7 @@ insertion and deletion~(INDEL) variant calling. Additionally, the alignment
 step in this pipeline is implemented on top of a general interface for
 parallelizing single-node genomics tools, which makes it possible to leverage
 distributed computing without reimplementing a tool or developing custom shims,
-unlike prior approaches~\cite{langmead09, schatz09}.
+unlike prior approaches~\cite{langmead09crossbow, schatz09}.
 
 As a result, \textsc{ADAM} improves over conventional genomics tools by providing:
 
@@ -406,7 +406,7 @@ libraries that have very long insert sizes~\cite{mardis13}. Additionally,
 library preparation varies tremendously between sequencing vendors. For long
 read sequencers such as the Pacific Biosciences sequencers~\cite{eid09} or
 the Oxford Nanopore sequencers~\cite{clarke09}, the libraries include long DNA
-fragments~(>5,000 bases) that generate a single, full length read.
+fragments~($>$5,000 bases) that generate a single, full length read.
 
 Illumina sequencers generate reads through a sequencing-by-synthesis approach.
 In this process, flourescent dyes are attached to the DNA bases. The sequencer
@@ -449,10 +449,10 @@ the genomic sequences from these ranges, using an edit calculation algorithm suc
 as Smith-Waterman~\cite{smith81}, Ukkonen's algorithm~\cite{ukkonen85}, or a
 pairwise sequence alignment Hidden Markov Model~(HMM,~\cite{durbin98}). Widely
 used mappers include \textsc{BWA}~\cite{li09}, which builds an index using the
-Burrows-Wheeler transform~\cite{burrows94}; \textsc{Bowtie}~\cite{langmead09},
+Burrows-Wheeler transform~\cite{burrows94}; \textsc{Bowtie}~\cite{langmead09bowtie},
 which builds an FM-index~\cite{ferragina00}; and \textsc{SNAP}~\cite{zaharia11},
 which builds a hash-based index. Several projects have applied hardware acceleration
-to alignment, including \textsc{cloud-scale-bwamem}~\cite{chen15, chen16}, Ahmed
+to alignment, including \textsc{Cloud-Scale-BWAMEM}~\cite{chen16, chen15}, Ahmed
 et al~\cite{ahmed15}, and unpublished work out of Microsoft
 Azure~\cite{msr16}.
 
@@ -538,7 +538,7 @@ project~\cite{1kg}. Some of these formats are much older; many genomic feature
 file formats descend from the development of the University of California,
 Santa Cruz's (UCSC) Genome Browser~\cite{kent02}, which was developed as part
 of the Human Genome Project~\cite{lander01}, and informal specificiations for
-the FASTQ~\cite{cock09} and FASTA formats date back to at least the nineties,
+the FASTQ~\cite{cock10} and FASTA formats date back to at least the nineties,
 through their use in the \textsc{phred}~\cite{ewing98} and
 \textsc{FASTA}/\textsc{FASTP}~\cite{pearson90} tools.
 
@@ -1277,7 +1277,7 @@ timeframe~\cite{schadt10, stein10}. While the per-run latency of current genomic
 pipelines such as the \textsc{GATK} could be improved by manually partitioning
 the input dataset and distributing work, native support for distributed
 computing is not provided. As a stopgap solution, projects like
-\textsc{Cloudburst}~\cite{schatz09} and \textsc{Crossbow}~\cite{langmead09}
+\textsc{Cloudburst}~\cite{schatz09} and \textsc{Crossbow}~\cite{langmead09crossbow}
 have ported individual analytics tools to run on top of \textsc{Hadoop}. While
 this approach has served well for proofs of concept, this approach provides poor
 abstractions for application developers. These poor abstractions make it
@@ -2340,7 +2340,7 @@ In both examples, the user can run the parallelized tool with less than five
 lines of code. We believe that the power of this API lies in its simplicity.
 With a minimal API, we can replace the manual sharding that was historically
 implemented using workflow management systems~\cite{depristo11, chiang15} or
-custom wrappers~\cite{langmead09, schatz09, pireddu11, nellore16}. Since this
+custom wrappers~\cite{langmead09crossbow, schatz09, pireddu11, nellore16}. Since this
 API is built in the query layer of the \textsc{ADAM} stack, it can run
 independent of both the file format used to save the data and the storage
 system used to store the data. This latter point is a significant improvement
@@ -2528,8 +2528,8 @@ performance optimizations:
   However, this is a straightforward modification.
 \item In the process of rewriting the \textsc{CovariateKey} representation, we
   optimized the implementation of the code that assigned dinucleotide and cycle
-  covariates to a given base. This yielded a $3\times$ speedup for the cycle
-  covariate, and a $5\times$ speedup for the dinucleotide covariate.\cite{fixme}
+  covariates to a given base. This yielded a $2\times$ speedup when creating
+  covariates.
 \end{itemize}
 
 Once we have computed the observations that correspond to each covariate, we
