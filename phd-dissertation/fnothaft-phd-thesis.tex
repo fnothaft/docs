@@ -2390,13 +2390,13 @@ in \textsc{Cannoli} in~\S\ref{sec:benchmarking-cannoli}.
 \chapter{Scalable Alignment Preprocessing with \textsc{ADAM}}
 \label{chap:adam}
 
-In \textsc{ADAM}, we have implemented the three most-commonly used pre-processing stages from the
+In \textsc{ADAM}, we have implemented the three most commonly used pre-processing stages from the
 \textsc{GATK} pipeline~\cite{depristo11}. In this section, we describe the stages that we have
 implemented, and the techniques we have used to improve performance and accuracy when running on
 a distributed system. These pre-processing stages include:
 
 \begin{enumerate}
-\item \textbf{Duplicate Removal:} During the process of preparing DNA for sequencing, reads are duplicated by
+\item Duplicate marking: During the process of preparing DNA for sequencing, reads are duplicated by
 errors during the sample preparation and polymerase chain reaction stages. Detection of duplicate reads
 requires matching all reads by their position and orientation after read alignment. Reads with identical position
 and orientation are assumed to be duplicates. When a group of duplicate reads is found, each read is scored,
@@ -2409,7 +2409,7 @@ the two reads in the read pairs align to different chromosomes; see Li et al~\ci
 Specifically, because Picard's traversal engine is restricted to processing linearly sorted alignments,
 Picard mishandles these alignments. Since our engine is not constrained by the underlying layout of data
 on disk, we are able to properly handle chimeric read pairs.
-\item \textbf{Local Realignment:} In local realignment, we correct areas where variant alleles cause reads to be
+\item Local realignment: In local realignment, we correct areas where variant alleles cause reads to be
 locally misaligned from the reference genome.\footnote{This is typically caused by the presence of
 insertion/deletion (INDEL) variants; see DePristo et al~\cite{depristo11}.} In this algorithm, we first identify regions
 as targets for realignment. In the \textsc{GATK}, this identification is done by traversing sorted read alignments. In our implementation,
@@ -2420,9 +2420,9 @@ compute the convex hull of overlapping regions in parallel. We discuss this in m
 After we have generated the targets, we associate reads to the overlapping target, if one exists. After
 associating reads to realignment targets, we run a heuristic realignment algorithm that works by minimizing
 the quality-score weighted number of bases that mismatch against the reference.
-\item \textbf{Base Quality Score Recalibration~(BQSR):} During the sequencing process, systemic errors occur
+\item Base Quality Score Recalibration: During the sequencing process, systemic errors occur
 that lead to the incorrect assignment of base quality scores. In this step, we label each base that we have
-sequenced with an \emph{error covariate}. For each covariate, we count the total number of bases that we saw,
+sequenced with an error covariate. For each covariate, we count the total number of bases that we saw,
 as well as the total number of bases within the covariate that do not match the reference genome. From this data, 
 we apply a correction by estimating the error probability for each set of covariates under a beta-binomial model
 with uniform prior.
@@ -2434,6 +2434,8 @@ mishandled if the two reads in the pair overlap.
 \end{enumerate}
 
 In the rest of this section, we discuss the high level implementations of these algorithms.
+We evaluate the performance and concordance of these algorithms against other
+tools in~\S\ref{sec:benchmarking-preprocessing}.
 
 \section{BQSR Implementation}
 \label{sec:bqsr-implementation}
@@ -2443,19 +2445,34 @@ At a high level, this is done by associating sequenced bases with possible error
 true error rate of this covariate. Once the true error rate of all covariates has been estimated, we then apply
 the corrected covariate.
 
-Our system is generic and places no limitation on the number or type of covariates that can be applied. A covariate
-describes a parameter space where variation in the covariate parameter may be correlated with a sequencing
-error. We provide two common covariates that map to common sequencing errors~\cite{nakamura11}:
+The original BQSR engine in \textsc{ADAM} was written to be generic and to place
+no limitations on the number or type of covariates that could be applied. A
+covariate describes a parameter space where variation in the covariate parameter
+may be correlated with a sequencing error. However, supporting generic covariates
+reduced the throughput of the recalibration engine, and we found that
+recalibration was generally run with two specified covariates. Currently, we
+support two covariates that map to common sequencing errors~\cite{nakamura11}:
 
 \begin{itemize}
-\item \emph{CycleCovariate}: This covariate expresses which cycle the base was sequenced in. Read errors are
-known to occur most frequently at the start or end of reads.
-\item \emph{DinucCovariate}: This covariate covers biases due to the sequence context surrounding a site. The two-mer
-ending at the sequenced base is used as the covariate parameter value.
+\item \textsc{CycleCovariate}: This covariate expresses which cycle the base was
+  sequenced in. Read errors are known to occur most frequently at the start or
+  end of reads. Additionally, a reagent error can occur in a way that corrupts
+  bases from a single cycle.
+\item \textsc{DinucCovariate}: This covariate covers biases due to the sequence
+  context surrounding a site. The two-mer ending at the sequenced base is used
+  as the covariate parameter value.
 \end{itemize}
 
-To generate the covariate observation table, we aggregate together the number of observed and error bases per
-covariate. Algorithms~\ref{alg:emit-observations} and \ref{alg:create-table} demonstrate this process.
+These covariates are calculated for each sequenced base. We then merge the
+covariates into a \textsc{CovariateKey}, which also includes the read group
+that the sample was from~(see~\S\ref{sec:metadata}) and the quality score
+assigned to the base. To generate the covariate observation table, we
+aggregate together the number of observed and error bases per covariate.
+Algorithms~\ref{alg:emit-observations} and \ref{alg:create-table} demonstrate
+this process. In Algorithm~\ref{alg:emit-observations}, the \textsc{Observation}
+class stores the number of bases seen and the number of errors seen. For
+example, \textsc{Observation(1, 1)} creates an \textsc{Observation} object that
+has seen one base, which was an erroneous base.
 
 \begin{algorithm}
 \caption{Emit Observed Covariates}
@@ -2487,26 +2504,80 @@ covariate. Algorithms~\ref{alg:emit-observations} and \ref{alg:create-table} dem
 \STATE $sites \leftarrow$ known variant sites
 \STATE $sites$.broadcast()
 \STATE $observations \leftarrow reads$.map($read \Rightarrow$ emitObservations($read, covariates, sites$))
-\STATE $table \leftarrow$ $observations$.aggregate(CovariateTable(), mergeCovariates)
+\STATE $table \leftarrow$ $observations$.reduceByKey(merge)
 \RETURN $table$
 \end{algorithmic}
 \end{algorithm}
 
-In Algorithm~\ref{alg:emit-observations}, the \textsc{Observation} class stores the number of bases seen
-and the number of errors seen. For example, \textsc{Observation(1, 1)} creates an \textsc{Observation} object
-that has seen one base, which was an erroneous base.
+Originally, Algorithm~\ref{alg:create-table} was implemented by running an
+aggregate where we merged all of the disparate covariates into the table at each
+step. By restricting the BQSR engine to two covariates, we achieved several
+performance optimizations:
 
-Once we have computed the observations that correspond to each covariate, we estimate the observed base
-quality using equation~\eqref{eqn:bqsr-err}. This represents a Bayesian model of the mismatch probability with
-Binomial likelihood and a Beta(1, 1) prior.
+\begin{itemize}
+\item By hard-coding the types of covariates we used, we reduced the cost of
+  identifying whether two \textsc{CovariateKey} objects represented the same
+  covariate.
+\item Additionally, hard-coding the covariates greatly reduced the size of the
+  \textsc{CovariateKey} object in memory, which allows us to achieve higher
+  cache hit rates when caching the output of the first stage of BQSR.
+\item Merging the observations between two base observations originally required
+  updating and merging the new and old \textsc{Observation} values. By rewriting
+  as a \textsc{reduceByKey}, we were able to eliminate the need for mutable
+  objects. We did not move this codepath to \textsc{Spark SQL}, since this
+  refactor predated the introduction of \textsc{Spark SQL} support into ADAM.
+  However, this is a straightforward modification.
+\item In the process of rewriting the \textsc{CovariateKey} representation, we
+  optimized the implementation of the code that assigned dinucleotide and cycle
+  covariates to a given base. This yielded a $3\times$ speedup for the cycle
+  covariate, and a $5\times$ speedup for the dinucleotide covariate.\cite{fixme}
+\end{itemize}
+
+Once we have computed the observations that correspond to each covariate, we
+estimate the observed base quality using equation~\eqref{eqn:bqsr-err}. This
+represents a Bayesian model of the mismatch probability with Binomial
+likelihood and a Beta(1, 1) prior.
 
 \begin{equation}
 \label{eqn:bqsr-err}
 \mathbf{E}(P_{err}|{cov}) = \frac{\textsc{\#errors}(cov) + 1}{\textsc{\#observations}(cov) + 2}
 \end{equation}
 
-After these probabilities are estimated, we go back across the input read dataset and reconstruct the quality
-scores of the read by using the covariate assigned to the read to look into the covariate table.
+After these probabilities are estimated, we go back across the input read
+dataset and reconstruct the quality scores of the read by using the covariate
+assigned to the read to look into the covariate table. However, this process is
+expensive if implemented na\"{i}vely. To handle covariate specific errors, we
+use the hierarchical model from the \textsc{GATK}~\cite{depristo11}. In this
+model, we generate the empirical quality of a \textsc{CovariateKey} by
+hierarchically computing the empirical error rates for the covariate
+groups that it falls into. We treat the read group as the highest order
+covariate, then the quality score, and then the two error covariates.
+Algorithm~\ref{alg:invert-cov} demonstrates this approach.
+
+\begin{algorithm}
+\caption{Inverting an element in the covariate table}
+\label{alg:create-table}
+\begin{algorithmic}
+\STATE $key \leftarrow$ covariate key to invert
+\STATE $global \leftarrow$ the empirical quality of this read group
+\STATE $qualities \leftarrow$ the empirical qualities of bases with a given quality score
+\STATE $dinucs \leftarrow$ the empirical qualities of bases with a given context
+\STATE $cycles \leftarrow$ the empirical qualities of bases at a given cycle
+\STATE $p_1 \leftarrow$ compensate($key$.quality, $global$)
+\STATE $p_2 \leftarrow$ compensate($p_1$, $qualities$($key$.quality)
+\STATE $d_d \leftarrow$ delta($p_2$, $dinucs$($key$.dinuc))
+\STATE $d_c \leftarrow$ delta($p_2$, $cycles$($key$.cycle))
+\RETURN $p_2 + d_d + d_c$
+\end{algorithmic}
+\end{algorithm}
+
+In the original BQSR implementation, this inversion would be called on every
+read base. This is inefficient, as the empirical quality is equal across all
+bases from a given \textsc{CovariateKey}. We eliminated this by inverting all
+covariates after all of the observations had been collected. Then, evaluating
+the new empirical quality score for a base assigned to a covariate was performed
+by looking up the covariate key in a hash map, which is computationally
+inexpensive.
 
 \section{Indel Realignment Implementation}
 \label{sec:indel-realignment-implementation}
@@ -3102,8 +3173,17 @@ However, we will add this functionality soon.
 \chapter{Benchmarking the \textsc{ADAM} Stack}
 \label{chap:benchmarking}
 
-\section{Benchmarking Duplicate Markers}
+\section{Benchmarking Preprocessing Algorithms}
+\label{sec:benchmarking-preprocessing}
+
+\subsection{Benchmarking Duplicate Markers}
 \label{sec:benchmarking-duplicate-markers}
+
+\subsection{Benchmarking INDEL Realigners}
+\label{sec:benchmarking-indel-realigners}
+
+\subsection{Benchmarking Recalibrators}
+\label{sec:benchmarking-recalibrators}
 
 \section{Evaluating Compression Techniques}
 \label{sec:compression}
