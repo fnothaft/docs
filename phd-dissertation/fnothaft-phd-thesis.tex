@@ -650,14 +650,15 @@ implementation of a widely used statistical model for genotyping~\cite{li11}. St
 creation) has approximately $\mathcal{O}(r l_r)$ time complexity, and stage two (graph elaboration) has
 $\mathcal{O}(h \max(l_h))$ time complexity.
 The asymptotic time cost bound of local reassembly comes from stage three, where cost is $\mathcal{O}(h r l_r
-\max(l_h))$, where $h$ is the number of haplotypes tested in this region\footnote{The number of
+\max(l_h))$, where $h$ is the number of haplotypes tested in this region, $r$ is the number of reads aligned to this region, $l_r$ is the read length,
+and $\min(l_h)$ is the length of the
+shortest haplotype that we are evaluating. This complexity comes from realigning $r$ reads to $h$
+haplotypes, where realignment has complexity $\mathcal{O}(l_r l_h)$. Note that the number of
 haplotypes tested may be lower than the number of haplotypes reassembled. Several tools
 (see Depristo et al~\cite{depristo11} and Garrison and Marth~\cite{garrison12}) allow users to limit the number of haplotypes evaluated to improve
-performance.}, $r$ is the number of reads aligned to this region, $l_r$ is the read length\footnote{For
-simplicity, we assume constant read length. This is a reasonable assumption as many of the variant
-callers discussed target Illumina reads that have constant length.}, and $\min(l_h)$ is the length of the
-shortest haplotype that we are evaluating. This complexity comes from realigning $r$ reads to $h$
-haplotypes, where realignment has complexity $\mathcal{O}(l_r l_h)$.
+performance. For simplicity, we assume constant read length. This is a reasonable assumption as many of the variant
+callers discussed target Illumina reads that have constant length, unless the reads have been trimmed
+during quality control.
 
 In this paper, we introduce the indexed de Bruijn graph and demonstrate how it can be used to
 reduce the asymptotic complexity of reassembly. An indexed de Bruijn graph is identical to a
@@ -1235,10 +1236,8 @@ As we discuss in more detail in~\S\ref{sec:read-preprocessing}, current scientif
 functionality between stack layers. An exemplar is the SAM/BAM and CRAM formats, which expect data
 to be sorted by genomic coordinate. This order modifies the layout of data on disk~(level 3, Materialized Data)
 and constrains how applications traverse datasets~(level 5, Evidence Access). Beyond
-constraining applications, this leads to bugs in applications that are difficult to detect.\footnote{The
-current best-practice implementations of the BQSR and Duplicate Marking algorithms both fail when
-processing certain corner-case alignments. These errors are caused because of the requirement to
-traverse reads in sorted order.} These views of evidence should be implemented at the evidence
+constraining applications, this leads to bugs in applications that are difficult to detect.
+These views of evidence should be implemented at the evidence
 access layer instead of in the layout of data on disk. This split enforces independence of anything below the
 schema.
 
@@ -2404,14 +2403,14 @@ and all but the highest quality read are marked as duplicates.
 
 We have validated our duplicate removal code against Picard~\cite{picard}, which is used by the GATK
 for Marking Duplicates. Our implementation is fully concordant with the Picard/GATK duplicate removal
-engine, except we are able to perform duplicate marking for chimeric read pairs.\footnote{In a chimeric read pair,
-the two reads in the read pairs align to different chromosomes; see Li et al~\cite{li10}.}
+engine, except we are able to perform duplicate marking for read pairs whose reads align to different
+reference chromosomes~(known as chimeric read pairs, see Li et al~\cite{li10}).
 Specifically, because Picard's traversal engine is restricted to processing linearly sorted alignments,
 Picard mishandles these alignments. Since our engine is not constrained by the underlying layout of data
 on disk, we are able to properly handle chimeric read pairs.
 \item Local realignment: In local realignment, we correct areas where variant alleles cause reads to be
-locally misaligned from the reference genome.\footnote{This is typically caused by the presence of
-insertion/deletion (INDEL) variants; see DePristo et al~\cite{depristo11}.} In this algorithm, we first identify regions
+locally misaligned from the reference genome. This is typically caused by the presence of
+insertion/deletion (INDEL) variants~\cite{depristo11}. In this algorithm, we first identify regions
 as targets for realignment. In the \textsc{GATK}, this identification is done by traversing sorted read alignments. In our implementation,
 we fold over partitions where we generate targets, and then we merge the tree of targets. This process allows us
 to eliminate the data shuffle needed to achieve the sorted ordering. As part of this fold, we must
@@ -2613,9 +2612,7 @@ region $\hat{r}$ that satisfies the following properties:
 
 In our problem, we seek to find all of the maximal convex hulls, given a set of regions. For genomics, the
 convexity constraint described by equation \eqref{eqn:convexity-constraint} is trivial to check: specifically, the
-genome is assembled out of reference contigs\footnote{\emph{Contig} is short for \emph{contiguous
-sequence}. In alignment based pipelines, reference contigs are  used to describe the sequence of each
-chromosome.} that define disparate 1-D coordinate spaces. If two regions exist on different contigs, they
+genome is assembled out of reference contigs that define disparate 1-D coordinate spaces. If two regions exist on different contigs, they
 are known not to overlap. If two regions are on a single contig, we simply check to see if they overlap
 on that contig's 1-D coordinate plane.
 
@@ -2812,8 +2809,8 @@ $\mathcal{S}_j$), the indexed de Bruijn graph $G$ provides several guarantees:
 \begin{enumerate}
 \item If two sequences $\mathcal{S}_i$ and $\mathcal{S}_j$ share at least two $k$-mers $s_1$ and
 $s_2$, we can provably find the maximum edit distance $d$ of the subsequences in $\mathcal{S}_i$ and
-$\mathcal{S}_j$, and bound the cost of finding this edit distance at $\mathcal{O}(nd)$,\footnote{Here,
-$n = \max(\text{distance}_{\mathcal{S}_i}(s_1, s_2), \text{distance}_{\mathcal{S}_j}(s_1, s_2))$.}
+$\mathcal{S}_j$, and bound the cost of finding this edit distance at $\mathcal{O}(nd)$, where,
+$n = \max(\text{distance}_{\mathcal{S}_i}(s_1, s_2), \text{distance}_{\mathcal{S}_j}(s_1, s_2))$.
 \item For many of the above subsequence pairs, we can bound the cost at $\mathcal{O}(n)$, \emph{and}
 provide canonical representations for the necessary edits,
 \item $\mathcal{O}(n^2)$ complexity is restricted to aligning the subsequences of $\mathcal{S}_i$ and
@@ -2878,8 +2875,7 @@ position three. With $k$-mer length $k = 3$, this corresponds to the graph in Fi
 
 If $m_i = k - 1, m_j \ge k$ or vice versa, we have a canonical INDEL edit (for convenience, we assume
 that $\mathcal{S}_i'$ contains the $k - 1$ length path). Here, we can prove that there is a $m_j - m_i$
-length insertion\footnote{This is equivalently an $m_j - m_i$ length deletion in $\mathcal{S}_i'$ relative to
-$\mathcal{S}_j'$.} in $\mathcal{S}_j'$ relative to $\mathcal{S}_i'$, $k - 1$ letters \emph{after}
+length insertion in $\mathcal{S}_j'$ relative to $\mathcal{S}_i'$, $k - 1$ letters \emph{after}
 $\text{index}(s_1)$:
 
 \begin{lemma}[Distance between $k$ length subsequences]
@@ -2926,8 +2922,8 @@ linearly from $s_1$ to $s_2$, and is therefore $\mathcal{O}(n)$. However, in pra
 differences that cannot be described as one of the earlier two canonical approaches. First, let us
 generalize from the two above proofs: if we have two independent paths between $s_1, s_2$ in the
 de Bruijn graph $G$ that was constructed from $\mathcal{S}_i, \mathcal{S}_j$, we can describe
-$\mathcal{S}_i$ as a sequence created by concatenating $s_1, \mathcal{L}_i, s_2$.\footnote{This
-property holds true for $\mathcal{S}_j$ as well.} The canonical edits merely result from special cases:
+$\mathcal{S}_i$ as a sequence created by concatenating $s_1, \mathcal{L}_i, s_2$. This
+property holds true for $\mathcal{S}_j$ as well. The canonical edits merely result from special cases:
 
 \begin{itemize}
 \item In a canonical substitution edit, $l_{\mathcal{L}_i} = l_{\mathcal{L}_j} = 1$.
