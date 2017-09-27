@@ -2596,7 +2596,7 @@ in the region.
 To identify target regions for realignment, we simply map across all the reads. If a read contains INDEL evidence,
 we then emit a region corresponding to the region covered by that read.
 
-\subsection{Convex-Hull Finding}
+\subsubsection{Convex-Hull Finding}
 \label{sec:convex-hull}
 
 Once we have identified the target realignment regions, we must then find the maximal convex hulls
@@ -2664,7 +2664,7 @@ Algorithm~\ref{alg:join-targets}.
 
 The set returned by this function is used as an index for mapping reads directly to realignment targets.
 
-\subsection{Candidate Generation and Realignment}
+\subsubsection{Candidate Generation and Realignment}
 \label{sec:candidate-generation-realignment}
 
 Once we have generated the target set, we map across all the reads and check to see if the read overlaps
@@ -2700,11 +2700,16 @@ q_i &= \min(q_{i, R}, \min_{j \in \{0, \dots, l_c - l_{r_i}\}} q_{i, j}) \\
 q_c &= \sum_{r_i \in \mathbf{r}} q_i
 \end{align}
 
-In~\eqref{eqn:realignment}, $s(i)$ denotes the base at position $i$ of sequence $s$, and $l_s$ denotes the
-length of sequence $s$. We pick the consensus sequence that minimizes the $q_c$ value. If the chosen
-consensus has a log-odds ratio~(LOD) that is greater than $5.0$ with respect to the reference, we realign the
-reads. This is done by recomputing the CIGAR and MDTag for each new alignment. Realigned reads have their
-mapping quality score increased by 10 in the Phred scale.
+In~\eqref{eqn:realignment}, $s(i)$ denotes the base at position $i$ of sequence
+$s$, and $l_s$ denotes the length of sequence $s$. We pick the consensus
+sequence that minimizes the $q_c$ value. To improve performance, in the
+$q_{i, j}$ calculation, we terminate the loop once the running sum
+$\sum_{k = 0}^{l_{r_i}} Q_k I[r_I(k) = c(j + k)]$ is larger than the prior
+$\min_i q_{i, j}$. If the chosen consensus has a log-odds ratio~(LOD)
+that is greater than $5.0$ with respect to the reference, we realign the reads.
+This is done by recomputing the CIGAR and MDTag for each new alignment.
+Realigned reads have their mapping quality score increased by 10 in the Phred
+scale.
 
 \section{Duplicate Marking Implementation}
 \label{sec:duplicate-marking-implementation}
