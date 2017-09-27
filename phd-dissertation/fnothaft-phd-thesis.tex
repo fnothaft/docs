@@ -2723,6 +2723,17 @@ We mark as duplicates all read pairs that have the same pair alignment locations
 map to the same sites. Only the highest scoring read/read pair is kept, where the score is the sum of all quality
 scores in the read that are greater than 15.
 
+To eliminate a shuffle, we leveraged an insight from
+\textsc{SAMBLASTER}~\cite{faust14}, which runs directly on the output of an
+aligner, which will group all reads from a single fragment together~(also known
+as query grouped). The fragment schema introduced in~\S\ref{sec:read-schemas}
+describes a set of query grouped reads, and is equivalent to the output of the
+step in duplicate marking that groups reads by read name. This allows us to
+eliminate a shuffle when running on reads loaded from a query grouped
+SAM/BAM/CRAM file, or when running on the output of reads aligned using
+\textsc{Cannoli}. We describe the performance benefit of this change
+in~\S\ref{sec:benchmarking-duplicate-markers}.
+
 \chapter{Rapid Variant Calling with \textsc{Avocado}}
 \label{chap:avocado}
 
