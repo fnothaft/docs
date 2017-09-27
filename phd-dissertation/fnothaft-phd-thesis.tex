@@ -2737,24 +2737,26 @@ in~\S\ref{sec:benchmarking-duplicate-markers}.
 \chapter{Rapid Variant Calling with \textsc{Avocado}}
 \label{chap:avocado}
 
-To use Avocado to call variants, we run two applications, each of which has several
-sub-stages:
+This chapter introduces \textsc{Avocado}, a substitution and short INDEL variant
+caller that is built natively on top of the \textsc{ADAM} APIs. For highest
+accuracy, \textsc{Avocado} is run as a two phase tool. In the first phase, we
+reassemble or realign our reads around INDEL variants. In the second phase, we
+apply a probabilistic model built around a biallelic model to the reads to
+identify variants.
 
-\begin{enumerate}
-\item \textbf{INDEL Reassembly:} Here, we clean up all reads that are aligned
-near INDEL variants. We do this as a two step process:
-\begin{enumerate}
-\item We make a pass over all reads, using our indexed de Bruijn algorithm
-to extract INDEL variants. These INDEL variants are collected on a single node,
-and used as inputs to the next stage.
-\item Optionally, we run \textsc{ADAM}'s~\cite{massie13, nothaft15} INDEL realigner,
-using the discovered INDELs from stage one as ``known INDELs'' to realign to.
-This improves variant calling accuracy over solely using the indexed de
-Bruijn algorithm.
-\end{enumerate}
-\item \textbf{Variant Calling:} In this phase, we discover all SNVs and INDELs,
-score them using the reads, and emit either called variants or genotype
-likelihoods in genome VCF~(gVCF) format. This runs as a four step process:
+\textsc{Avocado}'s INDEL reassembly process cleans up all reads that are aligned
+near INDEL variants. We do this as a two step process. In the first pass, we
+pass over all the reads and use our novel indexed de Bruijn algorithm to extract
+and canonicalize all of the INDEL variants. For best accuracy, we use the
+\textsc{ADAM} INDEL realigner described
+in~\S\ref{sec:indel-realignment-implementation} in knowns mode. This improves
+variant calling accuracy over solely using the indexed de Bruijn algorithm.
+
+After realigning the INDELs, we run genotyping. In this phase, we discover all
+SNVs and INDELs, score them using the reads, and emit either called variants
+or genotype likelihoods in genome VCF~(gVCF) format. This runs as a four step
+process:
+
 \begin{enumerate}
 \item We extract all variants from the aligned reads by parsing the alignments.
 \item Using these variants, we compute all read/variant overlaps, and compute
@@ -2764,7 +2766,6 @@ locations covered by a read.
 \item We merge all of the per-read likelihoods per variant. This gives us final
 genotype likelihoods per each variant.
 \item Finally, we apply a standard set of hard filters to each variant.
-\end{enumerate}
 \end{enumerate}
 
 All of these stages are implemented as a parallel application that runs on top of
