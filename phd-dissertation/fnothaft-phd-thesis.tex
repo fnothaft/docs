@@ -2231,6 +2231,17 @@ data aligned to a genomic locus range.
 \section{Accomodating Single-node Tools in \textsc{ADAM} With the \textsc{pipe} API}
 \label{sec:pipe-api}
 
+The \textsc{pipe} API is an API in \textsc{ADAM} that provides a simple
+mechanism for automatically parallelizing a command across a cluster running
+\textsc{Apache Spark}. The user specifies the command to be run, files that need
+to be distributed to each worker running the command, and any environment
+settings that are needed. \textsc{ADAM} then uses the attached genomic reference
+metadata~(see~\S\ref{sec:metadata}) to infer the proper partitioning to apply to
+the data, partitions the data, and runs the user specified command. The input
+format to provide to the command and the output format to expect from the
+command is determined at compile-time in \textsc{Scala} and at runtime in R and
+\textsc{Python}.
+
 \begin{figure}[h]
 \begin{center}
 \includegraphics[width=0.95\linewidth]{graphs/pipe.pdf}
@@ -2239,27 +2250,108 @@ data aligned to a genomic locus range.
 \label{fig:pipe}
 \end{figure}
 
+Figure~\ref{fig:pipe} illustrates how the \textsc{pipe} API is executed by
+\textsc{ADAM}. The \textsc{pipe} implementation starts by checking the genome
+reference metadata~(see~\S\ref{sec:metadata}) to see if the dataset is aligned
+to a reference genome. If the data is not aligned, then we assume that no
+specific partitioning scheme is needed, and skip repartitioning. If the data is
+aligned, then we use the partitioner used in the region join
+implementation~(see~\S\ref{sec:query-patterns}) to chunk the data into
+partitions that represent contiguous blocks of the reference genome. After the
+partitioning phase, we open a subprocess per partition that is running the user
+specified command, and connect streams to the standard in and out pipes of the
+running process.
+
+To handle a wide variety of file formats, we have abstracted the I/O subsystem
+into ``formatters.'' We use the formatters to encode/decode the data going to
+and from the running process:
+
 \begin{itemize}
-\item The \textsc{pipe} API provides a simple API that autoparallelizes a command
-  across a cluster that supports Apache Spark:
-  \begin{itemize}
-  \item User specifies command, files to copy locally, environment settings
-  \item ADAM infers partitioning from attached sequences
-  \item Piped formats are specified at compile-time, optionally at runtime
-  \end{itemize}
-\item Implementation:
-  \begin{itemize}
-  \item For data aligned to a reference genome, uses fixed size chunking, built on
-    region join infrastructure~(\S\ref{sec:query-patterns}); user can specify flank size
-  \item Once data is partitioned, we open up a subprocess, and connect to stdin/out of
-    this process.
-  \item Data is formatted using In/Out formatters:
-    \begin{itemize}
-    \item Converts data from ADAM schemas into stream in legacy format, and vice versa
-    \item \textsc{ADAM} supports a broad range of codecs, including...
-    \end{itemize}
-  \end{itemize}
+\item To create the input for the running process, we use the
+  \textsc{InFormatter} trait. This trait receives an iterator over a single
+  partition of a \textsc{GenomicRDD}, and encodes that iterator into the format
+  that the running process is expecting. Each implementation of the
+  \textsc{InFormatter} trait is required to also implement the
+  \textsc{InFormatterCompanion} trait, which defines a singleton object that
+  can create an instance of the class. This pattern is necessary to expose
+  the metadata stored in a \textsc{GenomicRDD} to the \textsc{InFormatter} by
+  guaranting that there will be a static method that can build an
+  \textsc{InFormatter} with access to the metadata stored in a
+  \textsc{GenomicRDD}. This approach is necessary since \textsc{Scala} cannot
+  guarantee that each implementation of a trait provides a constructor with a
+  given type signature, and we need metadata to construct properly formatted
+  BAM and VCF streams. The \textsc{InFormatter} runs asynchronously in a new
+  thread.
+\item To read the data from the running process, we use the
+  \textsc{OutFormatter} trait. This trait decodes the output of an invocation of
+  the running process and creates an iterator. The \textsc{OutFormatter} does
+  not need access to the metadata from a \textsc{GenomicRDD}, so we do not need
+  an \textsc{OutFormatterCompanion} trait. The \textsc{OutFormatter} is run
+  synchronously in the thread that called the process. The \textsc{OutFormatter}
+  provides an iterator so that we can leverage \textsc{Apache Spark}'s pulling
+  model, which limits the number of records that must be materialized into
+  memory at a given instant.
 \end{itemize}
+
+This API allows for a very concise, yet general framework. With the
+formatter pattern, we can support a broad range of formats while exposing a
+very simple API to the user. Specifically, we can pipe sequence fragments as
+interleaved FASTQ, reads as SAM/BAM/CRAM, variants/genotypes as VCF, and
+features as BED/GTF/GFF2/GFF3/\-\textsc{IntervalList}/\-\textsc{NarrowPeak}. If
+a program needs reference files to be available locally on each node, they can
+achieve this by passing an array containing the URLs of each file. We use an
+internal \textsc{Apache Spark} API to copy these files locally on each machine.
+Along with this, we provide a simple syntax that allows the user to symbolically
+add the local path to this file into their command, which we know at runtime.
+
+To demonstrate how concise the API is, Listings~\ref{lst:pipe-bwa}
+and~\ref{lst:pipe-freebayes} demonstrate how to use the \textsc{pipe}
+API to call BWA~\cite{li10} from \textsc{Python} and
+\textsc{FreeBayes}~\cite{garrison12} from R.
+
+\begin{lstlisting}[caption=Calling BWA using the \textsc{Python pipe} API, label=lst:pipe-bwa]
+from bdgenomics.adam.adamContext import ADAMContext
+
+ac = ADAMContext(sc)
+
+reads = ac.loadAlignments("reads.fastq").toFragments()
+
+alignedReads = reads.pipe(
+  "bwa mem -t 1 -p /data/hs38DH.fa -",
+  "org.bdgenomics.adam.fragments.InterleavedFASTQInFormatter",
+  "org.bdgenomics.adam.rdd.read.AnySAMOutFormatter",
+  "org.bdgenomics.adam.api.java.FragmentsToAlignmentRecordsConverter")
+\end{lstlisting}
+
+\begin{lstlisting}[caption=Calling \textsc{FreeBayes} using the R \textsc{pipe} API, label=lst:pipe-freebayes]
+library(bdg.adam)
+
+ac <- ADAMContext(sparkR.session())
+
+reads <- loadAlignments(ac, "alignments.bam")
+
+variants <- pipe(reads,
+  "freebayes --fasta-reference /data/hs38DH.fa --stdin",
+  "org.bdgenomics.adam.rdd.read.BAMInFormatter",
+  "org.bdgenomics.adam.rdd.variant.VCFOutFormatter",
+  "org.bdgenomics.adam.api.AlignmentRecordsToVariantContextsConverter")
+\end{lstlisting}
+
+In both examples, the user can run the parallelized tool with less than five
+lines of code. We believe that the power of this API lies in its simplicity.
+With a minimal API, we can replace the manual sharding that was historically
+implemented using workflow management systems~\cite{depristo11, chiang15} or
+custom wrappers~\cite{langmead09, schatz09, pireddu11, nellore16}. Since this
+API is built in the query layer of the \textsc{ADAM} stack, it can run
+independent of both the file format used to save the data and the storage
+system used to store the data. This latter point is a significant improvement
+over workflow systems that expect a shared POSIX file system, as these systems
+often use indexed range query into a file to perform sharding~\cite{chiang15}.
+This is difficult to apply generally on a cloud file store like S3, as then the
+tool being run in parallel must be able to natively query the cloud file system.
+Additionally, this approach makes it possible to integrate a command line
+program into a larger programmatic workflow. We discuss a possible use case that
+would leverage this pattern in~\S\ref{sec:efficient-consensus}.
 
 \section{Packaging Parallelized Single-node Tools in \textsc{Cannoli}}
 \label{sec:parallelizing-in-cannoli}
