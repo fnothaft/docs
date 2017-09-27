@@ -3060,68 +3060,47 @@ mean quality score of all bases in the read that were in this variant. We then
 use \textsc{Apache Spark}'s \textsc{reduceByKey} functionality to compute
 the number of times each variant was observed with high quality. We do this
 to discard sequence variants that were observed in a read that represent a
-sequencing error, and not a true variant. In our evaluation, we set the quality
+sequencing error, and not a true variant. By default, we set the quality
 needed to consider a variant observation as high quality to Phred 18~(equivalent
 to a error probability of less than 0.016), and we require that a variant is
-seen in at least 3 reads.
-
-To score the discovered variants, we use an ``overlap join'' primitive to
-find all of the variants that a single read overlaps. An overlap join is a
-relational join where the row equality function is defined as whether two
-objects overlap in the genomic coordinate space~\cite{nothaft15}. This
-primitive can be implemented in a distributed system as both a broadcast
-join~(the smaller of the two datasets is sent to every node in the cluster),
-or as a sort-merge join, where the dataset is sorted. Our implementation
-uses a broadcast strategy, as the set of variants to score is typically small
-and this approach eliminates the work imbalance problem introduced earlier.
-
-Our broadcast overlap join implementation starts by sorting the candidate
-variants by genomic locus. We collect the variants to the leader node, and
-then broadcast a sorted array of variants to each node in the cluster. To
-find all of the variants that overlap a single read, we run a binary search
-across the sorted array of variants. We prefer this strategy to building
-an indexed datastructure (such as an interval tree, see Kozanitis and Patterson~\cite{kozanitis16})
-because sorting can be efficiently parallelized across the \textsc{Apache
-Spark} cluster, while building an indexed structure would typically need to be
-done sequentially on a single node. Additionally, a flat array of sorted
-variants is simpler to serialize and broadcast across the cluster than an
-indexed structure. When we query into the sorted array using binary search,
-the binary search algorithm will give us a variant that is overlapped by
-the read. Since we actually want to run a combined join-and-group query,
-we then search outwards from this first hit to identify all of the variants
-that overlap the read alignment.
-
-One of the reasons that we filter out variant sites that are not supported
-by many high quality reads is an engineering limitation currently in
-\textsc{Avocado}. As we decrease the stringency of the filters and allow
-more variants to be detected, we increase the amount of variants that we
-need to broadcast between nodes. This causes the size of data that we
-must serialize to grow beyond the size of the maximum individual item
-that we can serialize (limited to 2GB due to the Java Virtual Machine, which
-is used by Apache Spark).
-We are working to eliminate this limitation. There are several possible
-strategies. A simple strategy would be to reduce the amount of data written
-to the serialization buffer by compressing the data before streaming it
-into the serialization buffer. However, our sorted array currently
-stores the genomic coordinate of a variant separately from the variant
-itself, which causes a minor amount of data duplication in memory. By
-eliminating this data duplication, we should be able to eliminate this
-engineering constraint.
+seen in at least 3 reads. To score the discovered variants, we use the overlap
+join primitive introduced in~\S\ref{sec:query-patterns} to find all of the
+variants that a single read overlaps. Our implementation uses a broadcast
+strategy, as the set of variants to score is typically small and this approach
+eliminates the work imbalance problem introduced earlier.
 
 \subsection{Genotyping Model}
 \label{sec:genotyping-model}
 
 Once we have joined our reads against our variants, we score each read using
-the biallelic genotyping model proposed by Li~\cite{li11}. For each variant, we
-check to see if the variant allele is present in the read at the appropriate
+a variant of the biallelic genotyping model proposed by Li~\cite{li11}. Our
+approach differs in several ways:
+
+\begin{itemize}
+\item Due to the limited numerical precision of double-length floating point
+  numbers, we implement our likelihood model entirely in log space. To avoid
+  computing logs repeatedly, we tabulate all the possible values of a single
+  read's contribution to the likelihood of a single variant given a fixed range
+  of base and mapping qualities.
+\item To handle multi-allelic sites, we decompose the likelihood model further.
+  Specifically, we compute the likelihood that the read supports the reference
+  allele, the alternate allele under test, another observed alternate allele,
+  or an allele that was not observed. We can use this approach to compute the
+  likelihood of a compound heterozygous variant, and to make a partial no-call.
+\end{itemize}
+
+An early variant of \textsc{Avocado} used a strict biallelic model, but this
+generated incorrect calls for compound heterozygous sites and INDEL variants.
+This version of \textsc{Avocado} performed the following process to score variants.
+For each variant, we check to see if the read supports the variant allele.
 position in the alignment. If the variant is present, we treat the read as positive
 evidence supporting the variant. If the read contains the reference allele at
 that site, we treat the read as evidence supporting the reference. If the read
 neither matches the variant allele nor the reference, we do not use the read
 to calculate the genotype likelihoods, but we do use the read to compute
 statistics~(e.g., for calculating depth, strand bias, etc.) about the genotyped
-site. We calculate the genotype likelihood for the genotype in log space, using
-Equation~\eqref{eq:genotype-likelihood}. Equation~\eqref{eq:genotype-likelihood}
+site. This version calculated the genotype likelihood for the genotype in log space,
+using Equation~\eqref{eq:genotype-likelihood}. Equation~\eqref{eq:genotype-likelihood}
 is not our contribution and is reproduced from Li~\cite{li11}, but in log space.
 
 \begin{align}
@@ -3142,21 +3121,40 @@ we can eliminate issues caused by floating-point underflow. Additionally, since
 $\epsilon$ is derived from Phred scaled quantities and is thus already in log
 space (base ten), while $g$ and $m - g$ are constants that can be pre-converted to
 log space. For all sites, we also compute a reference model that can be used in
-joint genotyping in a gVCF approach. Additionally, we support a gVCF mode where all
-sites are scored, even if they are not covered by a putative variant.
+joint genotyping in a quasi-gVCF approach. Additionally, we support a gVCF mode where
+all sites are scored, even if they are not covered by a putative variant.
 
-We compute the likelihoods for each read in parallel. This function maps over all
-of the reads, and emits a set of records describing each observation. In addition
-to storing the likelihood vector per read/variant pair, this record contains data
-necessary to compute several genotype annotations that are used for variant
-filtration~(such as strand bias observations, mapping quality, etc.,
-see~\S\ref{sec:variant-filtration}). We use \textsc{Apache Spark}'s
-\textsc{reduceByKey} function to merge all of the observations for a given
-locus. Once we have merged all of the observations for a given site, we call the
-genotype state by taking the genotype state with the highest likelihood. In single
-sample mode, we assume no prior probability. We support a joint variant calling
-mode that computes reference allele frequency for use in a binomial prior
-probability distribution.
+The new scoring model used in \textsc{Avocado} checks to see if the read matches
+the alternate allele we are testing, the reference allele, another alternate
+allele that overlaps with the allele we are testing, or none of the above. 
+To do this, we use the ``one sided'' variant of
+Equation~\eqref{eq:genotype-likelihood}, which is given in
+Equation~\eqref{eq:one-sided}.
+
+\begin{align}
+\label{eq:one-sided}
+\log \mathcal{L}(g) &= \sum_{i = 0}{j} l_r(g, m - g, \epsilon_i)
+\end{align}
+
+For all sites, the log sum of the one-sided likelihood of the reference allele
+and the one-sided likelihood of the alternate allele under test will be equal to
+the value of the full biallelic likelihood model. However, the one-sided model
+can also be applied to sites with more than one alternate allele. For these
+sites, after computing all one-sided likelihoods, we then calculate the combined
+likelihoods for each pair of alleles, and emit a genotype call that corresponds
+to the highest likelihood of all admissible likelihood combinations.
+
+We compute the likelihoods for each read in parallel. The scoring function maps
+over all of the reads. For each variant covered by the read being observed, the
+scoring function will emit a record that contains the mapping and base
+qualities, and whether the read supported the reference allele, the alternate
+allele under test, another alternate allele, or no known alleles. These records
+are converted into a \textsc{Spark SQL} DataFrame, and we join these values
+against a small table containing all of the pre-computed one-sided likelihoods.
+We then run an aggregation over all reads covering a given variant, for all
+variants in parallel. Once we have aggregated all of the observations for a given
+site, we call the genotype state by taking the genotype state with the highest
+likelihood. In single sample mode, we assume no prior probability.
 
 \subsection{Variant Filtration}
 \label{sec:variant-filtration}
@@ -3177,9 +3175,6 @@ this filter is disabled for INDELs.
 depth. By default, the minimum depth is 10, and maximum depth is 200. This value
 can be set separately for INDELs and SNPs.
 \end{enumerate}
-
-Currently, we do not support filtering variant sites in joint genotyping mode.
-However, we will add this functionality soon.
 
 \part{Evaluation}
 
