@@ -1984,8 +1984,7 @@ to track metadata alongside the \textsc{Apache Spark} RDD, moved the
 presentation layer methods into the implementations of the \textsc{GenomicRDD}
 classes, and eliminated the implicit conversions. Long term, we believe that the
 ideal mechanism for storing this metadata is a database designed for storing
-metadata, such as the \textsc{Ground} store~\cite{hellerstein17}. We discuss the
-longterm metadata managment needs in~\S\ref{sec:metadata-future}.
+metadata, such as the \textsc{Ground} store~\cite{hellerstein17}.
 
 \section{Query Patterns for Genomic Data Analysis}
 \label{sec:query-patterns}
@@ -3298,15 +3297,67 @@ to be specified. In the \textsc{pipe} API, we allow the user to specify the
 width of flanking sequence to include in each call. Since this new partitioning
 scheme uses a flanking length to decide which record to copy from the start of
 a partition to the end of the prior partition, we can unify these two schemes.
+We have prototyped this approach, but have not yet evaluated and critiqued this
+approach on read world datasets.
 
 \subsection{Lazily Binding To Genomic File Formats}
 \label{sec:lazy-bind}
 
+An inefficiency in the \textsc{pipe} API occurs when reading data from a file
+stored in a legacy file format and then piping this data into a command using
+that same file format. An example of this would be loading reads from a SAM file
+and then \textsc{pipe}ing these reads into a variant caller using SAM input.
+This is inefficient because we wind up converting the reads into the
+\textsc{ADAM} schema, just to convert the data back into the legacy file format.
+
+One possible approach to eliminate this issue would be to change how we
+implement the conversion/view system in \textsc{ADAM}. Currently, the view
+mechanism is implemented using monolithic datatype conversion classes. These
+classes provide methods that convert a single record from a legacy data file
+into \textsc{ADAM}'s schema records. The \textsc{GATK4}~\cite{gatk4} uses an
+alternative approach. In this approach, the \textsc{GATK4} wraps the record
+types that it converts from in an interface that these records then implement.
+The conversions are then implemented through the methods in the wrapper classes.
+
 \subsection{Improving Debugging Capabilities for Distributed Systems}
 \label{sec:improving-debug}
 
-\subsection{Improved Metadata Management for Genomics}
-\label{sec:metadata-future}
+Debugging is a persistent problem in developing code that runs on distributed
+systems. While much work has focused on debugging errors~\cite{alvaro15, dave13}
+in a distributed system, we are more interested in debugging performance
+anomalies. Due to the nature of genomic data, faults are typically easy to
+diagnose, as the faults are localized to a set of genomic loci. These loci can
+then be isolated, and used for debugging. A bigger challenge can be isolating
+performance anomalies, especially since many performance anomalies may be
+related to complex genomic loci. Additionally, \textsc{Apache Spark}'s execution
+model pipelines multiple transformations into a single analysis
+stage~\cite{zaharia12}, which can obfuscate the contribution of multiple
+functions to a performance anomaly.
+
+In \textsc{ADAM}, we attempted to address the latter problem through a library
+enhancement that was contributed by an open source developer. In this approach,
+we wrap the RDD API in a way that wraps all RDD function calls in timers. These
+timers are high resolution timers and are specified at a very fine granularity
+(e.g., a timer might wrap a single function call inside of a map over the RDD).
+Once a job runs, the statistics collected by the timers are reported in a
+tabular format.
+
+While this library is useful, it still doesn't have a sufficient faculty for
+aiding in the causal discovery of performance anomalies. One approach that would
+be useful would time slice the statistics further, and would couple them with
+timewise reports of events that indicate a performance issue, such as long or
+frequent GC pauses. By coupling this tool with a performance visualizaton
+tool like \textsc{Ganglia}~\cite{massie04}, there would be an opportunity to
+visualize the instrumented performance of a method along with other indicators
+such as JVM garbage collection epochs and stats, network/disk/memory bandwith
+utilization, CPU utilization, and other performance indicators.
+
+Additionally, another dimension that would be useful to pair the performance
+instrumentation code with would be the primary key associated with the record
+being processed during an instrumented function invocation. This is particularly
+important for genomics, as many issues with work imbalance are due to pathological
+regions in the genome where a repeat or a section of low-complexity sequence
+cause several orders of magnitude increased coverage.
 
 \section{Extensions to \textsc{Avocado}}
 \label{sec:extending-avocado}
