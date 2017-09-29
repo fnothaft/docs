@@ -3226,26 +3226,78 @@ query optimizations, extending the variant calling algorithms in
 \section{Further Query Optimization in \textsc{ADAM}}
 \label{sec:extensions-adam}
 
+\textsc{ADAM} provides several interfaces that either provide genomics-specific
+query APIs, or that perform a runtime optimization. These interfaces include the
+region join API described in~\S\ref{sec:query-patterns}, the \textsc{pipe} API
+described in~\S\ref{sec:pipe-api}, and the lazy binding optimization described
+in~\S\ref{sec:multi-languge}. We can improve the performance of the region join
+and \textsc{pipe} APIs by eliminating shuffles when data is already presorted.
+We can also improve the performance of the \textsc{pipe} API by applying the
+lazy binding techinque to the various genomic file formats. Additionally, we
+discuss how we can make it easier to understand the performance of distributed
+code in \textsc{Apache Spark}, and how we can make it easier to manipulate
+genomic metadata.
+
 \subsection{Preserving Sorted Knowledge in \textsc{ADAM}}
 \label{sec:sorted-knowledge}
 
+An inefficiency in \textsc{ADAM}'s region join API stems from the need to
+achieve an equivalent partitioning between the two datasets being joined. We
+recently added functionality to \textsc{ADAM} that saves metadata to disk if the
+dataset is being saved as a sorted table of \textsc{Apache Parquet} data, with
+the sort order being defined lexicographically by the contig names. While this
+approach can eliminate shuffles for some joins, it has several limitations:
+
 \begin{itemize}
-\item Preserving sorted knowledge in \textsc{ADAM}
-  \begin{itemize}
-  \item Needed to improve performance of region joins
-  \item Currently implemented, but refactoring to extend to legacy genomic datatypes
-  \item Store sorted state as metadata in the GenomicRDD.
-  \end{itemize}
-\item Extending what transformations can be optimized by partitioning:
-  \begin{itemize}
-  \item Currently just accelerate joins
-  \item Aggregation queries naturally fall out of this as well
-  \end{itemize}
-\item Exposing other primitives as well:
-  \begin{itemize}
-  \item Convex hull merge
-  \end{itemize}
+\item Since the region join API requires records that straddle the partition
+  boundaries to be replicated across the boundary, this approach only works for
+  \textsc{Apache Parquet}. Conceptually, we could implement this with a sharded
+  codec, but \textsc{Hadoop-BAM}'s support for sharded file formats is limited.
+  As a result, we cannot eliminate shuffles for data coming in from a standard
+  genomic file format that defines a sort order.
+\item Additionally, the current partitioning scheme requires a lexicographical
+  contig ordering. This is inconsistent with the karyotypic ordering that is
+  commonly used in the bioinformatics ecosystem, and which relies on being
+  able to specifiy the ordering of contigs with an index..
 \end{itemize}
+
+We are working on an alternative approach that is compatible with all contig
+orderings and file formats. In this approach, we make several changes:
+
+\begin{itemize}
+\item Instead of replicating the records that straddle a partition boundary in
+  the dataset that is saved to disk, we move these records using a shuffle-free
+  approach. To do this, we run a first pass that looks as the records at the
+  start of each partition and selects all records that need to be replicated to
+  the end of the previous partition. These records are then collected to the
+  driver and appended to the ends of the partitions prior to the join running.
+  Since this approach doesn't require records to be replicated, it is compatible
+  with all file formats.
+\item In the current implementation, once data is loaded as sorted, this is
+  encoded by setting a field that is protected to the \textsc{GenomicRDD} trait.
+  This makes it more difficult to implement methods that can be optimized to
+  make use of sort order. Specifically, if a method can optimize for sort order,
+  the method needs to check this field and select the sorted or unsorted
+  codepath at runtime. In the new implementation, we make sorted and unsorted
+  traits. If an implementation of \textsc{GenomicRDD} has behavior that can
+  be optimized for data that is known to be sorted, that implementation should
+  provide the optimized variant in a class that implements the sorted trait, and
+  an unoptimized variant in the unsorted trait.
+\item We drop the requirement for a lexicographic ordering, and use an indexed
+  contig ordering. This supports both the lexicographic ordering that we
+  typically use, as well as the karyotypic ordering that is commonly used in
+  genomics.
+\end{itemize}
+
+Beyond broadening the opportunities for eliminating a shuffle in the region join
+codepath, an additional benefit of this new approach is that it allows us to
+harmonize the partitioning scheme used by the \textsc{pipe} API with the scheme
+used by the region join API. Currently, these two schemes are not harmonious
+because the region join's partitioning scheme does not allow a flanking length
+to be specified. In the \textsc{pipe} API, we allow the user to specify the
+width of flanking sequence to include in each call. Since this new partitioning
+scheme uses a flanking length to decide which record to copy from the start of
+a partition to the end of the prior partition, we can unify these two schemes.
 
 \subsection{Lazily Binding To Genomic File Formats}
 \label{sec:lazy-bind}
