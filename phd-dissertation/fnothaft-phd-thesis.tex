@@ -3323,7 +3323,7 @@ The conversions are then implemented through the methods in the wrapper classes.
 \label{sec:improving-debug}
 
 Debugging is a persistent problem in developing code that runs on distributed
-systems. While much work has focused on debugging errors~\cite{alvaro15, dave13}
+systems. While much work has focused on debugging errors~\cite{alvaro15, zhang17}
 in a distributed system, we are more interested in debugging performance
 anomalies. Due to the nature of genomic data, faults are typically easy to
 diagnose, as the faults are localized to a set of genomic loci. These loci can
@@ -3362,19 +3362,6 @@ cause several orders of magnitude increased coverage.
 \section{Extensions to \textsc{Avocado}}
 \label{sec:extending-avocado}
 
-\subsection{Deep Learning for Variant Calling}
-\label{sec:deep-learning}
-
-\begin{itemize}
-\item Deep learning for variant calling:
-  \begin{itemize}
-  \item Current model for INDEL discovery is intolerant of read errors
-  \item Doesn't model error distribution over technologies
-  \item Google \textsc{DeepVariant} uses deep learning but in an unglamorous way
-  \item Would the \textsc{Avocado} INDEL canonicalization algorithm be a better fit?
-  \end{itemize}
-\end{itemize}
-
 \subsection{Somatic Variant Calling}
 \label{sec:somatic-variant-calling}
   
@@ -3393,22 +3380,56 @@ cause several orders of magnitude increased coverage.
 \section{Hardware Acceleration for Genomic Data Processing}
 \label{sec:genomic-hardware}
 
-\begin{itemize}
-\item With improved I/O, single thread performance remains an issue
-  \begin{itemize}
-  \item As seen with \textsc{Cannoli}, hard to outperform C++ from Java
-  \item However, marginal benefit to jumping to C++ is unclear
-  \item Can we go directly to hardware?
-  \end{itemize}
-\item WIP on Genie library
-\item How can we make this even more accessible?
-  \begin{itemize}
-  \item SQL as target language is a great opportunity
-  \item Integrate Genie with Apache Arrow
-  \item Allow generation of FPGA from Spark SQL plan
-  \end{itemize}
-\item How can we easily accomodate UDFs?
-\end{itemize}
+As we increase the I/O bandwidth that can be achieved by running many tasks in
+parallel across a horizontally scalable file system, single thread performance
+becomes an issue. As we have seen with the \textsc{Cannoli} tool, the JVM can
+provide good performance, but it is difficult to outperform C/C++ from within
+the JVM. However, the marginal performance gain from moving to a lower level
+language is unclear. To gain an even higher performance gain, we should consider
+moving to a hardware accelerator, which can be highly specialized to our
+specific application patterns~\cite{asanovic17}. There has already been
+commercial work towards building hardware accelerated solutions for genomic data
+analysis~\cite{dragen}, as well as academic work towards accelerating the
+\textsc{BWA} alignment algorithm~\cite{chen16, chen15} and alignment for de novo
+assembly~\cite{turakhia17}.
+
+To this end, we have been working on the \textsc{Darwin} project, which
+implements the preprocessing algorithms introduced in Chapter~\ref{chap:adam} in
+a library which can be synthesized to target both field programmable gate
+arrays~(FPGAs) and application specific integrated circuits~(ASIC). The FPGA
+form factor is especially desirable as commercial cloud vendors like
+AWS~\cite{f1} and Microsoft Azure~\cite{putnam14} have moved to support FPGAs in
+the datacenter. This library provides a 2--10$\times$ performance improvement
+over \textsc{ADAM}'s read preprocessing library. In the immediate short term, we
+will continue to validate the algorithms in \textsc{Genie}, and will work to add
+variant calling.
+
+While FPGAs hold promise for accelerating complex and computationally intensive
+genomic data analysis pipelines, they face the same accessibility problem
+as \textsc{Apache Spark}, which was described in Chapter~\ref{chap:cannoli}. To
+address this problem, we have used the Q100~\cite{wu14} architecture, which uses
+a SQL-like programming methodology to drive a high-level synthesis workflow.
+This greatly increases the accessibility of hardware design, which is currently
+restricted to people who are willing to learn a hardware description language,
+which typically have programming patterns that are divergent from software
+design~\cite{bachrach12}. One possible direction for future work is to use the
+\textsc{Apache Spark SQL} library to drive a high level synthesis flow, as the
+SQL query captured by the query engine could be turned into synthesizable
+hardware. This would make the programming model accessible to a larger group of
+programmers.
+
+One significant remaining question is how to process user defined
+functions~(UDFs) that are specified outside of the SQL dialect. UDFs cannot
+typically be optimized by a query planner~\cite{armbrust15, kornacker15}, but
+are critical for genomic data analysis. While the duplicate marker and base
+recalibrator can be implemented in \textsc{Genie} with modest extensions to SQL,
+the INDEL realigner is implemented as a monolithic UDF. One option is to use a
+dataflow methodology~\cite{bhattacharyya08}, which would map the dataflow
+described by a program into hardware. This would be compatible with a purely
+functional programming methodology that relies on list comprehensions, which is
+a idiomatic programming style in the \textsc{Scala}~\cite{odersky04} language.
+This approach could be used to synthesize hardware from a UDF, which would make
+it increasingly possible to implement genomic analysis tasks in hardware.
 
 \chapter{Conclusion}
 \label{chap:conclusion}
