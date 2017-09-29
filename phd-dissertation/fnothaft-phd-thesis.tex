@@ -3212,20 +3212,16 @@ over \textsc{GZIP}ped \textsc{VCF} for variant data.
 \chapter{Future Work}
 \label{chap:future-work}
 
-\begin{itemize}
-\item What were our overarching the goals?
-  \begin{itemize}
-  \item Make genomic analysis easier to scale
-  \item Improve variant calling accuracy
-  \item Make genomic data analysis faster
-  \end{itemize}
-\item Several future directions:
-  \begin{itemize}
-  \item Further improving query performance in \textsc{ADAM}
-  \item Extending variant calling algorithms in \textsc{Avocado}
-  \item Hardware acceleration for genomics
-  \end{itemize}
-\end{itemize}
+In this dissertation, we have articulated a set of overarching goals for
+\textsc{ADAM} and the \textsc{Big Data Genomics} project. We aimed to make it
+easier to write genomic analyses that could be run on large datasets using
+distributed computing. With these APIs, we started working on the
+\textsc{Avocado} variant caller, with the goal of making variant calling both
+faster and more accurate. From this work, we have identified several important
+future directions. In this section, we will discuss possible avenues for
+improving query performance in \textsc{ADAM} by providing more genomics specific
+query optimizations, extending the variant calling algorithms in
+\textsc{Avocado}, and mapping genomics analysis tasks directly into hardware.
 
 \section{Further Query Optimization in \textsc{ADAM}}
 \label{sec:extensions-adam}
