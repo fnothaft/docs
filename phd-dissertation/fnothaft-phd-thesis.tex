@@ -3364,18 +3364,68 @@ cause several orders of magnitude increased coverage.
 
 \subsection{Somatic Variant Calling}
 \label{sec:somatic-variant-calling}
-  
-\begin{itemize}
-\item Somatic variant calling:
-  \begin{itemize}
-  \item \textsc{Avocado} currently only models a sample with known ploidy
-  \item Can we accomodiate pooled or somatic variant calling?
-  \item WIP towards porting over MuTect
-  \end{itemize}
-\end{itemize}
+
+Although the reassembly algorithm introduced in~\S\ref{sec:indel-reassembly} can
+run on data that does not have known copy number, the \textsc{Avocado} genotyper
+described in~\S\ref{sec:genotyping-model} requires known copy number to call a
+variant. While this genotyping model can be used as a first step in a variant
+caller that assumes a popuation structure, it is not compatible with somatic
+variant calling. In somatic mutation calling, we are looking for the variants
+that appear in one sequencing run from a sample that do not appear in another
+sequencing run from a sample. Typically, this technique is used to call mutations
+in a tumor, and it would be desirable to support somatic variant calling using
+\textsc{Apache Spark}. We have worked to port the
+\textsc{Mutect}~\cite{cibulskis13} algorithm over to \textsc{Avocado}, but have
+not completed this effort.
+
+One critical part of somatic variant calling is coming up with a statistical
+model that addresses low allele frequency variation, which is caused by tumor
+subclonality. Many tools address this by calling variants that are supported
+by a small number of high quality bases. One possible way to address this issue
+would be with an approach that mixes contamination estimation~\cite{cibulskis11}
+with base quality recalibration. Specifically, we could use an advanced form of
+base quality recalibration to try to capture sequence specific error models,
+while using the germline variants as the known variants for masking. Then, we
+could use contamination estimation to try to identify a background rate of
+sequence contamination. We have implemented an \textsc{ADAM}-based variant of
+the \textsc{ContEst}~\cite{cibulskis11} tool in \textsc{Quinine}, which is
+the \textsc{Big Data Genomics}' quality control tool. From here, we would need
+to merge these two approaches into a novel probabilistic model.
 
 \subsection{Efficient Consensus Methods}
 \label{sec:efficient-consensus}
+
+To improve the accuracy of variant calls generated from a single set of aligned
+reads, some pipelines use a consensus method~\cite{zook15}. In this approach,
+several variant callers are used, and a variant is accepted as a true positive
+if multiple variant callers confidently call the variant. While this approach
+can improve the accuracy of variant calling, it necessitates running multiple
+variant calling pipelines and can substantially increase computational cost.
+
+One approach that may be tractible is to use a machine learning approach to run
+a limited consensus approach. A possible implementation might use a setup
+similar to the \textsc{GATK}'s~\cite{depristo11} variant quality score
+recalibration~(VQSR) algorithm, which fits a Gaussian mixture model to annotated
+genotypes. To do this, we would use a read dataset that has good ground truth
+data, such as one of the GIAB truth sets~\cite{zook15}. We would then run the
+variant callers that we are interested in, and annotate all the variant calls
+as either true or false positives. Using the variant calling annotations on
+each called genotype, we would then train a statistical model that explained
+when a variant caller would call a variant correctly.
+
+To use this model to decrease concensus calling runtime, we would use the tool
+that was the most sensitive as a first pass. Once we had called variants with
+this tool, we would look at all sites that appeared to be weak false positives,
+and would run one or more variant caller that the trained model indicated would
+perform well on these sites. This approach would also need the first variant
+caller to either emit a gVCF or to emit calls for all possibly variant sites.
+One natural extension would be to optimize for runtime. Specifically, if two
+variant callers have similar sensitivity, but one of the two variant callers
+achieves this sensitivity with significantly lower runtime, we would likely want
+to use the faster variant caller as our first pass tool. This variant of the
+problem may be more difficult to optimize, as the amount of time needed to
+call a variant may depend on the complexity of the variant and the reads around
+the variant site~\cite{bloniarz14}.
 
 \section{Hardware Acceleration for Genomic Data Processing}
 \label{sec:genomic-hardware}
