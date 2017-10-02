@@ -3357,10 +3357,53 @@ instrumentation code with would be the primary key associated with the record
 being processed during an instrumented function invocation. This is particularly
 important for genomics, as many issues with work imbalance are due to pathological
 regions in the genome where a repeat or a section of low-complexity sequence
-cause several orders of magnitude increased coverage.
+cause several orders of magnitude increased coverage. It might be possible to use a
+statistical model that predicts performance~\cite{venkataraman16ernest} to isolate
+key-specific/skew-driven performance issues.
 
 \section{Extensions to \textsc{Avocado}}
 \label{sec:extending-avocado}
+
+There are several extensions that we are considering to the \textsc{Avocado}
+variant caller. In this dissertation, we have discussed \textsc{Avocado}'s
+INDEL reassembly and single sample germline genotyping methods. There is ongoing
+work to add more joint variant calling methods to \textsc{Avocado}, such as a
+pedigree-aware caller~(currently only supports mother/father/offspring trios).
+In this section, we discuss support for incremental joint variant calling,
+tumor-normal variant calling, and methods for merging the output of multiple
+variant callers.
+
+\subsection{Incremental Joint Variant Calling}
+\label{sec:incremental-joint-variant-calling}
+
+In a gVCF-based joint variant calling workflow, variant discovery is done per
+sample, prior to a joint genotyping phase. In discovery, gVCF files are
+generated that contain the likelihoods of the reference allele at all sites in
+the genome, and likelihoods for alternate alleles observed in that sample. In
+the joint genotyping phase, the gVCFs of all samples are then used to generate
+a prior probability for the variant being called as an allele in the population.
+While this process allows the expensive gVCF creation process to be done only
+once per sample, the joint genotyping must be repeated every time the cohort is
+updated.
+
+This is unnecessarily expensive, since genotype priors are generally based upon
+allele frequency and should be stable as long as the composition of the cohort
+remains uniform as the cohort grows. Ideally, instead of recomputing the prior
+using the whole population, we could make an update to the current prior using
+the new samples that we have added. For some statistical models, there are well
+known techniques that can provide provably correct approaches~\cite{sherman50}
+or approximate results~\cite{meng16}.
+
+One possible shortcoming of the gVCF approach is that it may result in reduced
+sensitivity when detecting INDEL variants. Specifically, for INDELs, longer
+variants that benefit from realignment or reassembly may be missed. However, if
+these variants are later discovered in a sample with strong support for the
+variant, we may be able to discover them in a sample that previously called the
+INDEL as a negative by realigning the reads that overlap the site. As such, we
+believe that it would be worth investigating this problem, either in the context
+of a pipeline that discovers all INDEL variants across all samples before joint
+calling variants, or by reviewing the read evidence in every prior called sample
+whenever a novel INDEL variant is observed in the cohort.
 
 \subsection{Somatic Variant Calling}
 \label{sec:somatic-variant-calling}
