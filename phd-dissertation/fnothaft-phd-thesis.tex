@@ -862,28 +862,28 @@ file formats that were difficult to access in parallel and that had imprecise
 specifications. This led to the initial goals for the \textsc{ADAM} project:
 
 \begin{itemize}
-\item Provide clean APIs for writing large scale genomic data analyses
+\item Provide clean APIs for writing large scale genomic data analyses.
 \item Raise abstraction by centering data manipulation around schemas instead
-  of file formats
-\item Allow these APIs to be exposed across commonly used languages
-\item Efficiently execute non-reference oriented query patterns
+  of file formats.
+\item Allow these APIs to be exposed across commonly used languages.
+\item Efficiently execute non-reference oriented query patterns.
 \end{itemize}
 
 To achieve these goals, we designed a decoupled, stack-oriented architecture
-that was centered around schemas that provided a logical view over the genomic
-data that was being manipulated. This architecture was implemented on top of
+centered around schemas that provided a logical view over the genomic
+data being manipulated. This architecture was implemented on top of
 \textsc{Apache Spark}'s RDD APIs, and provided the user with a distributed
 collection of genomic data which were encoded in \textsc{Apache
-  Avro}~\cite{avro}. This allowed for queries to be described at a high level
+  Avro}~\cite{avro} and allowed for queries to be described at a high level
 through \textsc{Spark}'s RDD APIs, which would execute the queries rapidly by
 running parallel scans over the data. Over time, our goals grew in scope to
 include:
 
 \begin{itemize}
-\item Support coordinate-space joins with genomic data
-\item Support exploratory data analysis on genomic datasets
+\item Support coordinate-space joins with genomic data.
+\item Support exploratory data analysis on genomic datasets.
 \item Allow people to reuse their existing genomic analysis tools on Spark with
-  minimal modifications
+  minimal modifications.
 \end{itemize}
 
 Because of \textsc{ADAM}'s decoupled architecture, we were able to easily
@@ -893,8 +893,8 @@ joins~(\S\ref{sec:query-patterns}) and the \textsc{pipe} API for supporting
 legacy genomics tools~(\S\ref{sec:query-patterns}) were added to \textsc{ADAM}'s
 core APIs. The \textsc{Mango} project enhanced \textsc{ADAM}'s ability to run
 interactive queries against genomic data by improving support for pushing down
-ranged predicates to disk~\cite{tu16} and by adding a spatial- and temporal-
-locality-aware in-memory caching layer~\cite{morrow17}. These modifications
+ranged predicates to disk~\cite{tu16} and by adding a spatial- and
+temporal-locality-aware in-memory caching layer~\cite{morrow17}. These modifications
 replaced \textsc{ADAM}'s default query and data access layers with layer
 implementations better suited to the query patterns at hand.
 
@@ -925,7 +925,7 @@ This approach is undesirable for two reasons:
 \begin{enumerate}
 \item Due to the very low level nature of the API, programmers must implement
   their own complex transforms, such as grouping together reads that start at a
-  single genomic position. This can lead to errors in user code.
+  single genomic position. Writing against low level APIs can lead to errors in user code.
 \item A natural consequence of the first point is that low level APIs obscure
   the actual query pattern that is being implemented. For example, a duplicate
   marker typically groups together all reads that aligned to a single genomic
@@ -936,8 +936,8 @@ This approach is undesirable for two reasons:
 
 These two issues translate into two obvious consequences. First, a low level API
 increases the complexity of implementing a query, and thus necessitates increased
-developer effort. This introduces more locations where queries can be
-implemented incorrectly. We identified two concrete examples of this when
+developer effort. A low level API introduces more locations where queries can be
+implemented incorrectly. We identified two concrete examples when
 working on the read preprocessing pipeline in \textsc{ADAM}. Specifically, we
 identified that the \textsc{Picard} duplicate marker and the \textsc{GATK}
 base quality recalibrator incorrectly process reads that come from sequenced
@@ -950,12 +950,12 @@ duplicate marking kernel. If we are calling variants in a whole exome
 sequencing~(WES) dataset, we would run a query pattern with several steps:
 
 \begin{enumerate}
-\item Align reads
-\item Sort reads
-\item Mark duplicates by grouping by alignment position
-\item Filter out reads mapped outside of the exome
+\item Align reads.
+\item Sort reads.
+\item Mark duplicates by grouping by alignment position.
+\item Filter out reads mapped outside of the exome.
 \item Call variants by aggregating statistics at each position covered by an
-  aligned read
+  aligned read.
 \end{enumerate}
 
 A query planner that is aware of the structure of the genome could apply several
@@ -975,7 +975,7 @@ sort order or grouping invariants. For example, the
 \textsc{Picard}~\cite{picard} and \textsc{Sambamba}~\cite{tarasov15}
 duplicate markers require read inputs to be coordinate sorted, while the
 \textsc{SAMBLASTER}~\cite{faust14} duplicate marker requires the read data to
-be queryname grouped. These invariants are necessary for efficiency but come at
+be queryname grouped. These invariants are necessary for efficiency, but come at
 the cost of increased complexity when integrating multiple tools together into
 a monolithic pipeline.
 
@@ -985,7 +985,7 @@ tools across a large cluster, existing tools typically use a ``scatter-gather''
 pattern~(see discussion of many-task workflow patterns in Zheng et
 al.~\cite{zhang15, zhang16}) that chunks a genomic dataset into many small
 parts~(contiguous ranges of the genome) that are then processed independently.
-This presents several problems:
+This scatter-gather pattern presents several problems:
 
 \begin{itemize}
 \item Due to bias caused by repeated sequence in the genome, we cannot achieve
@@ -995,7 +995,7 @@ This presents several problems:
   ranged access into files, and may not be efficient to implement on cloud-based
   shared-nothing stores~\cite{vivian17}.
 \item This approach makes it difficult to implement queries that need to run an
-  all-reduce over the data. Examples of this include the base quality score
+  all-reduce over the data. Examples of an all-reduce include the base quality score
   recalibration kernel~(see~\S\ref{sec:bqsr-implementation}), or genome-wide
   machine learning methods~\cite{morrow17cks}.
 \end{itemize}
@@ -1005,7 +1005,7 @@ This presents several problems:
 
 While most of the file formats used for genomics do not preclude parallel I/O,
 their structure makes parallel I/O difficult to implement in an efficient
-manner. This is caused by two primary factors:
+manner. This limitation is caused by two primary factors:
 
 \begin{enumerate}
 \item The files are often expensive to split, in the absence of an index.
@@ -1049,8 +1049,8 @@ corresponds to data from a single sample. The architectural implication of this
 trend is that I/O must be serialized, which leads to a typical I/O subsystem
 loading data in through a single thread, which delegates the data to multiple
 decompression threads. The data are then decompressed, processed, and compressed
-again, at which point the writes to a disk or to a stream are serialized. This
-creates contention at both ends of the tool. The impact of this can easily be
+again, at which point the writes to a disk or to a stream are serialized.
+Serialized I/O creates contention at both ends of the tool. The impact of this can easily be
 seen in a highly efficient tool, like the \textsc{Salmon} RNA-seq quantification
 engine~\cite{patro17}. Due to I/O contention, \textsc{Salmon} is unable to scale
 beyond 32 cores.
@@ -1101,15 +1101,15 @@ cluster. Because the abstractions provided by the \textsc{htslib} and
 \textsc{htsjdk} systems were guided by the file formats themselves, idioms from
 data traversal~(iterating across a collection) and I/O~(closing a stream) became
 intermingled. Additionally, the behavior of a row in a collection was influenced
-by the I/O process. This is because all extant genomics file formats are row
+by the I/O process. This design choice is because all extant genomics file formats are row
 oriented, which means that the only way to improve the performance of a query
 that does not access all of the fields in a record was to lazily parse the
 fields as they were accessed.
 
 Instead of bleeding abstractions from the I/O layer through the stack, we
 decided to introduce schemas that represented the major genomic datatypes. This
-enforces a strict separation between the I/O layer and the end-user API. This
-naturally supports the many file formats that can describe a given class of
+architecture enforces a strict separation between the I/O layer and the end-user API. A
+stack-based architecture can naturally supports the many file formats that can describe a given class of
 genomic data, since we can provide a view between the genomic file format and
 the schemas. Additionally, since a schema is fundamentally a logical
 representation of a record, our schemas need not be language-specific, and
@@ -1147,14 +1147,14 @@ There were several reasons that we added these design goals. We had
 originally intended \textsc{ADAM} to mainly support batch analyses, and deferred
 support for interactive analysis to query engines like \textsc{Impala}. However,
 we felt that there was a good opportunity to reshape interactive genomic data
-analysis by enabling exploratory data analysis using \textsc{ADAM}'s APIs. To do
-this, we needed a way to lower the latency of typical \textsc{Spark} queries. We
-did this in the \textsc{Mango} project~\cite{tu16, morrow17}, which introduced
+analysis by enabling exploratory data analysis using \textsc{ADAM}'s APIs.
+Thus, we needed a way to lower the latency of typical \textsc{Spark} queries.
+The \textsc{Mango} project~\cite{tu16, morrow17} improved latency by introducing
 better support for using primary indices on genomic position, as well as an
 efficient in-memory caching layer. These implementations replaced the default
 implementations of two levels of our stack.
 
-As noted in the previous paragraph, interactive query was one reason we wanted
+As noted in the previous paragraph, interactive queries were one reason we wanted
 to take advantage of data being sorted at query time. Additionally, as we built
 out \textsc{ADAM}'s read preprocessing transformations~(see
 Chapter~\ref{chap:adam}), we realized that many of these queries depended on
@@ -1188,11 +1188,11 @@ Chapter~\ref{chap:cannoli}.
 \label{sec:stack-architecture}
 
 The processing patterns being applied to scientific data shift widely as the data itself ages. Because of
-this change, we want to design a scientific data processing system that is flexible enough to
+this change, we want a scientific data processing system that is flexible enough to
 accommodate our different use cases. At the same time, we want to ensure that the components in the
 system are well isolated so that we avoid bleeding functionality across the stack. If we bleed functionality
 across layers in the stack, we make it more difficult to adapt our stack to different applications.
-Additionally, as we discuss in~\S\ref{sec:read-preprocessing}, improper separation of concerns can
+Additionally, as we discuss in~Chapter~\ref{chap:adam}, improper separation of concerns can
 actually lead to errors in our application.
 
 These concerns are very similar to the factors that led to the development of the Open Systems
@@ -1239,12 +1239,12 @@ A well defined software stack has several other significant advantages. By limit
 interactions with layers lower than the presentation layer, application developers are given a clear and
 consistent view of the data they are processing, and this view of the data is independent of whether the
 data is local or distributed across a cluster or cloud. By separating the API from the data access layer,
-we improve flexibility. With careful design in the data format and data access layers, we can seamlessly
+we improve flexibility of implementation. With careful design in the data format and data access layers, we can seamlessly
 support conventional whole file access patterns, while also allowing easy access to small slices of files.
 By treating the compute substrate and storage as separate layers, we also drastically increase
 the portability of the APIs that we implement.
 
-As we discuss in more detail in~\S\ref{sec:read-preprocessing}, current scientific systems bleed
+As we discuss in more detail in~Chapter~\ref{chap:architecture}, current scientific systems bleed
 functionality between stack layers. An exemplar is the SAM/BAM and CRAM formats, which expect data
 to be sorted by genomic coordinate. This order modifies the layout of data on disk~(level 3, Materialized Data)
 and constrains how applications traverse datasets~(level 5, Evidence Access). Beyond
@@ -1253,21 +1253,21 @@ These views of evidence should be implemented at the evidence
 access layer instead of in the layout of data on disk. This split enforces independence of anything below the
 schema.
 
-The idea of decomposing scientific applications into a stack model is not new; Bafna et al~\cite{bafna13}
-made a similar suggestion in 2013. We borrow some vocabulary from Bafna et al, but our approach is
+The idea of decomposing scientific applications into a stack model is not new; Bafna, et al.~\cite{bafna13}
+made a similar suggestion in 2013. We borrow some vocabulary from Bafna, et al., but our approach is
 differentiated in several critical ways:
 
 \begin{itemize}
-\item Bafna et al consider the stack model specifically in the context of data management systems for
+\item Bafna, et al. consider the stack model specifically in the context of data management systems for
 genomics; as a result, they bake current technologies and design patterns into the stack. In our opinion,
 a stack design should serve to abstract layers from methodologies/implementations. If not, future
 technology trends may obsolete a layer of the stack and render the stack irrelevant.
-\item Bafna et al define a binary data format as the narrow waist in their stack, instead of a schema.
+\item Bafna, et al. define a binary data format as the narrow waist in their stack, instead of a schema.
 While these two seem interchangeable, they are not in practice. A schema is a higher level of abstraction
 that encourages the use of literate programming techniques and allows for data serialization techniques
 to be changed as long as the same schema is still provided.
-\item Notably, Bafna et al use this stack model to motivate GQL~\cite{kozanitis14}. While a query system
-should provide a way to process and transform data, Bafna et al instead move this system down to the
+\item Notably, Bafna, et al. use this stack model to motivate GQL~\cite{kozanitis14}. While a query system
+should provide a way to process and transform data, Bafna, et al. instead move this system down to the
 data materialization layer. We feel that this inverts the semantics that a user of the system would prefer
 and makes the system less general.
 \end{itemize}
@@ -2415,7 +2415,7 @@ and all but the highest quality read are marked as duplicates.
 We have validated our duplicate removal code against Picard~\cite{picard}, which is used by the GATK
 for Marking Duplicates. Our implementation is fully concordant with the Picard/GATK duplicate removal
 engine, except we are able to perform duplicate marking for read pairs whose reads align to different
-reference chromosomes~(known as chimeric read pairs, see Li et al~\cite{li10}).
+reference chromosomes~(known as chimeric read pairs, see Li, et al.~\cite{li10}).
 Specifically, because Picard's traversal engine is restricted to processing linearly sorted alignments,
 Picard mishandles these alignments. Since our engine is not constrained by the underlying layout of data
 on disk, we are able to properly handle chimeric read pairs.
@@ -2961,7 +2961,7 @@ property holds true for $\mathcal{S}_j$ as well. The canonical edits merely resu
 
 Conceptually, a non-canonical edit occurs when two edits occur within $k$ positions of each other. In
 this case, we can trivially fall back on a $O(nm)$ local alignment algorithm~(e.g., a pairwise HMM or
-Smith-Waterman, see Durbin et al~\cite{durbin98} or Smith and Waterman~\cite{smith81}), \emph{but} we only need to locally realign
+Smith-Waterman, see Durbin, et al.~\cite{durbin98} or Smith and Waterman~\cite{smith81}), \emph{but} we only need to locally realign
 $\mathcal{L}_i$ against $\mathcal{L}_j$, which reduces the size of the realignment problem. However, we
 can further limit this bound by limiting the maximum number of INDEL edits to $d = | l_{\mathcal{L}_i} -
 l_{\mathcal{L}_j} |$. This allows us to use an alignment algorithm that limits the number of INDEL
