@@ -2219,14 +2219,14 @@ coordination. Then, we describe the \textsc{Cannoli} tool, which contains
 wrappers for a set of common genomic analysis tools. This approach is general
 but not universal: while the \textsc{pipe} API can be used to parallelize the
 majority of analysis steps, it cannot be used for tools that require an
-all-reduce. This includes RNA-seq quantification tools like
+all-reduce. All-reduce patterns are found in RNA-seq quantification tools like
 \textsc{Kallisto}~\cite{bray16} or \textsc{Salmon}~\cite{patro17}, or tools
 that perform a global normalization, like the XHMM copy number variant
 caller~\cite{fromer12}. However, this approach works well for tools whose
 computation can be described as mapping over unaligned reads, or mapping over
 data aligned to a genomic locus range.
 
-\section{Accomodating Single-node Tools in \textsc{ADAM} With the \textsc{pipe} API}
+\section{Accomodating Single-node Tools in \textsc{ADAM} With the \textsc{Pipe} API}
 \label{sec:pipe-api}
 
 The \textsc{pipe} API is an API in \textsc{ADAM} that provides a simple
@@ -2345,7 +2345,7 @@ independent of both the file format used to save the data and the storage
 system used to store the data. This latter point is a significant improvement
 over workflow systems that expect a shared POSIX file system, as these systems
 often use indexed range query into a file to perform sharding~\cite{chiang15}.
-This is difficult to apply generally on a cloud file store like S3, as then the
+Range queries are difficult to apply generally on a cloud file store like S3, as the
 tool being run in parallel must be able to natively query the cloud file system.
 Additionally, this approach makes it possible to integrate a command line
 program into a larger programmatic workflow. We discuss a possible use case that
@@ -2394,8 +2394,8 @@ implemented, and the techniques we have used to improve performance and accuracy
 a distributed system. These pre-processing stages include:
 
 \begin{enumerate}
-\item Duplicate marking: During the process of preparing DNA for sequencing, reads are duplicated by
-errors during the sample preparation and polymerase chain reaction stages. Detection of duplicate reads
+\item \textbf{Duplicate marking:} During the process of preparing DNA for sequencing, reads are duplicated
+erroreously during the sample preparation and polymerase chain reaction stages. Detection of duplicate reads
 requires matching all reads by their position and orientation after read alignment. Reads with identical position
 and orientation are assumed to be duplicates. When a group of duplicate reads is found, each read is scored,
 and all but the highest quality read are marked as duplicates.
@@ -2407,8 +2407,8 @@ reference chromosomes~(known as chimeric read pairs, see Li et al~\cite{li10}).
 Specifically, because Picard's traversal engine is restricted to processing linearly sorted alignments,
 Picard mishandles these alignments. Since our engine is not constrained by the underlying layout of data
 on disk, we are able to properly handle chimeric read pairs.
-\item Local realignment: In local realignment, we correct areas where variant alleles cause reads to be
-locally misaligned from the reference genome. This is typically caused by the presence of
+\item \textbf{Local realignment:} In local realignment, we correct areas where variant alleles cause reads to be
+locally misaligned from the reference genome. Local misalignments are typically caused by the presence of
 insertion/deletion (INDEL) variants~\cite{depristo11}. In this algorithm, we first identify regions
 as targets for realignment. In the \textsc{GATK}, this identification is done by traversing sorted read alignments. In our implementation,
 we fold over partitions where we generate targets, and then we merge the tree of targets. This process allows us
@@ -2418,7 +2418,7 @@ compute the convex hull of overlapping regions in parallel. We discuss this in m
 After we have generated the targets, we associate reads to the overlapping target, if one exists. After
 associating reads to realignment targets, we run a heuristic realignment algorithm that works by minimizing
 the quality-score weighted number of bases that mismatch against the reference.
-\item Base Quality Score Recalibration: During the sequencing process, systemic errors occur
+\item \textbf{Base Quality Score Recalibration:} During the sequencing process, systemic errors occur
 that lead to the incorrect assignment of base quality scores. In this step, we label each base that we have
 sequenced with an error covariate. For each covariate, we count the total number of bases that we saw,
 as well as the total number of bases within the covariate that do not match the reference genome. From this data, 
@@ -2439,11 +2439,11 @@ tools in~\S\ref{sec:benchmarking-preprocessing}.
 \label{sec:bqsr-implementation}
 
 Base quality score recalibration seeks to identify and correct correlated errors in base quality score estimates.
-At a high level, this is done by associating sequenced bases with possible error covariates, and estimating the
+At a high level, we associate sequenced bases with possible error covariates, and estimate the
 true error rate of this covariate. Once the true error rate of all covariates has been estimated, we then apply
 the corrected covariate.
 
-The original BQSR engine in \textsc{ADAM} was written to be generic and to place
+The original BQSR engine in \textsc{ADAM} was generic and placed
 no limitations on the number or type of covariates that could be applied. A
 covariate describes a parameter space where variation in the covariate parameter
 may be correlated with a sequencing error. However, supporting generic covariates
@@ -2519,7 +2519,7 @@ performance optimizations:
 \item Additionally, hard-coding the covariates greatly reduced the size of the
   \textsc{CovariateKey} object in memory, which allows us to achieve higher
   cache hit rates when caching the output of the first stage of BQSR.
-\item Merging the observations between two base observations originally required
+\item Merging the two base observations originally required
   updating and merging the new and old \textsc{Observation} values. By rewriting
   as a \textsc{reduceByKey}, we were able to eliminate the need for mutable
   objects. We did not move this codepath to \textsc{Spark SQL}, since this
@@ -2554,7 +2554,7 @@ Algorithm~\ref{alg:invert-cov} demonstrates this approach.
 
 \begin{algorithm}
 \caption{Inverting an element in the covariate table}
-\label{alg:create-table}
+\label{alg:invert-cov}
 \begin{algorithmic}
 \STATE $key \leftarrow$ covariate key to invert
 \STATE $global \leftarrow$ the empirical quality of this read group
@@ -2724,11 +2724,12 @@ scores in the read that are greater than 15.
 
 To eliminate a shuffle, we leveraged an insight from
 \textsc{SAMBLASTER}~\cite{faust14}, which runs directly on the output of an
-aligner, which will group all reads from a single fragment together~(also known
+aligner, that will group all reads from a single fragment together~(also known
 as query grouped). The fragment schema introduced in~\S\ref{sec:read-schemas}
 describes a set of query grouped reads, and is equivalent to the output of the
-step in duplicate marking that groups reads by read name. This allows us to
-eliminate a shuffle when running on reads loaded from a query grouped
+step in duplicate marking that groups reads by read name. When reads are grouped
+by sequencing fragment, we can eliminate a shuffle. Fragment-grouped reads are
+found when loading reads from a query grouped
 SAM/BAM/CRAM file, or when running on the output of reads aligned using
 \textsc{Cannoli}. We describe the performance benefit of this change
 in~\S\ref{sec:benchmarking-duplicate-markers}.
@@ -2744,16 +2745,16 @@ apply a probabilistic model built around a biallelic model to the reads to
 identify variants.
 
 \textsc{Avocado}'s INDEL reassembly process cleans up all reads that are aligned
-near INDEL variants. We do this as a two step process. In the first pass, we
+near INDEL variants. We do this as a two step process. In the first step, we
 pass over all the reads and use our novel indexed de Bruijn algorithm to extract
 and canonicalize all of the INDEL variants. For best accuracy, we use the
 \textsc{ADAM} INDEL realigner described
-in~\S\ref{sec:indel-realignment-implementation} in knowns mode. This improves
-variant calling accuracy over solely using the indexed de Bruijn algorithm.
-
+in~\S\ref{sec:indel-realignment-implementation} to realign known INDELs. This
+approach improves variant calling accuracy over solely using the indexed de Bruijn
+algorithm.
 After realigning the INDELs, we run genotyping. In this phase, we discover all
 SNVs and INDELs, score them using the reads, and emit either called variants
-or genotype likelihoods in genome VCF~(gVCF) format. This runs as a four step
+or genotype likelihoods in genome VCF~(gVCF) format. Genotyping is a four step
 process:
 
 \begin{enumerate}
@@ -2762,13 +2763,13 @@ process:
 the likelihood that each read represents a given variant that it overlaps. In
 gVCF mode, we also calculate the likelihood of the reference allele at all
 locations covered by a read.
-\item We merge all of the per-read likelihoods per variant. This gives us final
-genotype likelihoods per each variant.
+\item We merge all of the per-read likelihoods per variant. Aggregating the
+  per-read likelihoods gives us the final genotype likelihoods per each variant.
 \item Finally, we apply a standard set of hard filters to each variant.
 \end{enumerate}
 
 All of these stages are implemented as a parallel application that runs on top of
-\textsc{Apache Spark}~\cite{zaharia10, zaharia12}, using the \textsc{ADAM}
+\textsc{Apache Spark}~\cite{zaharia10, zaharia12} using the \textsc{ADAM}
 library~\cite{massie13, nothaft15}.
 
 \section{INDEL Reassembly}
@@ -2777,12 +2778,12 @@ library~\cite{massie13, nothaft15}.
 As opposed to traditional realignment based approaches, we canonicalize INDELs
 in the reads by looking for bubbles flanked by read vs. reference sequence matches. In a colored de Bruijn
 graph, a bubble refers to a location where the graph diverges between two
-samples. In \S\ref{sec:formulation}, we demonstrate how we can use the
+samples. We demonstrate how we can use the
 reconvergence of the de Bruijn graph in the flanking sequence around a bubble
 to define provably canonical alignments of the bubble between two sequences.
 For a colored de Bruijn graph containing reads and the reference genome, this
 allows us to canonically express INDEL variants in the reads against the
-reference. In~\S\ref{sec:implementation}, we then show how this approach
+reference. We then show how this approach
 can be implemented efficiently without building a de Bruijn graph per read,
 or even adding each read to a de Bruijn graph. Once we have extracted a
 canonical set of INDELs, we realign the reads to each INDEL sequence using
@@ -2873,7 +2874,7 @@ $\mathcal{S}_i'$ and $\mathcal{S}_j'$ are identical. If both subsequences had th
 position $k$, this would imply that both sequences were identical and therefore the two paths between
 $s_1, s_2$ would not be independent~(Definition~\ref{defn:path-independence}). If the two letters are
 different \emph{and} the subsequences are non-repetitive, each character is responsible for $k$
-previously unseen $k$-mers. This is the only possible explanation for the two independent $k$ length
+previously unseen $k$-mers. A substitution is the only possible explanation for the two independent $k$ length
 paths between $s_1$ and $s_2$.
 \end{proof}
 
@@ -3003,11 +3004,11 @@ either side of the flanking sequence was longer than $k$.
 This process is very efficient, as it can be done wholly with standard string
 operators in a single loop over the read. To avoid the cost of looking up the
 reference sequence from a reference genome, we require that all reads are
-tagged with the SAM \textsc{MD} tag. This allows us to reconstruct the
+tagged with the SAM \textsc{MD} tag. MD tags allow us to reconstruct the
 reference sequence for a bubble from the read sequence and CIGAR.
 
 One problem with this method is that it can be misled by sequencing errors
-that are proximal to a true variant. As can be seen in~\S\ref{sec:accuracy},
+that are proximal to a true variant. As can be seen in~\S\ref{sec:benchmarking-indel-realigners},
 solely using our indexed de Bruijn algorithm to clean up INDEL alignments leads
 to lower accuracy than the state-of-the-art toolkit. However, if the INDEL
 variant in a read that is discovered is a true variant, it is a good candidate
@@ -3025,7 +3026,7 @@ represents a suffient improvement over the sum weighted edit distance between
 the reads and the reference genome, the read alignments are moved to their
 lowest weighted edit distance position relative to the consensus sequence.
 A detailed description of this algorithm can be found in~\S\ref{sec:indel-realignment-implementation}.
-As seen in~\S\ref{sec:accuracy}, coupling local realignment with our INDEL
+As seen in~\S\ref{sec:benchmarking-indel-realigners}, coupling local realignment with our INDEL
 canonicalization scheme improves SNP calling accuracy to comparable with the
 state-of-the-art, while improving INDEL calling accuracy by 2--5\%.
 
@@ -3045,7 +3046,7 @@ An alternative approach is to use previously known data about genome coverage
 to statically partition tasks into balanced chunks~\cite{chiang15}. Unlike the
 static partitioning approach used by \textsc{SpeedSeq} that discards regions with
 very high coverage, this allows us to call variants in regions with very high
-coverage. However, as is also noted in the \textsc{SpeedSeq} paper, variant calls
+coverage. However, as is also noted in the \textsc{SpeedSeq} paper~\cite{chiang15}, variant calls
 in these regions are likely to be caused by artifacts in the reference genome that
 confound mapping and thus are uninformative or spurious, and are hard filtered by
 our pipeline~(see~\S\ref{sec:variant-filtration}).
@@ -3090,9 +3091,9 @@ approach differs in several ways:
 
 An early variant of \textsc{Avocado} used a strict biallelic model, but this
 generated incorrect calls for compound heterozygous sites and INDEL variants.
-This version of \textsc{Avocado} performed the following process to score variants.
+This early version of \textsc{Avocado} performed the following process to score variants.
 For each variant, we check to see if the read supports the variant allele.
-position in the alignment. If the variant is present, we treat the read as positive
+If the variant is present, we treat the read as positive
 evidence supporting the variant. If the read contains the reference allele at
 that site, we treat the read as evidence supporting the reference. If the read
 neither matches the variant allele nor the reference, we do not use the read
