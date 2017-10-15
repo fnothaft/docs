@@ -90,8 +90,8 @@ morestring=[b]"}
 The rapid decrease in sequencing cost has made large scale sequencing
 tractible. The dramatic improvement in sequencing cost since the Human
 Genome Project has enabled a human whole genome sequence~(WGS) to be
-generated for under \$1,000 in wetlab costs~\cite{nhgri}. This trend
-will continue for the forseeable future, as sequencing vendors like
+generated for under \$1,000 in wetlab costs~\cite{nhgri}. Costs
+will continue to decrease for the forseeable future, as sequencing vendors like
 Illumina unveil new sequencers such as the NovaSeq that provide even
 higher throughput while also decreasing cost, and as radically new
 sequencing technologies like Oxford Nanopore come online~\cite{jain17}.
@@ -100,9 +100,9 @@ population health research projects and clinical practice. As a result,
 the total volume of sequencing data produced is expected to exceed that
 of YouTube by 2021~\cite{stephens15}.
 
-The massive scale of the sequencing data that is being acquired enables
+The massive scale of the sequencing data enables
 novel insight into biological phenomena. The Exome Aggregation
-project~(ExAC,~\cite{lek16})--now gnomAD--provides an especially powerful
+project~(ExAC,~\cite{lek16})---now gnomAD---provides an especially powerful
 demonstration: by sequencing more than 60,000 exomes, we have been able
 to better understand the impact of genomic variation on prion
 disease~\cite{minikel16} and cardiovascular disease~\cite{walsh16}, and to
@@ -111,7 +111,7 @@ However, this scale of data solves biological problems at the cost of techincal
 and logistical problems. Data storage and transfer has become a serious problem,
 and the focus of many researchers~\cite{fritz11, kozanitis11} and standards
 organizations~\cite{paten15}. Not only is the volume of data large, but
-expensive processing is needed to analyze the data. Due to historical design
+the processing cost to analyze the data is high. Due to historical design
 decisions, much of this processing is currently restricted to single node
 architectures that assume POSIX storage APIs. As a result, it can take
 upwards of 100 hours to analyze the raw read data from a single genome.
@@ -121,7 +121,7 @@ genomic data analysis. Horizontally scalable storage architectures can
 simultaneously provide increased data storage capacities, data access
 throughput, and reduced storage cost. Because most genomic analyses are centered
 on analyzing the genomic data at disparate genomic loci without coordination
-between loci, most genomic analysis tasks can be executed in parallel. Even more
+between them, most genomic analysis tasks can be executed in parallel. Even more
 importantly, these analysis patterns cleanly map onto quasi-relational primitives
 that are powerful and can be executed in parallel. Finally, by building upon
 widely used open-source distributed processing architectures like \textsc{Apache
@@ -142,8 +142,8 @@ of the common genomics query models. By having clearly defined APIs between
 each level of the stack, we are able to exchange layers to optimize query
 performance for a given query, input data type, or cluster/cloud configuration.
 
-Our work on \textsc{ADAM} has resulted in the broad ecosystem of projects
-depicted in Figure~\ref{fig:bdg}. We refer to the tools built on \textsc{ADAM}
+Our work on \textsc{ADAM} has resulted in the broad ecosystem of projects,
+which Figure~\ref{fig:bdg} depicts. We refer to the tools built on \textsc{ADAM}
 as the ``Big Data Genomics''~(BDG) project. In this dissertation, we will limit
 our focus to \textsc{ADAM}'s architecture and APIs, and the tools and algorithms
 that form the core components of the BDG variant calling pipeline:
@@ -183,7 +183,7 @@ bioinformatics tools.
 
 In this dissertation, we begin by describing the deluge of genomic data and the
 tools that are used to process, manipulate, and store genomic data. In part two,
-we then describe the requirements for a distributed genomic data analysis
+we describe the requirements for a distributed genomic data analysis
 framework and introduce \textsc{ADAM}'s architecture. Part three describes how
 we built the \textsc{Cannoli}-\textsc{ADAM}-\textsc{Avocado} variant calling
 pipeline on top of \textsc{ADAM}'s architecture, and the novel algorithms and
@@ -202,7 +202,9 @@ genome may be provide insight into the fitness of a single individual, genetic
 data is most meaningful when viewed in aggregate across large cohorts.
 For variants that do not have an obvious and severe pathogenic effect, our best
 lens for understanding their impact from genomic data is through statistical
-association testing. While genome wide association testing~(GWAS) has yielded
+association testing.
+
+While genome wide association testing~(GWAS) has yielded
 some successes, including prominent findings in neurogenetics~\cite{ripke14},
 GWAS has faced several limitations. First, the association between genotype and
 phenotype is often weak, unless the variant under study is strongly
@@ -221,7 +223,7 @@ gene mutations can be shared across disease subtypes.
 These population scale sequencing projects have been enabled entirely by
 technical innovation. While it cost more than \$100M to complete the data
 acquisition for the Human Genome Project, the cost of sequencing a single
-genome has dropped to under \$1,000~\cite{nhgri}. This has been driven by
+genome has dropped to under \$1,000~\cite{nhgri}. This low cost has been driven by
 continuous technical improvements by Illumina and competing sequencer vendors.
 With the continued improvement of nanopore sequencing~\cite{jain17}, we may see
 an additional precipitous drop in sequencing costs, as nanopore sequencers have
@@ -246,7 +248,7 @@ MyCode collaboration with Regeneron~\cite{carey16}.
 
 The rapid uptake of genome sequencing in academic, industrial, and clinical
 settings is driving the total number of human genomes sequenced to double
-approximately once every seven months~\cite{stephens15}. This far outpaces
+approximately every seven months~\cite{stephens15}. This far outpaces
 Moore's law at its peak, and is a rate of increase approximately four times
 greater than current estimates of Moore's law, which peg the doubling of
 transistor counts to occur approximately every two years. As a result of
@@ -264,14 +266,14 @@ patterns either lack data dependencies~(unaligned reads, or analyses that look
 at a single genomic locus), or have well defined spatial communication
 patterns~(process data overlapping a given locus). These computations can
 typically be paralellized with minimal communication. Additionally, many genomic
-analysis queries map directly onto relational primitives which are implemented
+analysis queries map directly onto relational primitives that are implemented
 in existing distributed data analysis platforms~\cite{armbrust15}. An example of
 this is a genomic association test, which can be implemented as an aggregation
 query.
 
-To take full advantage of distributed computing, we believe that we need to do a
+To take full advantage of distributed computing, we believe that we need a
 clean slate re-architecture of the genomic data processing infrastructure. In a
-typical genomic processing pipeline, the analysis tools are typically designed
+conventional genomic processing pipeline, the analysis tools are typically designed
 assuming a flattened stack running on a single node, or on a high performance
 computing~(HPC)-style cluster with shared storage. These systems typically make
 strong assumptions about the cost of making random accesses into a POSIX file
@@ -291,13 +293,14 @@ user-facing query models with better performance.
 \section{Mapping Genomics onto Distributed Computing using \textsc{ADAM}}
 \label{sec:mapping-genomics-to-distributed-computing}
 
-To address these problems, we propose \textsc{ADAM}, a comprehensive framework
+To address these problems, we developed \textsc{ADAM}, a comprehensive framework
 for processing genomic data using the \textsc{Apache Spark} framework for
 distributed computing. \textsc{ADAM} defines schemas for a full range of genomic
 datatypes, which provides a data-indepent query model. These schemas form the
 basis of a narrow waisted stack, which yields APIs that support both genomic
 query and metadata management. By extending \textsc{ADAM} onto \textsc{Apache
-  Spark SQL}, these APIs can be used across multiple languages. This extends the
+  Spark SQL}, these APIs can be used across multiple languages. Support for
+processing genomic data with \textsc{Spark SQL} extends the
 power of distributed computing to bioinformatics users who are writing in the
 Python or R languages, as opposed to previous tools that were centered either
 around Java or the Pig scripting language~\cite{nordberg13, schumacher14}.
@@ -344,12 +347,12 @@ reads~(100-300 base pairs, bp), align them to the reference genome, perform
 preprocessing on the reads to eliminate errors, and then probabilistically
 identify true variation from the reads. In this chapter, we will start by
 describing how the reads are sequenced~(\S\ref{sec:genome-sequencing}) and
-analyzed~(\S\ref{sec:genomic-analysis}). We will then dive deeper into the
+analyzed~(\S\ref{sec:genomic-analysis}). We then dive deeper into the
 representations of genomic data~(\S\ref{sec:genomic-data-representations}),
 and the architectures used to process this
-data~(\S\ref{sec:genomic-architectures}). Then, we will review the variant
+data~(\S\ref{sec:genomic-architectures}). Then, we review the variant
 identification algorithms~(\S\ref{sec:variant-calling-approaches}). Finally,
-we will discuss the emergence of commodity distributed computing
+we discuss the emergence of commodity distributed computing
 frameworks~(\S\ref{sec:distributed-computing}) and how researchers have
 approached parallelizing genome resequencing
 pipelines~(\ref{sec:distributed-genome-analysis})
@@ -373,11 +376,13 @@ then run through a sequencer. This stage creates genomic ``reads'', which
 include a string of bases~(in the A, C, G, T alphabet used by DNA) along with
 estimates of the probability that a single base was read correctly. The library
 preparation stage converts the biological sample into DNA fragments, which we
-can sequence. In the simplest case~(sequencing a genome), we start by extract
+can sequence. In the simplest case~(sequencing a genome), we start by extracting
 DNA from a collection of cells. We then slice the long DNA strands into shorter
 fragments, before selecting fragments of a certain length (``size selection'').
 The size of fragments collected depends on both the sequencing instrument that
-is being used, and the biological assay being conducted. Common variants on this
+is being used, and the biological assay being conducted.
+
+Common variants on this
 process include exome sequencing (where we start from DNA, but select the regions
 of the genome that encode genes before fragmenting and size selecting reads),
 RNA-seq (where we start by converting single stranded RNA into DNA, which is
@@ -393,7 +398,8 @@ Illumina sequencer have the same length, as the length of the read is determined
 by the number of cycles that the sequencer is run. ``Paired''  means that we
 generate two reads from each DNA fragment; we read one read from each strand of
 the DNA, with the two reads coming from opposite ends of the DNA fragment.
-In a conventional sequencing libraries, the DNA fragments include bases that are
+
+In a conventional sequencing library, the DNA fragments include bases that are
 not sequenced; these bases are typically referred to as the ``insert'', and the
 number of bases not sequenced (``insert size'') are controlled through the
 size selection process. For example, if we wanted to prepare a paired sequencing
@@ -425,11 +431,11 @@ bases.
 
 Many of the analyses that use reads generated from Illumina sequencers are
 analyzed with mapping-based approaches. In this class of approaches, we rely on
-the existence of a ``reference genome'' for an organization. This is a curated
+the existence of a ``reference genome'' for an organization. The reference genome is a curated
 dataset that consists of the DNA sequences for all of the chromosomes in the
 genome of a species. For humans, the first reference genome was generated
 through the Human Genome Project~\cite{lander01}. New genome references are
-released every several years and include corrections to prior reference genomes
+released every few years and include corrections to prior reference genomes
 and new assemblies for areas of the genome that are hard to sequence (typically
 caused by the genome being highly repetitive in a single area). The most recent
 release of the human genome~(GRCh38, see~\cite{church15}) was released at the
@@ -462,7 +468,7 @@ against the reference genome, and then compute the transitive difference between
 the two individuals. To compute the variations between a single individual and
 the reference, we start by aligning the reads to the reference genome. From
 here, we can then look at each site in the genome to see if there are reads that
-support an sequence edit. This is typically done by applying a statistical model
+support an sequence edit. The test for read support is typically done by applying a statistical model
 to the reads that looks at the base error probabilities attached to the reads
 that contain the reference sequence and the reads that contain the proposed
 sequence variant. Examples of the models used include the \textsc{SAMTools
@@ -481,21 +487,21 @@ very little DNA, we will commonly use a polymerase chain reaction~(PCR) during
 library preparation. This reaction will take our input DNA and replicate it,
 thereby increasing the amount of DNA that we can provide to the sequencer.
 However, as part of the PCR process, some fragments will be excessively
-replicated. This can lead to a single fragment being replicated 100 times. If
+replicated. PCR duplication can lead to a single fragment being replicated $>$100 times. If
 this fragment contains a sequence variant or a sequence that is susceptible to
 being sequenced incorrectly, this can bias the genomic region where the read is
 located and lead to an incorrect variant being identified.
 
 Local realignment is typically run after duplicate marking and addresses an
 issue inherent to the mapping process. Specifically, if there are larger
-sequence variants (e.g., multi-base insertions or deletions) into a read, the
+sequence variants (e.g., multi-base insertions or deletions) in a read, the
 mapping process will commonly identify the correct genomic region that a read
 should map to, but will locally misalign the read relative to other reads that
 contain the same underlying sequence variant~\cite{depristo11}. During local
 realignment, we start by identifying all possible insertion/deletion~(INDEL)
 variants in our reads. For every region that contains an INDEL, we then look
 at the reads that map to that region. We identify the most common sequence
-variant in the set of reads and rewrite the local read alignments ensure that
+variant in the set of reads and rewrite the local read alignments to ensure that
 all reads that contain a single sequence variant are aligned with a consistent
 representation. This step is necessary because the algorithms used to compute
 the pairwise alignment of two sequences are fundamentally
@@ -521,7 +527,7 @@ widely used analysis across contemporary genomics, and is a core part of large
 population-scale studies such as the 1,000 Genomes Project~\cite{1kg12, 1kg},
 the Exome Aggregation Consortium~\cite{lek16}, and The Cancer Genome
 Atlas~\cite{weinstein13}. Additionally, the read preprocessing stages are
-tremendously computationally expensive. For a single human genome sequenced with
+computationally expensive. For a single human genome sequenced with
 an average of 60 reads covering each genomic position, it takes over 160 hours
 to align the reads, preprocess the reads, and call variants, with approximately
 110 of the hours spent preprocessing the reads. Finally, implementations of thes
@@ -537,15 +543,15 @@ descend from formats that were developed during the 1,000 Genomes
 project~\cite{1kg}. Some of these formats are much older; many genomic feature
 file formats descend from the development of the University of California,
 Santa Cruz's (UCSC) Genome Browser~\cite{kent02}, which was developed as part
-of the Human Genome Project~\cite{lander01}, and informal specificiations for
-the FASTQ~\cite{cock10} and FASTA formats date back to at least the nineties,
+of the Human Genome Project~\cite{lander01}. Informal specificiations for
+the FASTQ~\cite{cock10} and FASTA formats date back to at least the 1990s,
 through their use in the \textsc{phred}~\cite{ewing98} and
 \textsc{FASTA}/\textsc{FASTP}~\cite{pearson90} tools.
 
 The file formats developed during the 1,000 Genomes project stored high
 throughput sequencing data in tab separated value~(TSV) files. These
 formats included the \textsc{Sequence Alignment/Mapping}~(SAM)
-format~\cite{li09}, which represents genomic reads and the \textsc{Variant Call
+format~\cite{li09}, which represents genomic reads, and the \textsc{Variant Call
   Format}~(VCF) format~\cite{danecek11}, which was defined to store variants
 and genotypes. The 1000 Genomes project also made significant use of the
 TSV \textsc{Browser Extensible Data}~(BED) format for storing genomic feature
@@ -592,7 +598,7 @@ only run as a multithreaded application on a single node. Instead,
 multi-node execution was provided through the \textsc{Queue}~\cite{depristo11}
 workflow manager.
 
-While the UNIX-like design philosophy espoused by many bioinformatics tools
+While the UNIX-like design philosophy embraced by many bioinformatics tools
 allows for the creation of tools with well defined boundaries, this seems to be
 fundamentally at odds with the reality of complex genomics workflows, where many
 tools must be cascaded one-after-the-other. As a result, genomics has embraced
@@ -620,7 +626,7 @@ dataflow and functional approaches to describe workflows.
 
 The accuracy of insertion and deletion~(INDEL) variant discovery has been improved by the development
 of variant callers that couple local reassembly with haplotype-based statistical models to recover INDELs
-that were locally misaligned~\cite{albers11}. Now, several prominent variant callers such as the Genome
+that were locally misaligned~\cite{albers11}. Now, haplotype-based models are used by several prominent variant callers such as the Genome
 Analysis Toolkit's~(GATK) \textsc{HaplotypeCaller}~\cite{depristo11}, \textsc{Scalpel}~\cite{narzisi14}, and
 \textsc{Platypus}~\cite{rimmer14}. Although haplotype-based methods have enabled more accurate INDEL
 and single nucleotide polymorphism~(SNP) calls~\cite{bao14}, this accuracy comes at the cost of
@@ -643,7 +649,8 @@ that most likely represents the variants hypothesized to exist in the region,
 then used for genotyping.
 \end{enumerate}
 
-In this paper, we focus on improving the algorithmic efficiency steps one through three of the local reassembly problem.
+In this dissertation, we introduce algorithms that improve the algorithmic efficiency
+of steps one through three of the local reassembly problem.
 We do not focus algorithmically on accelerating stages four and five, as there is wide
 variation in the algorithms used in stages four and five. However, we do provide an parallel
 implementation of a widely used statistical model for genotyping~\cite{li11}. Stage one (graph
@@ -681,7 +688,7 @@ In both approaches, local alignment errors~(errors in alignment \emph{within} th
 by using a statistical model to identify the most likely location that the read could have come from, given
 the other reads seen in this area.
 
-Although the model used for choosing the best haplotype pair to finalize realignments to varies between
+Although the model used for choosing the best haplotype pair to finalize realignments varies between
 methods~(e.g., the GATK's \textsc{IndelRealigner} uses a simple log-odds model~\cite{depristo11}, while
 methods like \textsc{FreeBayes}~\cite{garrison12} and \textsc{Platypus}~\cite{rimmer14} make use of richer
 Bayesian models), these methods require an all-pairs alignment of reads to candidate
@@ -701,8 +708,9 @@ graph as each read must be sequentially broken into $k$-mers, but these methods 
 storage cost. Specifically, storage cost for a de Bruijn graph is similar to $\mathcal{O}(k
 (l_{\text{ref}} + l_{\text{variants}} + l_{\text{errors}}))$, where $l_{\text{ref}}$ is the length of the reference
 haplotype in this region, $l_{\text{variants}}$ is the length of true variant sequence in this region, 
-$l_{\text{errors}}$ is the length of erroneous sequence in this region, and $k$ is the $k$-mer size. In
-practice, we can approximate both errors and variants as being random, which gives $\mathcal{O}(k
+$l_{\text{errors}}$ is the length of erroneous sequence in this region, and $k$ is the $k$-mer size.
+
+In practice, we can approximate both errors and variants as being random, which gives $\mathcal{O}(k
 l_{\text{ref}})$ storage complexity. From this graph, we must enumerate the haplotypes present in the
 graph. Starting from the first $k$-mer in the reference sequence for this region, we perform a depth-first
 search to identify all paths to the last $k$-mer in the reference sequence. Assuming that the graph is
@@ -738,7 +746,7 @@ approximation, and hope to study these characteristics in more detail in future 
 \section{Distributed Computing Platforms}
 \label{sec:distributed-computing}
 
-Google described the use of large clusters of commodity computers in their
+Dean and Ghemawat described the use of large clusters of commodity computers in their
 \textsc{MapReduce} system~\cite{dean04, dean08} in 2004. Since then, there has
 been a surge of activity focusing on the development of distributed data
 analysis tools. In the open source world, this has spawned the \textsc{Apache
@@ -750,7 +758,7 @@ scripting languages like \textsc{Pig}~\cite{olston08}, query systems like
 traditional map-reduce platforms were well suited to extract, transform,
 load~(ETL) pipelines that made a single pass over a large dataset, they were
 a poor fit to ``advanced analytics'' applications---like machine learning, or
-graph processing---that made several passes over a dataset. This was due to
+graph processing---that made several passes over a dataset. This inefficiency was due to
 their reliance on the output of every computational phase being written to
 disk to ensure fault tolerance. A new set of distributed data processing tools
 were designed to address this problem by storing data in memory, and relying
@@ -779,7 +787,9 @@ that had well defined chunking patterns. Examples of this approach include the
 \textsc{RMAP} aligner~\cite{smith08}, and
 \textsc{CrossBow}~\cite{langmead09crossbow}, which integrates the
 \textsc{Bowtie}~\cite{langmead09bowtie} aligner with the
-\textsc{SoapSNP}~\cite{li09snp} variant caller. The second wave of approaches
+\textsc{SoapSNP}~\cite{li09snp} variant caller.
+
+The second wave of approaches
 built more fully featured applications on top of the \textsc{Apache Hadoop}
 framework that did not just rely on the streaming APIs. These applications
 include the \textsc{SEAL}~\cite{pireddu11} aligner, which extracted the
@@ -788,7 +798,9 @@ on the \textsc{PyDoop}~\cite{leo10} bindings for \textsc{Hadoop};
 \textsc{BigBWA}~\cite{abuin15}, which parallelizes \textsc{BWA}~\cite{li09}
 using the Java Native Interface~(JNI) on top of \textsc{Apache Hadoop}; and
 \textsc{Halvade}~\cite{decap15}, which parallelized the complex dataflow in
-the \textsc{GATK}~\cite{depristo11} using \textsc{Apache Hadoop}. The third
+the \textsc{GATK}~\cite{depristo11} using \textsc{Apache Hadoop}.
+
+The third
 wave of wrappers has been built around \textsc{Apache Spark} and includes
 \textsc{SparkBWA}~\cite{abuin16}, a successor to \textsc{BigBWA}~\cite{abuin15},
 \textsc{CloudScale-BWA MEM}~\cite{chen16}, which parallelizes
@@ -803,7 +815,7 @@ Many of these tools build on top of the \textsc{Hadoop-BAM}
 library~\cite{niemenmaa12}, which provides \textsc{Hadoop}-compatible parallel
 I/O libraries. The first generation of tools built query models for accessing
 genomic data through the \textsc{Pig}~\cite{olston08} scripting language.
-This was implemented in two separate tools: \textsc{BioPig}~\cite{nordberg13}
+Support for \textsc{Pig} was implemented in two separate tools: \textsc{BioPig}~\cite{nordberg13}
 and \textsc{SeqPig}~\cite{schumacher14}. Additionally, the \textsc{OpenCB}
 project has built \textsc{Hadoop}-based tools for manipulating genomic data via
 the \textsc{hpg-bigdata} project~\cite{opencb}. Recent work has moved on to
