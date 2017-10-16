@@ -1400,13 +1400,7 @@ contribute to realizing the stack vision in the following ways:
 \begin{itemize}
 \item The physical storage and data distribution layers~(1 and 2) are largely
   deferred to \textsc{Apache Spark} and \textsc{Hadoop}. \textsc{ADAM} interacts
-  with these layers through their APIs. There are a few places where
-  \textsc{ADAM} specializes for a given file system; the primary example is when
-  concatenating output files together to create a large unified output file. The
-  \textsc{Hadoop Distributed File System}~(HDFS, see Shvachko et
-  al.~\cite{shvachko10}) and the Amazon Web Services \textsc{Simple Storage
-    System}~(AWS S3) provide APIs for concatenating sharded files, which allows
-  the file merging process to be accelerated.
+  with these layers through their APIs.
 \item The materialized data and schema layers~(3 and 4) couple together in a
   critical way. The schemas provide a logical description of a given genomic
   datatype, and the materialized data layer provides a set of views between the
