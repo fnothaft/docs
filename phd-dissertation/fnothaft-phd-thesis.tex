@@ -58,21 +58,21 @@ morestring=[b]"}
   must provide programming interfaces and deployment models that are easily
   usable by biologists.
 
-  In this dissertation, we describe the \textsc{ADAM} system for processing
-  large genomic datasets using distributed computing. \textsc{ADAM} provides
+  In this dissertation, we describe the {ADAM} system for processing
+  large genomic datasets using distributed computing. {ADAM} provides
   a decouped stack-based architecture that can accomodiate many data formats,
-  deployment models, and data access patterns. Additionally, \textsc{ADAM}
-  defines schemas that describe common genomic datatypes. \textsc{ADAM}'s
+  deployment models, and data access patterns. Additionally, {ADAM}
+  defines schemas that describe common genomic datatypes. {ADAM}'s
   schemas and programming models enable the easy integration of disparate
   genomic datatypes and datasets into a single analysis.
 
-  To validate the \textsc{ADAM} architecture, we implemented an end-to-end
-  variant calling pipeline using \textsc{ADAM}'s APIs. To perform parallel
-  alignment, we developed the \textsc{Cannoli} tool, which uses \textsc{ADAM}'s
+  To validate the {ADAM} architecture, we implemented an end-to-end
+  variant calling pipeline using {ADAM}'s APIs. To perform parallel
+  alignment, we developed the {Cannoli} tool, which uses {ADAM}'s
   APIs to automatically parallelize single node aligners. We then
-  implemented \textsc{GATK}-style alignment refinement as part of \textsc{ADAM}.
+  implemented {GATK}-style alignment refinement as part of {ADAM}.
   Finally, we implemented a biallelic genotyping model, and novel reassembly
-  algorithms in the \textsc{Avocado} variant caller. This pipeline provides
+  algorithms in the {Avocado} variant caller. This pipeline provides
   state-of-the-art SNV calling accuracy, along with high~(97\%) INDEL calling
   accuracy. To further validate this pipeline, we reanalyzed 270 samples from
   the Simons Genome Diversity Dataset.
@@ -124,17 +124,17 @@ on analyzing the genomic data at disparate genomic loci without coordination
 between them, most genomic analysis tasks can be executed in parallel. Even more
 importantly, these analysis patterns cleanly map onto quasi-relational primitives
 that are powerful and can be executed in parallel. Finally, by building upon
-widely used open-source distributed processing architectures like \textsc{Apache
-Spark}~\cite{zaharia12} and \textsc{Hadoop}~\cite{hadoop}, genomics can benefit
+widely used open-source distributed processing architectures like {Apache
+Spark}~\cite{zaharia12} and {Hadoop}~\cite{hadoop}, genomics can benefit
 from the engineering contributions that advance these large open source projects.
 
-In this thesis, we introduce \textsc{ADAM}, an application programming
-interface~(API) for processing genomic data using Apache Spark. \textsc{ADAM}
+In this thesis, we introduce {ADAM}, an application programming
+interface~(API) for processing genomic data using Apache Spark. {ADAM}
 is based around a novel stack-oriented architecture that uses schemas to define
 the narrow waist in the stack. On top of the schemas, we provide high-level
 APIs that allow computational biologists and bioinformaticians to manipulate
 collections of genomic data in a parallel fashion. The high level APIs extend
-\textsc{Apache Spark}'s Resilient Distributed Dataset~(RDD, see Zahaira et
+{Apache Spark}'s Resilient Distributed Dataset~(RDD, see Zahaira et
 al.~\cite{zaharia12}) abstraction with genomics-specific functionality, and
 eliminates the low level ``walker'' pattern~\cite{mckenna10} that is common in
 genomics. At lower levels in the stack, we provide efficient implementations
@@ -142,18 +142,18 @@ of the common genomics query models. By having clearly defined APIs between
 each level of the stack, we are able to exchange layers to optimize query
 performance for a given query, input data type, or cluster/cloud configuration.
 
-Our work on \textsc{ADAM} has resulted in the broad ecosystem of projects,
-which Figure~\ref{fig:bdg} depicts. We refer to the tools built on \textsc{ADAM}
+Our work on {ADAM} has resulted in the broad ecosystem of projects,
+which Figure~\ref{fig:bdg} depicts. We refer to the tools built on {ADAM}
 as the ``Big Data Genomics''~(BDG) project. In this dissertation, we will limit
-our focus to \textsc{ADAM}'s architecture and APIs, and the tools and algorithms
+our focus to {ADAM}'s architecture and APIs, and the tools and algorithms
 that form the core components of the BDG variant calling pipeline:
 
 \begin{itemize}
-\item \textsc{Cannoli}, which parallelizes single node genomic data processing
-  tools. \textsc{Cannoli} is used in our pipeline for alignment.
-\item The \textsc{ADAM} read transformations, which correct for errors in the
+\item {Cannoli}, which parallelizes single node genomic data processing
+  tools. {Cannoli} is used in our pipeline for alignment.
+\item The {ADAM} read transformations, which correct for errors in the
   aligned reads.
-\item \textsc{Avocado}, a fully parallelized variant caller.
+\item {Avocado}, a fully parallelized variant caller.
 \end{itemize}
 
 This pipeline is able to call variants on a high coverage ($60\times$) whole
@@ -161,7 +161,7 @@ genome in under one hour when running on commodity cloud computing resources.
 This represents a dramatic improvement in performance over the widely used
 Genome Analysis Toolkit~(GATK, see DePristo et al.~\cite{depristo11}), which
 needed over 100 hours to call variants on the same sample. These tools
-demonstrate how \textsc{ADAM}'s APIs enable bioinformatics analyses to be
+demonstrate how {ADAM}'s APIs enable bioinformatics analyses to be
 written at a high level, while also allowing for the reuse of code from legacy
 bioinformatics tools.
 
@@ -169,13 +169,13 @@ bioinformatics tools.
   \begin{center}
     \includegraphics[width=0.95\linewidth]{graphs/bdgenomics-stack.pdf}
   \end{center}
-  \caption{The Big Data Genomics ecosystem. Our work on \textsc{ADAM} has
+  \caption{The Big Data Genomics ecosystem. Our work on {ADAM} has
     built a framework for scalable genomics using external projects like
-    \textsc{Apache Spark}~\cite{zaharia12} and \textsc{Apache
-      Parquet}~\cite{parquet}. On top of \textsc{ADAM}'s core APIs, we have
+    {Apache Spark}~\cite{zaharia12} and {Apache
+      Parquet}~\cite{parquet}. On top of {ADAM}'s core APIs, we have
     built a broad ecosystem of tools~\cite{linderman17, morrow17, tu16}
-    demonstrating how \textsc{Apache Spark} can accelerate genomic data
-    analysis. To enable the reproducible use of \textsc{Apache Spark} in
+    demonstrating how {Apache Spark} can accelerate genomic data
+    analysis. To enable the reproducible use of {Apache Spark} in
     scientific data analysis workloads, we have contributed to novel,
     cloud-native workflow systems~\cite{vivian17}.}
   \label{fig:bdg}
@@ -184,14 +184,14 @@ bioinformatics tools.
 In this dissertation, we begin by describing the deluge of genomic data and the
 tools that are used to process, manipulate, and store genomic data. In part two,
 we describe the requirements for a distributed genomic data analysis
-framework and introduce \textsc{ADAM}'s architecture. Part three describes how
-we built the \textsc{Cannoli}-\textsc{ADAM}-\textsc{Avocado} variant calling
-pipeline on top of \textsc{ADAM}'s architecture, and the novel algorithms and
+framework and introduce {ADAM}'s architecture. Part three describes how
+we built the {Cannoli}-{ADAM}-{Avocado} variant calling
+pipeline on top of {ADAM}'s architecture, and the novel algorithms and
 architectural refinements that were needed. We then validate the accuracy of
 this pipeline in part four using ground truth datasets~\cite{zook15} and a large
 scale sequencing project~\cite{mallick16}. We conclude by describing open
 problems and future directions for this research, as well as the impact of the
-Big Data Genomics/\textsc{ADAM} project.
+Big Data Genomics/{ADAM} project.
 
 \section{Economic Trends and Population Scale Sequencing}
 \label{sec:economic-trends-population-scale}
@@ -279,33 +279,33 @@ computing~(HPC)-style cluster with shared storage. These systems typically make
 strong assumptions about the cost of making random accesses into a POSIX file
 system, and present low level abstractions to users. While there have been
 several attempts to retrofit legacy tools onto distributed
-computing~(\textsc{CloudBurst}~\cite{schatz09}
-and~\textsc{Crossbow}~\cite{langmead09crossbow}), these approaches have typically used
-custom wrappers around \textsc{Apache Hadoop Streaming} and have been
+computing~({CloudBurst}~\cite{schatz09}
+and~{Crossbow}~\cite{langmead09crossbow}), these approaches have typically used
+custom wrappers around {Apache Hadoop Streaming} and have been
 non-general. There have also been several attempts to retrofit genomics-specific
 file formats onto distributed query
-architectures~(\textsc{SegPig}~\cite{schumacher14} and
-\textsc{BioPig}~\cite{nordberg13}), but these implementations provide either
+architectures~({SegPig}~\cite{schumacher14} and
+{BioPig}~\cite{nordberg13}), but these implementations provide either
 poor programming models or inefficient implementations. By doing a clean-slate
 rearchitecture, we can eliminate architectural problems and provide better
 user-facing query models with better performance.
 
-\section{Mapping Genomics onto Distributed Computing using \textsc{ADAM}}
+\section{Mapping Genomics onto Distributed Computing using {ADAM}}
 \label{sec:mapping-genomics-to-distributed-computing}
 
-To address these problems, we developed \textsc{ADAM}, a comprehensive framework
-for processing genomic data using the \textsc{Apache Spark} framework for
-distributed computing. \textsc{ADAM} defines schemas for a full range of genomic
+To address these problems, we developed {ADAM}, a comprehensive framework
+for processing genomic data using the {Apache Spark} framework for
+distributed computing. {ADAM} defines schemas for a full range of genomic
 datatypes, which provides a data-indepent query model. These schemas form the
 basis of a narrow waisted stack, which yields APIs that support both genomic
-query and metadata management. By extending \textsc{ADAM} onto \textsc{Apache
+query and metadata management. By extending {ADAM} onto {Apache
   Spark SQL}, these APIs can be used across multiple languages. Support for
-processing genomic data with \textsc{Spark SQL} extends the
+processing genomic data with {Spark SQL} extends the
 power of distributed computing to bioinformatics users who are writing in the
 Python or R languages, as opposed to previous tools that were centered either
 around Java or the Pig scripting language~\cite{nordberg13, schumacher14}.
 
-To demonstrate \textsc{ADAM}, we have built an end-to-end variant calling
+To demonstrate {ADAM}, we have built an end-to-end variant calling
 pipeline. This pipeline includes distributed implementations of alignment, read
 preprocessing, and variant calling. The pipeline can run end-to-end on a
 $60\times$ coverage whole genome in under an hour, at a cost of $<$\$15 on
@@ -317,7 +317,7 @@ parallelizing single-node genomics tools, which makes it possible to leverage
 distributed computing without reimplementing a tool or developing custom shims,
 unlike prior approaches~\cite{langmead09crossbow, schatz09}.
 
-As a result, \textsc{ADAM} improves over conventional genomics tools by providing:
+As a result, {ADAM} improves over conventional genomics tools by providing:
 
 \begin{itemize}
 \item Schemas which can support loading data from a large variety of formats.
@@ -329,11 +329,11 @@ As a result, \textsc{ADAM} improves over conventional genomics tools by providin
 \end{itemize}
 
 In the rest of this dissertation, we explain the design goals behind 
-\textsc{ADAM}. By reviewing the architecture and implementation of
-\textsc{ADAM}, we explain how these goals have shifted over time, informed by
-our development experiences. We then demonstrate the \textsc{ADAM} architecture
-through the \textsc{Cannoli} and \textsc{Avocado} tools, which implement the
-\textsc{Big Data Genomics} variant calling pipeline.
+{ADAM}. By reviewing the architecture and implementation of
+{ADAM}, we explain how these goals have shifted over time, informed by
+our development experiences. We then demonstrate the {ADAM} architecture
+through the {Cannoli} and {Avocado} tools, which implement the
+{Big Data Genomics} variant calling pipeline.
 
 \chapter{Background and Related Work}
 \label{chap:background}
@@ -454,11 +454,11 @@ been identified, the mapper will then locally align the read sequence against
 the genomic sequences from these ranges, using an edit calculation algorithm such
 as Smith-Waterman~\cite{smith81}, Ukkonen's algorithm~\cite{ukkonen85}, or a
 pairwise sequence alignment Hidden Markov Model~(HMM,~\cite{durbin98}). Widely
-used mappers include \textsc{BWA}~\cite{li09}, which builds an index using the
-Burrows-Wheeler transform~\cite{burrows94}; \textsc{Bowtie}~\cite{langmead09bowtie},
-which builds an FM-index~\cite{ferragina00}; and \textsc{SNAP}~\cite{zaharia11},
+used mappers include {BWA}~\cite{li09}, which builds an index using the
+Burrows-Wheeler transform~\cite{burrows94}; {Bowtie}~\cite{langmead09bowtie},
+which builds an FM-index~\cite{ferragina00}; and {SNAP}~\cite{zaharia11},
 which builds a hash-based index. Several projects have applied hardware acceleration
-to alignment, including \textsc{Cloud-Scale-BWAMEM}~\cite{chen16, chen15}, Ahmed
+to alignment, including {Cloud-Scale-BWAMEM}~\cite{chen16, chen15}, Ahmed
 et al~\cite{ahmed15}, and unpublished work out of Microsoft
 Azure~\cite{msr16}.
 
@@ -471,15 +471,15 @@ here, we can then look at each site in the genome to see if there are reads that
 support an sequence edit. The test for read support is typically done by applying a statistical model
 to the reads that looks at the base error probabilities attached to the reads
 that contain the reference sequence and the reads that contain the proposed
-sequence variant. Examples of the models used include the \textsc{SAMTools
-mpileup} variant caller~\cite{li11}, and the \textsc{GATK
+sequence variant. Examples of the models used include the {SAMTools
+mpileup} variant caller~\cite{li11}, and the {GATK
 UnifiedGenotyper}~\cite{depristo11}. However, the aligned reads frequently
 include errors that can lead to incorrect variant calls. To eliminate these
 errors, we rely on several preprocessing stages that are run between mapping and
 variant calling. In this paper, we will focus on three preprocessing stages:
 duplicate removal, local realignment, and base quality score recalibration.
 The variant calling pipeline has been targeted for hardware acceleration in the
-unpublished Edico \textsc{DRAGEN} processor~\cite{dragen}.
+unpublished Edico {DRAGEN} processor~\cite{dragen}.
 
 The duplicate removal stage identifies DNA fragments that were duplicated during
 library preparation. If we are starting from a biological sample that contains
@@ -531,8 +531,8 @@ computationally expensive. For a single human genome sequenced with
 an average of 60 reads covering each genomic position, it takes over 160 hours
 to align the reads, preprocess the reads, and call variants, with approximately
 110 of the hours spent preprocessing the reads. Finally, implementations of thes
-algorithms are available as part of the widely used \textsc{Genome Analysis
-Toolkit}~\cite{mckenna10, depristo11} and \textsc{ADAM}~\cite{massie13,
+algorithms are available as part of the widely used {Genome Analysis
+Toolkit}~\cite{mckenna10, depristo11} and {ADAM}~\cite{massie13,
 nothaft15} libraries.
 
 \subsection{Genomic Data Representations}
@@ -545,29 +545,29 @@ file formats descend from the development of the University of California,
 Santa Cruz's (UCSC) Genome Browser~\cite{kent02}, which was developed as part
 of the Human Genome Project~\cite{lander01}. Informal specificiations for
 the FASTQ~\cite{cock10} and FASTA formats date back to at least the 1990s,
-through their use in the \textsc{phred}~\cite{ewing98} and
-\textsc{FASTA}/\textsc{FASTP}~\cite{pearson90} tools.
+through their use in the {phred}~\cite{ewing98} and
+{FASTA}/{FASTP}~\cite{pearson90} tools.
 
 The file formats developed during the 1,000 Genomes project stored high
 throughput sequencing data in tab separated value~(TSV) files. These
-formats included the \textsc{Sequence Alignment/Mapping}~(SAM)
-format~\cite{li09}, which represents genomic reads, and the \textsc{Variant Call
+formats included the {Sequence Alignment/Mapping}~(SAM)
+format~\cite{li09}, which represents genomic reads, and the {Variant Call
   Format}~(VCF) format~\cite{danecek11}, which was defined to store variants
 and genotypes. The 1000 Genomes project also made significant use of the
-TSV \textsc{Browser Extensible Data}~(BED) format for storing genomic feature
+TSV {Browser Extensible Data}~(BED) format for storing genomic feature
 data. While the BED format had been introduced earlier, the introduction of
-\textsc{BEDTools}~\cite{quinlan10} during the 1,000 Genomes Project drove
+{BEDTools}~\cite{quinlan10} during the 1,000 Genomes Project drove
 the further use of the BED format. A plethora of textual file formats exist for
-storing genomic feature data, such as the \textsc{NarrowPeak} format, a
-specialized variant of BED that is used by the \textsc{MACS}~\cite{zhang08}
-tool; the \textsc{IntervalList} format, which is used extensively by the
-\textsc{GATK}~\cite{depristo11}; and the \textsc{General Feature Format}~(GFF),
+storing genomic feature data, such as the {NarrowPeak} format, a
+specialized variant of BED that is used by the {MACS}~\cite{zhang08}
+tool; the {IntervalList} format, which is used extensively by the
+{GATK}~\cite{depristo11}; and the {General Feature Format}~(GFF),
 which is used extensively in sequence annotation projects like the Sequence
 Ontology~\cite{eilbeck05}.
 
 Over time, some of these formats have been replaced by binary variants that
 provide improved compression and performance. SAM has been largely replaced
-in practice by the \textsc{Binary Alignment/Mapping}~(BAM) format, and the
+in practice by the {Binary Alignment/Mapping}~(BAM) format, and the
 binary VCF~(BCF) has entered use for storing variant data. In practice,
 textual file formats are still broadly used for storing variant and feature
 data, but they are often compressed using a block-compressed codec, such as
@@ -595,7 +595,7 @@ for summarizing tables of data across threads, as is used for combining
 Base Quality Score Recalibration~(BQSR) tables. While this API could
 conceptually be used in a distributed setting, the GATK has historically
 only run as a multithreaded application on a single node. Instead,
-multi-node execution was provided through the \textsc{Queue}~\cite{depristo11}
+multi-node execution was provided through the {Queue}~\cite{depristo11}
 workflow manager.
 
 While the UNIX-like design philosophy embraced by many bioinformatics tools
@@ -604,20 +604,20 @@ fundamentally at odds with the reality of complex genomics workflows, where many
 tools must be cascaded one-after-the-other. As a result, genomics has embraced
 workflow management as an alternate paradigm, where tools are composed into an
 abstract workflow, which is then executed by the management system. A popular
-early system was the \textsc{Galaxy}~\cite{goecks10} tool, which provided a
+early system was the {Galaxy}~\cite{goecks10} tool, which provided a
 graphical user interface for defining workflows and tool invocations. Recently,
 a set of novel workflow management systems have been developed, such as
-\textsc{Toil}~\cite{vivian17}, \textsc{NextFlow}~\cite{ditommaso17},
-\textsc{Rabix}~\cite{kaushik16}, \textsc{Cromwell}~\cite{cromwell},
-and \textsc{Cuneiform}~\cite{brandt15}. These systems exploit many-task
+{Toil}~\cite{vivian17}, {NextFlow}~\cite{ditommaso17},
+{Rabix}~\cite{kaushik16}, {Cromwell}~\cite{cromwell},
+and {Cuneiform}~\cite{brandt15}. These systems exploit many-task
 parallelism, and are well suited to analyses where a cohort of many samples
 should be analyzed independently by sample. These systems differ in their
 approach to expressing workflows. Several efforts to standardize workflow
 descriptions have emerged, with the most prominent community being around the
-\textsc{Common Workflow Language}~\cite{cwl}. \textsc{Toil} is implemented as
+{Common Workflow Language}~\cite{cwl}. {Toil} is implemented as
 a Python library that allows for workflows to be natively defined in Python,
-and can also run workflows written in CWL, or in \textsc{Cromwell}'s WDL
-dialect. \textsc{Rabix} executes CWL. \textsc{NextFlow} and \textsc{Cuneiform}
+and can also run workflows written in CWL, or in {Cromwell}'s WDL
+dialect. {Rabix} executes CWL. {NextFlow} and {Cuneiform}
 both take a clean slate approach to implementing a workflow language, using
 dataflow and functional approaches to describe workflows.
 
@@ -627,8 +627,8 @@ dataflow and functional approaches to describe workflows.
 The accuracy of insertion and deletion~(INDEL) variant discovery has been improved by the development
 of variant callers that couple local reassembly with haplotype-based statistical models to recover INDELs
 that were locally misaligned~\cite{albers11}. Now, haplotype-based models are used by several prominent variant callers such as the Genome
-Analysis Toolkit's~(GATK) \textsc{HaplotypeCaller}~\cite{depristo11}, \textsc{Scalpel}~\cite{narzisi14}, and
-\textsc{Platypus}~\cite{rimmer14}. Although haplotype-based methods have enabled more accurate INDEL
+Analysis Toolkit's~(GATK) {HaplotypeCaller}~\cite{depristo11}, {Scalpel}~\cite{narzisi14}, and
+{Platypus}~\cite{rimmer14}. Although haplotype-based methods have enabled more accurate INDEL
 and single nucleotide polymorphism~(SNP) calls~\cite{bao14}, this accuracy comes at the cost of
 end-to-end runtime~\cite{talwalkar14}. Several recent projects have been focused on improving
 reassembly cost either by limiting the percentage of the genome that is reassembled~\cite{bloniarz14} or
@@ -681,7 +681,7 @@ graphs without constructing a de Bruijn graph that contains both sequences.
 Current variant calling pipelines depend heavily on realignment based approaches for accurate
 genotyping~\cite{li14}. Although there are several approaches that do not make explicit use of reassembly,
 all realignment based variant callers use an algorithmic structure similar to the one described
-above. In non-assembly approaches like \textsc{FreeBayes}~\cite{garrison12}, stages
+above. In non-assembly approaches like {FreeBayes}~\cite{garrison12}, stages
 one and two are replaced with a single step where the variants observed in the reads aligned to a given
 haplotyping region are filtered for quality and integrated directly into the reference haplotype in that region.
 In both approaches, local alignment errors~(errors in alignment \emph{within} this region) are corrected
@@ -689,8 +689,8 @@ by using a statistical model to identify the most likely location that the read 
 the other reads seen in this area.
 
 Although the model used for choosing the best haplotype pair to finalize realignments varies between
-methods~(e.g., the GATK's \textsc{IndelRealigner} uses a simple log-odds model~\cite{depristo11}, while
-methods like \textsc{FreeBayes}~\cite{garrison12} and \textsc{Platypus}~\cite{rimmer14} make use of richer
+methods~(e.g., the GATK's {IndelRealigner} uses a simple log-odds model~\cite{depristo11}, while
+methods like {FreeBayes}~\cite{garrison12} and {Platypus}~\cite{rimmer14} make use of richer
 Bayesian models), these methods require an all-pairs alignment of reads to candidate
 haplotypes. This leads to the runtime complexity bound of $\mathcal{O}(h r l_r \min(l_h))$,
 as we must realign $r$ reads to $h$ haplotypes, where the cost of realigning
@@ -738,7 +738,7 @@ total number of sequence errors, this is not completely correlated with the numb
 sequencing errors, as sequencing errors are correlated with sequence context~\cite{depristo11}. Many
 current tools allow users to limit the total number of evaluated haplotypes, or apply strategies to minimize
 the number of haplotypes considered, such as filtering observed variants that are likely to be sequencing
-errors~\cite{garrison12}, restricting realignment to INDELs~(\textsc{IndelRealigner},~\cite{depristo11}), or
+errors~\cite{garrison12}, restricting realignment to INDELs~({IndelRealigner},~\cite{depristo11}), or
 by trimming paths from the assembly graph. Additionally, in a de Bruijn graph, errors in the
 first $k$ or last $k$ bases of a read will manifest as spurs and will not contribute paths through the graph. We provide~\eqref{eq:haplotypes} solely as a motivating
 approximation, and hope to study these characteristics in more detail in future work.
@@ -747,14 +747,14 @@ approximation, and hope to study these characteristics in more detail in future 
 \label{sec:distributed-computing}
 
 Dean and Ghemawat described the use of large clusters of commodity computers in their
-\textsc{MapReduce} system~\cite{dean04, dean08} in 2004. Since then, there has
+{MapReduce} system~\cite{dean04, dean08} in 2004. Since then, there has
 been a surge of activity focusing on the development of distributed data
-analysis tools. In the open source world, this has spawned the \textsc{Apache
+analysis tools. In the open source world, this has spawned the {Apache
   Hadoop} project~\cite{hadoop}, which started as a open source reimplementation
-of Google's \textsc{MapReduce}. \textsc{Hadoop} led to the development of
-scripting languages like \textsc{Pig}~\cite{olston08}, query systems like
-\textsc{Hive}~\cite{thusoo09}, and resource management frameworks like
-\textsc{YARN}~\cite{vavilapalli13} and \textsc{Mesos}~\cite{hindman11}. While
+of Google's {MapReduce}. {Hadoop} led to the development of
+scripting languages like {Pig}~\cite{olston08}, query systems like
+{Hive}~\cite{thusoo09}, and resource management frameworks like
+{YARN}~\cite{vavilapalli13} and {Mesos}~\cite{hindman11}. While
 traditional map-reduce platforms were well suited to extract, transform,
 load~(ETL) pipelines that made a single pass over a large dataset, they were
 a poor fit to ``advanced analytics'' applications---like machine learning, or
@@ -763,9 +763,9 @@ their reliance on the output of every computational phase being written to
 disk to ensure fault tolerance. A new set of distributed data processing tools
 were designed to address this problem by storing data in memory, and relying
 on different models for fault resilience. These systems include
-\textsc{Spark}~\cite{zaharia10, zaharia12} and \textsc{Flink}~\cite{carbone15}.
+{Spark}~\cite{zaharia10, zaharia12} and {Flink}~\cite{carbone15}.
 Additionally, a set of highly efficient query engines came out, such as
-\textsc{Cloudera Impala}~\cite{kornacker15} and \textsc{Spark
+{Cloudera Impala}~\cite{kornacker15} and {Spark
   SQL}~\cite{armbrust15}.
 
 \subsection{Distributed Genomic Analysis Tools}
@@ -781,66 +781,66 @@ systems have entered broad usage.
 
 There have been three waves of development focused on integrating single-node
 tools with distributed computing platforms. The first wave of development used
-\textsc{Apache Hadoop Streaming} as a simple mechanism for parallelising tools
+{Apache Hadoop Streaming} as a simple mechanism for parallelising tools
 that had well defined chunking patterns. Examples of this approach include the
-\textsc{CloudBurst} aligner~\cite{schatz09}, which parallelized the
-\textsc{RMAP} aligner~\cite{smith08}, and
-\textsc{CrossBow}~\cite{langmead09crossbow}, which integrates the
-\textsc{Bowtie}~\cite{langmead09bowtie} aligner with the
-\textsc{SoapSNP}~\cite{li09snp} variant caller.
+{CloudBurst} aligner~\cite{schatz09}, which parallelized the
+{RMAP} aligner~\cite{smith08}, and
+{CrossBow}~\cite{langmead09crossbow}, which integrates the
+{Bowtie}~\cite{langmead09bowtie} aligner with the
+{SoapSNP}~\cite{li09snp} variant caller.
 
 The second wave of approaches
-built more fully featured applications on top of the \textsc{Apache Hadoop}
+built more fully featured applications on top of the {Apache Hadoop}
 framework that did not just rely on the streaming APIs. These applications
-include the \textsc{SEAL}~\cite{pireddu11} aligner, which extracted the
-\textsc{BWA}~\cite{li09} aligner into a Python library which was executed
-on the \textsc{PyDoop}~\cite{leo10} bindings for \textsc{Hadoop};
-\textsc{BigBWA}~\cite{abuin15}, which parallelizes \textsc{BWA}~\cite{li09}
-using the Java Native Interface~(JNI) on top of \textsc{Apache Hadoop}; and
-\textsc{Halvade}~\cite{decap15}, which parallelized the complex dataflow in
-the \textsc{GATK}~\cite{depristo11} using \textsc{Apache Hadoop}.
+include the {SEAL}~\cite{pireddu11} aligner, which extracted the
+{BWA}~\cite{li09} aligner into a Python library which was executed
+on the {PyDoop}~\cite{leo10} bindings for {Hadoop};
+{BigBWA}~\cite{abuin15}, which parallelizes {BWA}~\cite{li09}
+using the Java Native Interface~(JNI) on top of {Apache Hadoop}; and
+{Halvade}~\cite{decap15}, which parallelized the complex dataflow in
+the {GATK}~\cite{depristo11} using {Apache Hadoop}.
 
 The third
-wave of wrappers has been built around \textsc{Apache Spark} and includes
-\textsc{SparkBWA}~\cite{abuin16}, a successor to \textsc{BigBWA}~\cite{abuin15},
-\textsc{CloudScale-BWA MEM}~\cite{chen16}, which parallelizes
-\textsc{BWA} through the JNI, with the ability to support \textsc{FPGA}
-acceleration; and \textsc{SparkGA}~\cite{mushtaq17}, which uses a similar
-approach as \textsc{Halvade} to parallelize the \textsc{GATK}, but is
-implemented on \textsc{Spark}.
+wave of wrappers has been built around {Apache Spark} and includes
+{SparkBWA}~\cite{abuin16}, a successor to {BigBWA}~\cite{abuin15},
+{CloudScale-BWA MEM}~\cite{chen16}, which parallelizes
+{BWA} through the JNI, with the ability to support {FPGA}
+acceleration; and {SparkGA}~\cite{mushtaq17}, which uses a similar
+approach as {Halvade} to parallelize the {GATK}, but is
+implemented on {Spark}.
 
 Several tools have implemented genomic analyses directly on top of distributed
-analysis tools from the \textsc{Apache Hadoop} and \textsc{Spark} ecosystem.
-Many of these tools build on top of the \textsc{Hadoop-BAM}
-library~\cite{niemenmaa12}, which provides \textsc{Hadoop}-compatible parallel
+analysis tools from the {Apache Hadoop} and {Spark} ecosystem.
+Many of these tools build on top of the {Hadoop-BAM}
+library~\cite{niemenmaa12}, which provides {Hadoop}-compatible parallel
 I/O libraries. The first generation of tools built query models for accessing
-genomic data through the \textsc{Pig}~\cite{olston08} scripting language.
-Support for \textsc{Pig} was implemented in two separate tools: \textsc{BioPig}~\cite{nordberg13}
-and \textsc{SeqPig}~\cite{schumacher14}. Additionally, the \textsc{OpenCB}
-project has built \textsc{Hadoop}-based tools for manipulating genomic data via
-the \textsc{hpg-bigdata} project~\cite{opencb}. Recent work has moved on to
-\textsc{Apache Spark}. Beyond \textsc{ADAM} and the \textsc{Big Data Genomics}
-ecosystem, \textsc{Spark} has been used in the
-\textsc{SparkSeq}~\cite{wiewiorka14} and \textsc{VariantSpark}~\cite{obrien15}
-tools. \textsc{SparkSeq} is geared towards RNA-seq analysis, and has been
-paired with \textsc{SparkBwa}~\cite{abuin16} to build the
-\textsc{Falco}~\cite{yang16} single-cell RNA-seq pipeline which runs end-to-end
-on \textsc{Apache Spark}. \textsc{VariantSpark} includes novel methods for
-statistically analyzing genotype data on \textsc{Spark}, including an efficient
+genomic data through the {Pig}~\cite{olston08} scripting language.
+Support for {Pig} was implemented in two separate tools: {BioPig}~\cite{nordberg13}
+and {SeqPig}~\cite{schumacher14}. Additionally, the {OpenCB}
+project has built {Hadoop}-based tools for manipulating genomic data via
+the {hpg-bigdata} project~\cite{opencb}. Recent work has moved on to
+{Apache Spark}. Beyond {ADAM} and the {Big Data Genomics}
+ecosystem, {Spark} has been used in the
+{SparkSeq}~\cite{wiewiorka14} and {VariantSpark}~\cite{obrien15}
+tools. {SparkSeq} is geared towards RNA-seq analysis, and has been
+paired with {SparkBwa}~\cite{abuin16} to build the
+{Falco}~\cite{yang16} single-cell RNA-seq pipeline which runs end-to-end
+on {Apache Spark}. {VariantSpark} includes novel methods for
+statistically analyzing genotype data on {Spark}, including an efficient
 implementation of random forests for wide-but-flat genomic data. There is
-increasing adoption of \textsc{Apache Spark} in genomics, with two large
+increasing adoption of {Apache Spark} in genomics, with two large
 unpublished projects coming out of the Broad Institute. The first is the fourth
-edition of the \textsc{GATK}~\cite{gatk4}, which is reimplemented on
-\textsc{Spark}. The second project is \textsc{Hail}~\cite{hail}, which is a
-reimplementation of the \textsc{PLINK} population genomics~\cite{purcell07}
-toolkit on \textsc{Spark}.
+edition of the {GATK}~\cite{gatk4}, which is reimplemented on
+{Spark}. The second project is {Hail}~\cite{hail}, which is a
+reimplementation of the {PLINK} population genomics~\cite{purcell07}
+toolkit on {Spark}.
 
 We do not extensively discuss non-resequencing pipelines for de novo genome
 assembly in this dissertation, but genome assembly has different access patterns
 that are more amenable to HPC-styled distributed implementations. Specifically,
 since de novo assembly operates on highly connected graphs, efficiently mapping
 de novo assembly to a graph-parallel framework like
-\textsc{GraphX}~\cite{gonzalez14} is difficult. The \textsc{ABySS}
+{GraphX}~\cite{gonzalez14} is difficult. The {ABySS}
 assembler~\cite{simpson09} uses the Message Passing Interface~(MPI) to
 parallelize genome assembly across an HPC cluster. A new and exciting avenue
 of work is using HPC systems that support a parallel global address space~(PGAS)
@@ -853,13 +853,13 @@ parallelism~\cite{georganas14, georganas15hipmer, georganas15meraligner,
 \chapter{Design Principles for Scalable Genomics}
 \label{chap:design}
 
-When we started designing \textsc{ADAM} in 2013, \textsc{Apache Spark} was still
+When we started designing {ADAM} in 2013, {Apache Spark} was still
 in early development, and few organizations were actively working with massive
 genomics data sets. At the time, we believed that the major pain points in
 working with large scale genomics datasets centered around low-level APIs that
 made it difficult to represent complex genomic data manipulations and the use of
 file formats that were difficult to access in parallel and that had imprecise
-specifications. This led to the initial goals for the \textsc{ADAM} project:
+specifications. This led to the initial goals for the {ADAM} project:
 
 \begin{itemize}
 \item Provide clean APIs for writing large scale genomic data analyses.
@@ -872,10 +872,10 @@ specifications. This led to the initial goals for the \textsc{ADAM} project:
 To achieve these goals, we designed a decoupled, stack-oriented architecture
 centered around schemas that provided a logical view over the genomic
 data being manipulated. This architecture was implemented on top of
-\textsc{Apache Spark}'s RDD APIs, and provided the user with a distributed
-collection of genomic data which were encoded in \textsc{Apache
+{Apache Spark}'s RDD APIs, and provided the user with a distributed
+collection of genomic data which were encoded in {Apache
   Avro}~\cite{avro} and allowed for queries to be described at a high level
-through \textsc{Spark}'s RDD APIs, which would execute the queries rapidly by
+through {Spark}'s RDD APIs, which would execute the queries rapidly by
 running parallel scans over the data. Over time, our goals grew in scope to
 include:
 
@@ -886,23 +886,23 @@ include:
   minimal modifications.
 \end{itemize}
 
-Because of \textsc{ADAM}'s decoupled architecture, we were able to easily
-enhance \textsc{ADAM} to support these query patterns. By refactoring how
-\textsc{ADAM} tracked data partitioning, the coordinate-space
-joins~(\S\ref{sec:query-patterns}) and the \textsc{pipe} API for supporting
-legacy genomics tools~(\S\ref{sec:query-patterns}) were added to \textsc{ADAM}'s
-core APIs. The \textsc{Mango} project enhanced \textsc{ADAM}'s ability to run
+Because of {ADAM}'s decoupled architecture, we were able to easily
+enhance {ADAM} to support these query patterns. By refactoring how
+{ADAM} tracked data partitioning, the coordinate-space
+joins~(\S\ref{sec:query-patterns}) and the {pipe} API for supporting
+legacy genomics tools~(\S\ref{sec:query-patterns}) were added to {ADAM}'s
+core APIs. The {Mango} project enhanced {ADAM}'s ability to run
 interactive queries against genomic data by improving support for pushing down
 ranged predicates to disk~\cite{tu16} and by adding a spatial- and
 temporal-locality-aware in-memory caching layer~\cite{morrow17}. These modifications
-replaced \textsc{ADAM}'s default query and data access layers with layer
+replaced {ADAM}'s default query and data access layers with layer
 implementations better suited to the query patterns at hand.
 
 In this section, we will revisit the pain points we asserted, and describe
 how our understanding of these pain points changed over time. From these pain
 points, we then reify a set of functional requirements for a distributed data
 analysis platform for manipulating genomic data. We then introduce
-\textsc{ADAM}'s stack architecture, and explain how it addresses these needs.
+{ADAM}'s stack architecture, and explain how it addresses these needs.
 
 \section{Pain Points with Single Node Genomics Tools}
 \label{sec:pain-points}
@@ -938,8 +938,8 @@ These two issues translate into two obvious consequences. First, a low level API
 increases the complexity of implementing a query, and thus necessitates increased
 developer effort. A low level API introduces more locations where queries can be
 implemented incorrectly. We identified two concrete examples when
-working on the read preprocessing pipeline in \textsc{ADAM}. Specifically, we
-identified that the \textsc{Picard} duplicate marker and the \textsc{GATK}
+working on the read preprocessing pipeline in {ADAM}. Specifically, we
+identified that the {Picard} duplicate marker and the {GATK}
 base quality recalibrator incorrectly process reads that come from sequenced
 fragments whose insert size violates undocumented invariants that are internal
 to each tool.
@@ -972,9 +972,9 @@ optimizations:
 In the absence of the ability to optimize the variant calling query plan
 end-to-end, most genomics tools achieve performance benefits by enforcing
 sort order or grouping invariants. For example, the
-\textsc{Picard}~\cite{picard} and \textsc{Sambamba}~\cite{tarasov15}
+{Picard}~\cite{picard} and {Sambamba}~\cite{tarasov15}
 duplicate markers require read inputs to be coordinate sorted, while the
-\textsc{SAMBLASTER}~\cite{faust14} duplicate marker requires the read data to
+{SAMBLASTER}~\cite{faust14} duplicate marker requires the read data to
 be queryname grouped. These invariants are necessary for efficiency, but come at
 the cost of increased complexity when integrating multiple tools together into
 a monolithic pipeline.
@@ -1014,24 +1014,24 @@ manner. This limitation is caused by two primary factors:
 \end{enumerate}
 
 To demonstrate the source of costs for performing parallel reads, let us look at
-\textsc{Hadoop-BAM}~\cite{niemenmaa12}, a popular library used for loading
-genomics data into \textsc{Apache Hadoop} or \textsc{Spark}. To split a BAM file,
-\textsc{Hadoop-BAM} implements \textsc{Hadoop}'s InputFormat class. When a file
-is opened for read, \textsc{Hadoop} provides \textsc{Hadoop-BAM} with approximate
+{Hadoop-BAM}~\cite{niemenmaa12}, a popular library used for loading
+genomics data into {Apache Hadoop} or {Spark}. To split a BAM file,
+{Hadoop-BAM} implements {Hadoop}'s InputFormat class. When a file
+is opened for read, {Hadoop} provides {Hadoop-BAM} with approximate
 ranges that the file should be split into. However, a BAM file cannot be
 arbitrarily split; we must find the first valid BAM record after the start of
-this file range. To do this, \textsc{Hadoop-BAM} must scan through the file,
+this file range. To do this, {Hadoop-BAM} must scan through the file,
 looking for a sequence of bytes that indicates the start of a record. Currently,
 this is implemented sequentially per split in a file. For a typical block size
 of 128MB, a BAM from a high coverage whole genome sequencing run will have
 500--1500 splits. The cost of computing the splits can be very high, especially
 if the data is stored in a remote file store, as is common on cloud computing
-vendors. To eliminate this issue, \textsc{Hadoop-BAM} supports a proprietary
+vendors. To eliminate this issue, {Hadoop-BAM} supports a proprietary
 index that stores valid split start positions. Recently, support was added that
 uses the linear BAM index to validate split start positions. An additional issue
-is that \textsc{Hadoop-BAM} does not always pick valid positions to begin
-reading. To address this issue, the \textsc{Spark-BAM}~\cite{sparkbam} project
-has begun rewriting parts of \textsc{Hadoop-BAM} to add more stringent record
+is that {Hadoop-BAM} does not always pick valid positions to begin
+reading. To address this issue, the {Spark-BAM}~\cite{sparkbam} project
+has begun rewriting parts of {Hadoop-BAM} to add more stringent record
 validation tests. These more stringent tests reduce the number of false positive
 record start positions to 0.
 
@@ -1051,8 +1051,8 @@ loading data in through a single thread, which delegates the data to multiple
 decompression threads. The data are then decompressed, processed, and compressed
 again, at which point the writes to a disk or to a stream are serialized.
 Serialized I/O creates contention at both ends of the tool. The impact of this can easily be
-seen in a highly efficient tool, like the \textsc{Salmon} RNA-seq quantification
-engine~\cite{patro17}. Due to I/O contention, \textsc{Salmon} is unable to scale
+seen in a highly efficient tool, like the {Salmon} RNA-seq quantification
+engine~\cite{patro17}. Due to I/O contention, {Salmon} is unable to scale
 beyond 32 cores.
 
 \section{Goals for a Scalable Genomics Library}
@@ -1060,19 +1060,19 @@ beyond 32 cores.
 
 From the pain points we described above, we can assemble a set of goals for a
 clean slate genomic analysis platform. In this section, we describe both the
-original goals that we adopted when building \textsc{ADAM}, as well as the goals
-that evolved for the \textsc{ADAM} ecosystem over time. From our original set
+original goals that we adopted when building {ADAM}, as well as the goals
+that evolved for the {ADAM} ecosystem over time. From our original set
 of goals, we designed the stack architecture that we introduce in the next
 section~(\S\ref{sec:stack-architecture}). As we will see, the stack architecture
 made it easier for us accomodate the goals that evolved during the course of
 the project.
 
-\subsection{Original Goals for \textsc{ADAM}}
+\subsection{Original Goals for {ADAM}}
 \label{sec:original-goals}
 
-In the original \textsc{ADAM} technical report~\cite{massie13}, we introduced an
+In the original {ADAM} technical report~\cite{massie13}, we introduced an
 architecture that presented fairly minimalistic wrappers around the
-\textsc{Apache Spark} APIs, but that was built out of technical components that
+{Apache Spark} APIs, but that was built out of technical components that
 were optimized for batch processing over large genomic datasets. This original
 architecture addressed the goals described in this section, and paved the way
 for supporting the goals introduced in the next section.
@@ -1088,17 +1088,17 @@ data. In doing this, we had several specific goals:
   genomic data.
 \item Make our APIs usable across multiple languages.
 \item Make it possible to easily query data using other parallel analysis tools
-  than \textsc{Apache Spark}.
+  than {Apache Spark}.
 \end{enumerate}
 
 Because of the stack smashing described in~\S\ref{sec:api-levels}, genomics
-libraries like \textsc{htslib}~(the base for \textsc{samtools}~\cite{li09}) and
-\textsc{htsjdk}~(the base for \textsc{Picard}~\cite{picard} and the
-\textsc{GATK}~\cite{mckenna10}) provide APIs that iterate directly across a
-file. As a comparison, \textsc{Apache Spark} is built on top of the RDD API,
+libraries like {htslib}~(the base for {samtools}~\cite{li09}) and
+{htsjdk}~(the base for {Picard}~\cite{picard} and the
+{GATK}~\cite{mckenna10}) provide APIs that iterate directly across a
+file. As a comparison, {Apache Spark} is built on top of the RDD API,
 which describes a collection of records which is parallelized across nodes in a
-cluster. Because the abstractions provided by the \textsc{htslib} and
-\textsc{htsjdk} systems were guided by the file formats themselves, idioms from
+cluster. Because the abstractions provided by the {htslib} and
+{htsjdk} systems were guided by the file formats themselves, idioms from
 data traversal~(iterating across a collection) and I/O~(closing a stream) became
 intermingled. Additionally, the behavior of a row in a collection was influenced
 by the I/O process. This design choice is because all extant genomics file formats are row
@@ -1121,19 +1121,19 @@ we would be able to achieve high query performance by running full scans over
 the dataset in parallel. Additionally, by providing APIs for filtering by row
 when reading from the file system, or for selecting the specific columns that
 we were interested in parsing, we could minimize the amount of data read from
-disk. To further accelerate these queries, we used the \textsc{Apache
+disk. To further accelerate these queries, we used the {Apache
   Parquet}~\cite{parquet} columnar storage system, which enabled cheap column
 projections and predicates that could be pushed down into the storage system.
-Since \textsc{Parquet} was gaining broader adoption across the analytics
-ecosystem, storing data in \textsc{Parquet} meant that it could be accessed
-and manipulated with tools such as \textsc{Apache Hive}~\cite{thusoo09}
-and \textsc{Cloudera Impala}~\cite{kornacker15}.
+Since {Parquet} was gaining broader adoption across the analytics
+ecosystem, storing data in {Parquet} meant that it could be accessed
+and manipulated with tools such as {Apache Hive}~\cite{thusoo09}
+and {Cloudera Impala}~\cite{kornacker15}.
 
 \subsection{Goals That Evolved Over Time}
 \label{sec:evolved-goals}
 
-Over the course of building out the \textsc{ADAM} project and the surrounding
-\textsc{Big Data Genomics} ecosystem, we added several design goals. These
+Over the course of building out the {ADAM} project and the surrounding
+{Big Data Genomics} ecosystem, we added several design goals. These
 included:
 
 \begin{enumerate}
@@ -1144,44 +1144,44 @@ included:
 \end{enumerate}
 
 There were several reasons that we added these design goals. We had
-originally intended \textsc{ADAM} to mainly support batch analyses, and deferred
-support for interactive analysis to query engines like \textsc{Impala}. However,
+originally intended {ADAM} to mainly support batch analyses, and deferred
+support for interactive analysis to query engines like {Impala}. However,
 we felt that there was a good opportunity to reshape interactive genomic data
-analysis by enabling exploratory data analysis using \textsc{ADAM}'s APIs.
-Thus, we needed a way to lower the latency of typical \textsc{Spark} queries.
-The \textsc{Mango} project~\cite{tu16, morrow17} improved latency by introducing
+analysis by enabling exploratory data analysis using {ADAM}'s APIs.
+Thus, we needed a way to lower the latency of typical {Spark} queries.
+The {Mango} project~\cite{tu16, morrow17} improved latency by introducing
 better support for using primary indices on genomic position, as well as an
 efficient in-memory caching layer. These implementations replaced the default
 implementations of two levels of our stack.
 
 As noted in the previous paragraph, interactive queries were one reason we wanted
 to take advantage of data being sorted at query time. Additionally, as we built
-out \textsc{ADAM}'s read preprocessing transformations~(see
+out {ADAM}'s read preprocessing transformations~(see
 Chapter~\ref{chap:adam}), we realized that many of these queries depended on
 joining genomic data against other overlapping data~(such as joining aligned
 reads against variants during BQSR's masking phase), or aggregating at a single
 genomic locus~(as in duplicate marking). In our SIGMOD article~\cite{nothaft15},
-we introduced the region join to \textsc{ADAM}. This join provided functionality
-similar to \textsc{BEDTools}~\cite{quinlan10}, and could be implemented using
+we introduced the region join to {ADAM}. This join provided functionality
+similar to {BEDTools}~\cite{quinlan10}, and could be implemented using
 both a broadcast and a sort-merge strategy. While our goal was to eliminate the
 need for sort-order invariants, we saw that there was a good opportunity to
 accelerate these join and aggregate patterns by eliminating shuffles whenever
 a dataset was already sorted. We describe the extensions we made to
-\textsc{ADAM} to support these optimizations in~\S\ref{sec:query-patterns}.
+{ADAM} to support these optimizations in~\S\ref{sec:query-patterns}.
 
-Finally, while we feel that \textsc{ADAM}'s APIs provide a significant
+Finally, while we feel that {ADAM}'s APIs provide a significant
 improvement over traditional genomic query models, we realized over time that it
 was an unrealistic goal to supplant these APIs due to their widespread usage.
-Additionally, the experiences of our coworkers during the \textsc{SNAP}
-project~\cite{zaharia11} led us to realize that \textsc{Spark}'s APIs were not
+Additionally, the experiences of our coworkers during the {SNAP}
+project~\cite{zaharia11} led us to realize that {Spark}'s APIs were not
 a good fit to all genomic data analysis problems. Specifically, the large
 indices used during short read alignment are difficult to manage efficiently in
 the Java Virtual Machine's~(JVM) managed memory model. Additionally, the prior
-work which used \textsc{Hadoop} or \textsc{Spark} to manually wrap and
+work which used {Hadoop} or {Spark} to manually wrap and
 parallelize legacy tools~\cite{schatz09, langmead09crossbow, abuin15, abuin16,
   chen15, chen16} led us to believe that there was interest in having a general
 API for parallelizing genomics tools. This led to the introduction of ADAM's
-\textsc{pipe} API, and the \textsc{Cannoli} tool, which is described in
+{pipe} API, and the {Cannoli} tool, which is described in
 Chapter~\ref{chap:cannoli}.
 
 \section{A Stack Architecture for Scientific Data Processing}
@@ -1274,43 +1274,43 @@ and makes the system less general.
 
 Deep stacks like the OSI stack~\cite{zimmermann80} are generally simplified for practical use. Conceptually,
 the stack we propose is no exception. In practice, we combine layers one and two, and layers five and six.
-There are several reasons for these mergers. First, in \textsc{Hadoop}-based systems, the system does not have practical visibility
+There are several reasons for these mergers. First, in {Hadoop}-based systems, the system does not have practical visibility
 below layer two, thus there is no reason to split layers one and two except as a philosophical exercise.
 Layers five and six are commingled because some of the enriched presentation objects are used to
 implement functionality in the evidence access layer. This normally happens when a key is needed, such as
 when repartitioning the dataset, or when reducing or grouping values.
 
-\chapter{The \textsc{ADAM} Architecture}
+\chapter{The {ADAM} Architecture}
 \label{chap:architecture}
 
-\textsc{ADAM}'s architecture was introduced as a response to the challenges
+{ADAM}'s architecture was introduced as a response to the challenges
 processing the growing volume of genomic sequencing data in a reasonable
 timeframe~\cite{schadt10, stein10}. While the per-run latency of current genomic
-pipelines such as the \textsc{GATK} could be improved by manually partitioning
+pipelines such as the {GATK} could be improved by manually partitioning
 the input dataset and distributing work, native support for distributed
 computing was not provided. As a stopgap solution, projects like
-\textsc{Cloudburst}~\cite{schatz09} and \textsc{Crossbow}~\cite{langmead09crossbow}
-have ported individual analytics tools to run on top of \textsc{Hadoop}. While
+{Cloudburst}~\cite{schatz09} and {Crossbow}~\cite{langmead09crossbow}
+have ported individual analytics tools to run on top of {Hadoop}. While
 this approach has served well for proofs of concept, this approach provides poor
 abstractions for application developers. These poor abstractions make it
 difficult for bioinformatics developers to create novel distributed genomic
 analyses, and does little to attack sources of inefficiency or incorrectness in
 distributed genomics pipelines.
 
-\textsc{ADAM}'s architecture reconsiders how we build software for processing
+{ADAM}'s architecture reconsiders how we build software for processing
 genomic data by eliminating the monolithic architectures that are driven by the
 underlying flat file formats used in genomics. These architectures impose
 significant restrictions, including:
 
 \begin{itemize}
 \item These implementations are locked to a single node processing model. Even
-  the \textsc{GATK}'s ``map-reduce'' styled \textsc{walker} API~\cite{mckenna10}
+  the {GATK}'s ``map-reduce'' styled {walker} API~\cite{mckenna10}
   is limited to natively support processing on a single node. While these jobs
   can be manually partitioned and run in a distributed setting, manual
   partitioning can lead to imbalance in work distribution and makes it difficult
   to run algorithms that require aggregating data across all partitions, and
   lacks the fault tolerance provided by modern distributed systems such as
-  \textsc{Apache Hadoop} or \textsc{Spark}~\cite{zaharia12}.
+  {Apache Hadoop} or {Spark}~\cite{zaharia12}.
 \item Most of these implementations \emph{assume} invariants about the sorted
   order of records on disk. This ``stack smashing'' (specifically, the layout
   of data is used to ``accelerate'' a processing stage) can lead to bugs when
@@ -1324,12 +1324,12 @@ significant restrictions, including:
   both a better programming environment and enable various query optimizations.
 \end{itemize}
 
-At the core of \textsc{ADAM}, users use the \textsc{ADAMContext} to load data as
-\textsc{GenomicRDD}s, which they can then manipulate. Figure~\ref{fig:grdd}
-depicts the \textsc{GenomicRDD} class hierarchy. In this class hierarchy, we
+At the core of {ADAM}, users use the {ADAMContext} to load data as
+{GenomicRDD}s, which they can then manipulate. Figure~\ref{fig:grdd}
+depicts the {GenomicRDD} class hierarchy. In this class hierarchy, we
 provide several classes that contain functionality that is applicable to all
 genomic datatypes, such as the coordinate-space primitives described
-in~\S\ref{sec:query-patterns} and the \textsc{pipe} primitive described
+in~\S\ref{sec:query-patterns} and the {pipe} primitive described
 in~\S\ref{sec:pipe-api}, and the genomic metadata management described
 in~\S\ref{sec:metadata}.
 
@@ -1337,46 +1337,46 @@ in~\S\ref{sec:metadata}.
 \begin{center}
 \includegraphics[width=\linewidth]{graphs/grdd.pdf}
 \end{center}
-\caption{The \textsc{GenomicRDD} class hierarchy. Ovals are traits, trapezoids
+\caption{The {GenomicRDD} class hierarchy. Ovals are traits, trapezoids
   are abstract classes, rectangles are classes, and a bold border means that the
-  abstract class is sealed. In \textsc{Scala}, sealing a class/trait restricts
+  abstract class is sealed. In {Scala}, sealing a class/trait restricts
   which classes can extend this class/mix-in this trait. The shaded classes are
-  the types returned from the \textsc{ADAMContext} load methods and from the
-  \textsc{GenomicRDD} methods.}
+  the types returned from the {ADAMContext} load methods and from the
+  {GenomicRDD} methods.}
 \label{fig:grdd}
 \end{figure}
 
-While the \textsc{ADAMContext} API has existed since the beginning of the
-\textsc{ADAM} project, the \textsc{GenomicRDD} API is a fairly recent
+While the {ADAMContext} API has existed since the beginning of the
+{ADAM} project, the {GenomicRDD} API is a fairly recent
 introduction, having been added in 2016, three years into the project. Despite
-its recent addition, the \textsc{GenomicRDD} API has been critical to achieving
-\textsc{ADAM}'s vision:
+its recent addition, the {GenomicRDD} API has been critical to achieving
+{ADAM}'s vision:
 
 \begin{itemize}
-\item The \textsc{GenomicRDD} wraps the \textsc{Apache Spark}
-  RDD~\cite{zaharia12} and \textsc{Spark SQL} DataFrame~\cite{armbrust15} APIs
+\item The {GenomicRDD} wraps the {Apache Spark}
+  RDD~\cite{zaharia12} and {Spark SQL} DataFrame~\cite{armbrust15} APIs
   with genomics-specific and genomic-datatype specific functionality. Access to both APIs from a single class
   enables the use of both generic~(RDD/DataFrame) and specialized APIs~(the
-  region join and \textsc{pipe} APIs) to process genomic data in a natively
+  region join and {pipe} APIs) to process genomic data in a natively
   distributed manner.
-\item The rich \textsc{GenomicRDD} type hierarchy enables methodical management
+\item The rich {GenomicRDD} type hierarchy enables methodical management
   of genomics metadata. We support metadata management at a read group, sample,
   and computational lineage level.
-\item By building upon APIs from \textsc{Spark SQL}, the \textsc{GenomicRDD} API
-  can be exposed in the \textsc{Python} and R languages, which enables the use
-  of \textsc{ADAM} outside of the JVM.
+\item By building upon APIs from {Spark SQL}, the {GenomicRDD} API
+  can be exposed in the {Python} and R languages, which enables the use
+  of {ADAM} outside of the JVM.
 \end{itemize}
 
 In the rest of this chapter, we explain the design decisions behind the
-\textsc{ADAM} architecture, with an eye towards how the architecture has
+{ADAM} architecture, with an eye towards how the architecture has
 evolved over the four years of the project. We discuss the specific tradeoffs
 we needed to make in order to realize the stack architecture we had introduced,
-before diving into the schema design that we used to decouple \textsc{ADAM} from
+before diving into the schema design that we used to decouple {ADAM} from
 the genomics file formats. We review the genomics-specific query patterns
-supported in \textsc{ADAM}, and explain how we have broadened \textsc{ADAM}'s
+supported in {ADAM}, and explain how we have broadened {ADAM}'s
 APIs to support multiple languages.
 
-\section{Realizing A Decoupled Stack Architecture In \textsc{ADAM}}
+\section{Realizing A Decoupled Stack Architecture In {ADAM}}
 \label{sec:realizing-stack-architecture}
 
 While a stack-based architecture provides many of the benefits we asserted in
@@ -1388,44 +1388,44 @@ programmers who are implementing their applications on top of the APIs cannot
 meaningfully reason about the performance and semantics of the code that they
 are running.
 
-In \textsc{ADAM}, we ultimately extend two important APIs. The
-\textsc{ADAMContext} is the entrypoint to loading all data, while the
-\textsc{GenomicRDD} API provides an abstract wrapper for genomic datasets. We
-specialize the \textsc{GenomicRDD} API across the various genomic datatypes.
-Once data has been loaded using the \textsc{ADAMContext}, users largely interact
-with the data by transforming the data enclosed in a \textsc{GenomicRDD}, which
+In {ADAM}, we ultimately extend two important APIs. The
+{ADAMContext} is the entrypoint to loading all data, while the
+{GenomicRDD} API provides an abstract wrapper for genomic datasets. We
+specialize the {GenomicRDD} API across the various genomic datatypes.
+Once data has been loaded using the {ADAMContext}, users largely interact
+with the data by transforming the data enclosed in a {GenomicRDD}, which
 is described by our schemas~(see~\S\ref{sec:schema-design}). These core APIs
 contribute to realizing the stack vision in the following ways:
 
 \begin{itemize}
 \item The physical storage and data distribution layers~(1 and 2) are largely
-  deferred to \textsc{Apache Spark} and \textsc{Hadoop}. \textsc{ADAM} interacts
+  deferred to {Apache Spark} and {Hadoop}. {ADAM} interacts
   with these layers through their APIs.
 \item The materialized data and schema layers~(3 and 4) couple together in a
   critical way. The schemas provide a logical description of a given genomic
   datatype, and the materialized data layer provides a set of views between the
-  \textsc{ADAM} schemas and legacy genomics file formats. This view is applied
-  by the \textsc{ADAMContext} when loading data, and by the \textsc{GenomicRDD}
+  {ADAM} schemas and legacy genomics file formats. This view is applied
+  by the {ADAMContext} when loading data, and by the {GenomicRDD}
   when saving data. This decomposition is critically important: a common early
-  misunderstanding of \textsc{ADAM} was that our schemas were introducing a new
+  misunderstanding of {ADAM} was that our schemas were introducing a new
   file format for genomic data. Rather, by supporting views between common
   formats to our schemas, we eliminate the need to know which file formats the
   data was loaded from.
 \item The evidence access layer~(5) is largely implemented in the
-  \textsc{GenomicRDD}, but can also be specialized in downstream applications
-  for their specific application/query pattern. At a basic level, \textsc{ADAM}
-  uses \textsc{Apache Spark}~\cite{zaharia12} and \textsc{Spark
+  {GenomicRDD}, but can also be specialized in downstream applications
+  for their specific application/query pattern. At a basic level, {ADAM}
+  uses {Apache Spark}~\cite{zaharia12} and {Spark
     SQL}~\cite{armbrust15} for evidence access. Without any optimizations,
   queries are implemented as scans over the full dataset. However, we apply
   several optimizations for coordinate-based queries, as described
-  in~\S\ref{sec:query-patterns}. Additionally, since \textsc{ADAM} builds off of
-  \textsc{Spark}'s RDD API, any tools that optimize at the RDD level can be used
+  in~\S\ref{sec:query-patterns}. Additionally, since {ADAM} builds off of
+  {Spark}'s RDD API, any tools that optimize at the RDD level can be used
   to enrich the evidence access layer~\cite{tu16, morrow17}.
 \item The presentation layer~(6) provides datatype~(e.g., read/feature/variant)
-  specific methods on top of the \textsc{GenomicRDD} API. This layer includes
+  specific methods on top of the {GenomicRDD} API. This layer includes
   many of the operations introduced in Chapter~\ref{chap:adam}.
 \item The application layer~(7) is where the user builds their code, and this is
-  built by using the \textsc{ADAMContext} to load in a \textsc{GenomicRDD},
+  built by using the {ADAMContext} to load in a {GenomicRDD},
   which is then transformed and saved.
 \end{itemize}
 
@@ -1433,36 +1433,36 @@ While many of these layers have been unchanged since we introduced our stack
 model in our original technical report~\cite{massie13} and our SIGMOD
 manuscript~\cite{nothaft15}, the evidence access and presentation layers~(5 and
 6) have changed. The introduction of the
-\textsc{GenomicRDD} API was symbolic of larger changes, which included:
+{GenomicRDD} API was symbolic of larger changes, which included:
 
 \begin{itemize}
 \item The evidence access layer originally assumed that other query systems like
-  \textsc{Cloudera Impala}~\cite{kornacker15} would be able to interoperate with
-  the \textsc{ADAM} schemas to load data. While this is still true, we have
+  {Cloudera Impala}~\cite{kornacker15} would be able to interoperate with
+  the {ADAM} schemas to load data. While this is still true, we have
   deemphasized this view. Specifically, once data has been loaded using the
-  \textsc{ADAM} schemas and saved into \textsc{Apache Parquet}, systems like
-  \textsc{Impala} can interoperate with the data through the \textsc{ADAM}
-  schemas. However, systems like \textsc{Impala} cannot interoperate with
-  the lower levels of \textsc{ADAM}'s stack, such as \textsc{ADAM}'s views to
+  {ADAM} schemas and saved into {Apache Parquet}, systems like
+  {Impala} can interoperate with the data through the {ADAM}
+  schemas. However, systems like {Impala} cannot interoperate with
+  the lower levels of {ADAM}'s stack, such as {ADAM}'s views to
   and from legacy genomics file formats.
-\item Because the \textsc{Hadoop} ecosystem optimizes for full scans, we
+\item Because the {Hadoop} ecosystem optimizes for full scans, we
   originally assumed that all queries were executed as full scans over the
   dataset, and these queries were executed without assuming any knowledge of the
   layout of the data. One of the advantages of introducing the
-  \textsc{GenomicRDD} API is that we were better able to track the layout of
+  {GenomicRDD} API is that we were better able to track the layout of
   data, and to specialize queries given a known layout. We describe one such
   mechanism for accelerating queries in the genomic coordinate space
   in~\S\ref{sec:query-patterns}.
 \item The presentation layer~(6) was originally implemented by enhancing the
-  schemas. Specifically, the \textsc{AlignmentRecord}
+  schemas. Specifically, the {AlignmentRecord}
   schema~(see~\S\ref{sec:read-schemas}) was accompanied by a
-  \textsc{RichAlignmentRecord} class, which provided convenience methods on top
-  of the schema. Similar ``enriched'' classes existed for the \textsc{Variant}
+  {RichAlignmentRecord} class, which provided convenience methods on top
+  of the schema. Similar ``enriched'' classes existed for the {Variant}
   schema as well. While these enriched classes have not been eliminated from
-  \textsc{ADAM}, we have eliminated the public API exposure of these classes.
+  {ADAM}, we have eliminated the public API exposure of these classes.
   While these classes were useful for implementing some of the algorithms in the
-  \textsc{ADAM} core, they ultimately proved difficult to understand the
-  performance characteristics of. They leveraged the \textsc{Scala} language's
+  {ADAM} core, they ultimately proved difficult to understand the
+  performance characteristics of. They leveraged the {Scala} language's
   compile-time implicit conversion functionality~\cite{odersky04}, which allows for
   the compile-time inclusion of a method that can satisfy a given type
   signature. Additionally, the enriched classes typically augmented the raw
@@ -1476,34 +1476,34 @@ manuscript~\cite{nothaft15}, the evidence access and presentation layers~(5 and
   the level of abstraction expected by our average user.
 \end{itemize}
 
-While the introduction of the \textsc{GenomicRDD} class has enabled the changes
+While the introduction of the {GenomicRDD} class has enabled the changes
 to our stack model that were described above, it was driven by other factors.
-The \textsc{ADAMContext} would originally return unwrapped \textsc{Spark} RDDs.
-The introduction of the \textsc{GenomicRDD} class was driven largely by the need
+The {ADAMContext} would originally return unwrapped {Spark} RDDs.
+The introduction of the {GenomicRDD} class was driven largely by the need
 for better management of genomic metadata, as described in~\S\ref{sec:metadata}.
 
 \section{Schema Design for Representing Genomic Data}
 \label{sec:schema-design}
 
 A common criticism of bioinformatics as a field surrounds the proliferation of file formats. Short read data alone is
-stored in four common formats: \textsc{FASTQ}~\cite{cock10}, \textsc{SAM}~\cite{li09}, \textsc{BAM}, and
-\textsc{CRAM}~\cite{fritz11}. While these formats all represent different layouts of data on disk, they tend to be
-logically harmonious. Due to this logical congruency of the different formats, we chose to build \textsc{ADAM}
-on top of a logical schema, instead of a binary format on disk. While we do use Apache \textsc{Parquet}~\cite{parquet} to
-materialize data on disk, the Apache \textsc{Avro}~\cite{avro} schema is used as a narrow waist in the system,
-that enables ``legacy'' formats to be processed identically to data stored in \textsc{Parquet} with modest performance
+stored in four common formats: {FASTQ}~\cite{cock10}, {SAM}~\cite{li09}, {BAM}, and
+{CRAM}~\cite{fritz11}. While these formats all represent different layouts of data on disk, they tend to be
+logically harmonious. Due to this logical congruency of the different formats, we chose to build {ADAM}
+on top of a logical schema, instead of a binary format on disk. While we do use Apache {Parquet}~\cite{parquet} to
+materialize data on disk, the Apache {Avro}~\cite{avro} schema is used as a narrow waist in the system,
+that enables ``legacy'' formats to be processed identically to data stored in {Parquet} with modest performance
 degradation.
 
 We made several high level choices when designing the schemas used in
-\textsc{ADAM}~\cite{massie13}. Over time, we have gone backwards on some of
+{ADAM}~\cite{massie13}. Over time, we have gone backwards on some of
 these design decisions. First, the schemas were originally fully denormalized.
 Our rationale for this decision was that this would reduce the cost of metadata
 access while simplifying metadata distribution. We believed we would be able to
 gain these benefits without greatly increasing the cost of memory access because
-our backing store~(\textsc{Parquet}) made use of run length and dictionary
+our backing store~({Parquet}) made use of run length and dictionary
 encoding, which allows for a single object to be allocated for highly repetitive
 elements on read. As we discuss in~\S\ref{sec:metadata}, this decision wound up
-being costly, and we reversed this decision as the \textsc{ADAM} schemas
+being costly, and we reversed this decision as the {ADAM} schemas
 progressed. Another key design choice was to require that all fields in the
 schema are nullable; by enforcing this requirement, we enable arbitrary user
 specified projections. Arbitrary projections can be used to accelerate
@@ -1525,10 +1525,10 @@ common sequence quality control algorithms such as Flagstat~\cite{massie13,
 
 We have reproduced the schemas used to describe reads, features, variants, and
 genotypes below. Figure~\ref{fig:schemas} is a UML diagram depicting how the
-schemas connect. \textsc{ADAM} also contains schemas for describing assembled
+schemas connect. {ADAM} also contains schemas for describing assembled
 contigs, but we have not included them in this section. We discuss the current
-schemas, as well as their evolution over the course of the \textsc{ADAM}
-project. While \textsc{ADAM}'s read schemas closely represent the \textsc{SAM}
+schemas, as well as their evolution over the course of the {ADAM}
+project. While {ADAM}'s read schemas closely represent the {SAM}
 specification, the variation and feature representations deviate significantly
 from the current state of representing genomic variation and features.
 
@@ -1536,19 +1536,19 @@ from the current state of representing genomic variation and features.
 \label{sec:read-schemas}
 
 Our read schema~(\S\ref{sec:alignment-record}) maps closely to the logical layout of data presented by
-\textsc{SAM} and \textsc{BAM}. Unlike the \textsc{SAM} format, we split the
+{SAM} and {BAM}. Unlike the {SAM} format, we split the
 flags out from a single field into many fields. Separating the flags makes it much simpler to
 extract state from a record. Additionally, we promote several commonly used
-fields from \textsc{SAM} attributes to fields. These fields include the original
+fields from {SAM} attributes to fields. These fields include the original
 quality, position, and CIGAR fields, which are set during
 realignment~(see~\S\ref{sec:indel-realignment-implementation}) and base quality
 recalibration~(see~\S\ref{sec:bqsr-implementation}).
 
 Additionally, we support a schema that groups together all of the reads from a
 single sequenced fragment~(\S\ref{sec:fragment}). The fragment data structure enables a traversal over read data that
-is similar to \textsc{SAM}'s read-name grouping.
+is similar to {SAM}'s read-name grouping.
 We feel that the fragment schema is preferable to the queryname sort order and
-query grouping invariants that \textsc{SAM} allows one to specify. By using this
+query grouping invariants that {SAM} allows one to specify. By using this
 schema, we can reduce the cost of duplicate marking by
 50\%~(see~\S\ref{sec:benchmarking-duplicate-markers}). Additionally, this
 representation provides a useful alternative to the interleaved FASTQ format for
@@ -1559,42 +1559,42 @@ Chapter~\ref{chap:cannoli}.
 \label{sec:variation-schemas}
 
 The variant and genotype schemas~(\S\ref{sec:variation-schemas}) present a larger departure from the representation used by the Variant Call
-Format~(\textsc{VCF}). The most noticeable difference is that we have migrated away from \textsc{VCF}'s variant oriented
+Format~({VCF}). The most noticeable difference is that we have migrated away from {VCF}'s variant oriented
 representation to a matrix representation. Instead of the variant record serving to group together genotypes, the
 variant record is embedded within the genotype. Thus, a record represents the genotype assigned to a sample,
-as opposed to a \textsc{VCF} row, where all individuals are collected together. The second major modification is to assume
+as opposed to a {VCF} row, where all individuals are collected together. The second major modification is to assume
 a biallelic representation. In a biallelic representation, we describe the genotype of a sample at a position or
 interval as the composition of a reference allele and a single alternate allele. If multiple alternate alleles segregate at
 the site (e.g., there are two known SNPs in a population at this site), we create multiple biallelic variants for the site.
-Restricting records to be biallelic differs from \textsc{VCF}, which allows multiallelic records. By limiting
+Restricting records to be biallelic differs from {VCF}, which allows multiallelic records. By limiting
 ourselves to a biallelic representation, we are able to clarify the meaning of many of the variant calling annotations. If a
-site contains a multiallelic variant (e.g., in \textsc{VCF} parlance this could be a \textsc{1/2} genotype), we split the
+site contains a multiallelic variant (e.g., in {VCF} parlance this could be a {1/2} genotype), we split the
 variant into two or more biallelic records. The sufficient statistics for each allele should then be computed under
-a reference model similar to the model used in genome \textsc{VCF}s. If the sample does contain a multiallelic variant at
-the given site, this multiallelic variant is represented by referencing to another record via the \textsc{OtherAlt}
-enumeration. A similar biallelic model is also used by the \textsc{Hail} project~\cite{hail}.
+a reference model similar to the model used in genome {VCF}s. If the sample does contain a multiallelic variant at
+the given site, this multiallelic variant is represented by referencing to another record via the {OtherAlt}
+enumeration. A similar biallelic model is also used by the {Hail} project~\cite{hail}.
 
 The variant and genotype schemas are the schemas that have evolved the most
-over the course of the \textsc{ADAM} project. When we wrote the original
-\textsc{ADAM} technical report~\cite{massie13}, the variant and genotype schemas
-were much narrower and closely mirrored the \textsc{VCF} specification.
+over the course of the {ADAM} project. When we wrote the original
+{ADAM} technical report~\cite{massie13}, the variant and genotype schemas
+were much narrower and closely mirrored the {VCF} specification.
 Since the VCF format contains many attributes that can be used to annotate both
-a genotype~(via a \textsc{Format} field) or a variant~(via an \textsc{Info}
+a genotype~(via a {Format} field) or a variant~(via an {Info}
 field), the original schemas largely contained overlapping field definitions.
 We refactored the two schemas to move to the biallelic-only variant model, and
 later, expanded the variant schema to include a nested structural variant
 description. This structural variant schema was removed during a large refactor
 after the ADAM SIGMOD paper that improved support for variant annotations. We
 have also played with flattening the variant schema out of the genotype schema
-for performance reasons. During our work on \textsc{Mango}~\cite{tu16, morrow17},
+for performance reasons. During our work on {Mango}~\cite{tu16, morrow17},
 we realized that nesting the variant field decreased the performance of range
 queries by approximately an order of magnitude. In the variant annotation
 refactor, we added the variant annotation schemas~(\S\ref{sec:variant-annotation-schemas}).
 
 These schemas provide a faithful representation of the VCF/ANN specification,
 which adds a formal and rich variant annotation specification to
-VCF~\cite{ann}. This specification is used by both the \textsc{Ensembl Variant
-  Effect Predictor}~(VEP, see~\cite{mclaren10}) and \textsc{SnpEff}~\cite{cingolani12}.
+VCF~\cite{ann}. This specification is used by both the {Ensembl Variant
+  Effect Predictor}~(VEP, see~\cite{mclaren10}) and {SnpEff}~\cite{cingolani12}.
 We have a separate schema for storing annotations on top of a genotype call~(\S\ref{sec:genotype-annotation-schema}); we
 refer to this object as a ``variant calling annotation'' instead of a ``genotype
 annotation,'' since the annotations are specific to the variant calling process
@@ -1605,12 +1605,12 @@ from a final callset that is used for annotation and statistical testing. Many
 of these variant annotations are useful for hard filtering, as described
 in~\S\ref{sec:variant-filtration}.
 
-During the refactor that improved \textsc{ADAM}'s support for variant
+During the refactor that improved {ADAM}'s support for variant
 annotations, we refactored the conversion class that provided a view from the
-VCF format to \textsc{ADAM}'s genotype and variant records. In this refactor,
+VCF format to {ADAM}'s genotype and variant records. In this refactor,
 we replaced the extant conversion code with a pure-functional converter. Our
 approach generated a collection of conversion functions. To convert between
-the \textsc{ADAM} and \textsc{htsjdk} representations of a variant/genotype,
+the {ADAM} and {htsjdk} representations of a variant/genotype,
 we would fold over this collection of functions. In turn, each function accesses
 the field they are converting, and mutates the new object that is being built
 during the conversion. The use of a pure-functional converter had several
@@ -1631,7 +1631,7 @@ upsides:
   chain correctly.
 \item A minor problem with our previous, monolithic converters was that they
   could not support projecting out a subset of fields, unlike data stored in
-  \textsc{Apache Parquet} using the \textsc{ADAM} schemas. While we would
+  {Apache Parquet} using the {ADAM} schemas. While we would
   still need to read all of the data in a whole row, being able to limit the
   number of fields projected would reduce the amount of parsing we need to do,
   which can be quite costly for semi-structured text formats like VCF. The
@@ -1646,17 +1646,17 @@ all of our data converters. We discuss this more in~\S\ref{sec:lazy-bind}.
 \subsection{Feature Schemas}
 \label{sec:feature-schemas}
 
-\textsc{ADAM}'s feature schema~(\S\ref{sec:feature-schema}) provides an abstracted view of a genomic feature
+{ADAM}'s feature schema~(\S\ref{sec:feature-schema}) provides an abstracted view of a genomic feature
 that can support most of the various genomic feature file formats, including
-\textsc{NarrowPeak}, BED, GTF/GFF2, GFF3, and \textsc{IntervalList}. We have
+{NarrowPeak}, BED, GTF/GFF2, GFF3, and {IntervalList}. We have
 full support for nested features, which are commonly used for describing genome
 annotations. Instead of nesting the features recursively inside of the feature
 record, we leverage the database cross reference schema, which is derived from
 the GTF/GFF2/GFF3 file format.
 
-\textsc{ADAM} originally contained an additional \textsc{GenomeRDD} subclass
-called the \textsc{GeneRDD}. This class would take the nested features contained
-in a \textsc{FeatureRDD} that described an annotated genome, and would perform
+{ADAM} originally contained an additional {GenomeRDD} subclass
+called the {GeneRDD}. This class would take the nested features contained
+in a {FeatureRDD} that described an annotated genome, and would perform
 all the joins and aggregations necessary to build out the fully nested
 annotation structure. Ultimately, we removed this class because the performance
 was poor, and most queries that would run on the nested structure could be
@@ -1667,7 +1667,7 @@ feature record.
 \subsection{Managing Genomic Metadata}
 \label{sec:metadata}
 
-A major evolution of the \textsc{ADAM} schemas relates to how we manage and
+A major evolution of the {ADAM} schemas relates to how we manage and
 store metadata. In our original schemas, the metadata was denormalized across the
 record. For example, all of the metadata from the sequencing run and prior
 processing steps were packed into record group metadata fields, as opposed to
@@ -1682,29 +1682,29 @@ poor deserializer implementation may replicate a string per field per record,
 which greatly increased the amount of memory allocated and the garbage
 collection~(GC) load. With this metadata included in each record, a dataset
 that was 200GB on disk would balloon into more than 5TB in memory. Additionally,
-implementing the deserializer conflicted with \textsc{Apache Spark}'s
-serialization architecture. \textsc{Spark} assumes that deserializers have
+implementing the deserializer conflicted with {Apache Spark}'s
+serialization architecture. {Spark} assumes that deserializers have
 limited state, and write to a stream that does not support seeks. While this is
 a reasonable assertion for row-oriented serialization techinques, this made it
 extremely difficult to implement a column-oriented serialization. Prior to
 eliminating the denormalized metadata from our schemas, this meant that we would
 have very efficient memory utilization immediately after reading from disk, as
-\textsc{Apache Parquet} would only allocate a single string per replicated
+{Apache Parquet} would only allocate a single string per replicated
 element. However, we would then see the memory explosion after the first shuffle
 in our query.
 
-This memory explosion led to a major refactor of the \textsc{ADAM} schemas and
-the introduction of the \textsc{GenomicRDD} hierarchy. Originally, since the
-metadata was consolidated in each record, the \textsc{ADAMContext} load methods
-would return \textsc{RDD}s containing our \textsc{Apache Avro}~\cite{avro}
+This memory explosion led to a major refactor of the {ADAM} schemas and
+the introduction of the {GenomicRDD} hierarchy. Originally, since the
+metadata was consolidated in each record, the {ADAMContext} load methods
+would return {RDD}s containing our {Apache Avro}~\cite{avro}
 schema objects. The methods that made up the presentation layer~(6) of our stack
-would be added at compile-time using \textsc{Scala}'s implicit methods. When we
-refactored the schemas, we introduced the \textsc{GenomicRDD} classes as a way
-to track metadata alongside the \textsc{Apache Spark} RDD, moved the
-presentation layer methods into the implementations of the \textsc{GenomicRDD}
+would be added at compile-time using {Scala}'s implicit methods. When we
+refactored the schemas, we introduced the {GenomicRDD} classes as a way
+to track metadata alongside the {Apache Spark} RDD, moved the
+presentation layer methods into the implementations of the {GenomicRDD}
 classes, and eliminated the implicit conversions. Long term, we believe that the
 ideal mechanism for storing this metadata is a database designed for storing
-metadata, such as the \textsc{Ground} store~\cite{hellerstein17}.
+metadata, such as the {Ground} store~\cite{hellerstein17}.
 
 \section{Query Patterns for Genomic Data Analysis}
 \label{sec:query-patterns}
@@ -1730,9 +1730,9 @@ putative variant.
 
 To support these algorithms, we provide the region join primitive. The algorithm
 used is described in Algorithm~\ref{alg:region-join} and takes as input two RDDs
-of \textsc{ReferenceRegions}, a data structure that represents intervals along
+of {ReferenceRegions}, a data structure that represents intervals along
 the 1-D genomics coordinate space. It produces the set of all overlapping
-\textsc{ReferenceRegion} pairs. This join can be implemented using either a
+{ReferenceRegion} pairs. This join can be implemented using either a
 broadcast or sort-merge approach. Algorithm~\ref{alg:region-join} demonstrates
 the broadcast approach.
 
@@ -1775,7 +1775,7 @@ interval array.
 
 While the join described above is a broadcast join, a region join can also be
 implemented via a straightforward shuffle-based approach, which is described in
-Algorithm~\ref{alg:shuffle-region-join}. The \textsc{partitionJoinFn} function
+Algorithm~\ref{alg:shuffle-region-join}. The {partitionJoinFn} function
 maintains two iterators (one each from both the left and right collections),
 along with a buffer. This buffer is used to track all key-value pairs from the
 right collection iterator that \emph{could} match to a future key-value pair
@@ -1794,7 +1794,7 @@ that cross partition boundaries into both partitions.
 \STATE $partitions \leftarrow left$.getPartitions()
 \STATE $left \leftarrow left$.repartitionAndSort($partitions$)
 \STATE $right \leftarrow right$.repartitionAndSort($partitions$)
-\STATE $joined \leftarrow left$.zipPartitions($right$, \textsc{partitionJoinFn})
+\STATE $joined \leftarrow left$.zipPartitions($right$, {partitionJoinFn})
 \RETURN $joined$
 \end{algorithmic}
 \end{algorithm}
@@ -1808,122 +1808,122 @@ to improve the performance of these joins by eliminating shuffles of data that
 is already sorted on disk. We discuss these avenues for future work
 in~\S\ref{sec:extensions-adam}.
 
-\section{Supporting Multi-Language Processing in \textsc{ADAM}}
+\section{Supporting Multi-Language Processing in {ADAM}}
 \label{sec:multi-language}
 
-One of the original goals in using \textsc{Apache Avro} was to allow the
-\textsc{ADAM} schemas to be used across more languages than just \textsc{Scala}
-and \textsc{Java}, as \textsc{Avro} has language bindings for commonly used
-languages like C/C++/C\#, \textsc{Python}, and \textsc{JavaScript}. However,
-this wound up not being a fruitful exercise. While \textsc{Avro} supported these
-languages, \textsc{Apache Parquet} did not, and since we used \textsc{Avro} to
-manage in-memory serialization but \textsc{Parquet} to manage on-disk
-serialization, users could not load our \textsc{Parquet} files from disk in
+One of the original goals in using {Apache Avro} was to allow the
+{ADAM} schemas to be used across more languages than just {Scala}
+and {Java}, as {Avro} has language bindings for commonly used
+languages like C/C++/C\#, {Python}, and {JavaScript}. However,
+this wound up not being a fruitful exercise. While {Avro} supported these
+languages, {Apache Parquet} did not, and since we used {Avro} to
+manage in-memory serialization but {Parquet} to manage on-disk
+serialization, users could not load our {Parquet} files from disk in
 non-JVM languages. Additionally, even if we had support for reading
-\textsc{Parquet} files from these other languages, it would have been prohibitive
+{Parquet} files from these other languages, it would have been prohibitive
 to port all of the logic in our stack~(mostly at the materialized data and
 presentation layers) over to other languages.
 
-Instead, we followed the approach used by \textsc{Apache Spark}'s
-\textsc{Python} and R bindings~\cite{venkataraman16} after \textsc{Spark SQL}
+Instead, we followed the approach used by {Apache Spark}'s
+{Python} and R bindings~\cite{venkataraman16} after {Spark SQL}
 was introduced~\cite{armbrust15}. Here, we created lightweight wrappers for
-the \textsc{ADAMContext} and \textsc{GenomicRDD} in the \textsc{Python} and
+the {ADAMContext} and {GenomicRDD} in the {Python} and
 R languages. These wrappers then called the JVM implementations of these classes
-through \textsc{Py4j}~\cite{py4j} or \textsc{SparkR}'s interoperability
+through {Py4j}~\cite{py4j} or {SparkR}'s interoperability
 layer~\cite{venkataraman16}. Instead of exposing the underlying RDD, we exposed
-the parallel dataset through \textsc{Spark SQL}'s \textsc{DataFrame} API. We
+the parallel dataset through {Spark SQL}'s {DataFrame} API. We
 chose this for several reasons:
 
 \begin{itemize}
-\item The \textsc{DataFrame} API is a close match to the programming models
-  commonly used in \textsc{Python} and R~\cite{armbrust15}, such as the
-  \textsc{Pandas}~\cite{mckinney10} and \textsc{Dyplr}~\cite{wickham15} libraries.
-\item A major performance pitfall in \textsc{PySpark} and \textsc{SparkR} was
-  serializer performance. Specifically, to use \textsc{PySpark}, we would have
-  needed to transform our binary \textsc{Avro} records into textual records that
-  \textsc{PySpark} would pickle for use in \textsc{Python}.
-\item Additionally, the \textsc{Spark SQL} query engine~\cite{armbrust15} allows
-  \textsc{Python} and R users to write query plans that can then be optimized
+\item The {DataFrame} API is a close match to the programming models
+  commonly used in {Python} and R~\cite{armbrust15}, such as the
+  {Pandas}~\cite{mckinney10} and {Dyplr}~\cite{wickham15} libraries.
+\item A major performance pitfall in {PySpark} and {SparkR} was
+  serializer performance. Specifically, to use {PySpark}, we would have
+  needed to transform our binary {Avro} records into textual records that
+  {PySpark} would pickle for use in {Python}.
+\item Additionally, the {Spark SQL} query engine~\cite{armbrust15} allows
+  {Python} and R users to write query plans that can then be optimized
   and executed using optimized JVM implementations where possible. This is a
-  contrast to \textsc{Spark}'s RDD API, where both records and queries are black
+  contrast to {Spark}'s RDD API, where both records and queries are black
   boxes.
 \end{itemize}
 
-While building on \textsc{Spark SQL} enabled cross-language support, it was not
-a straightforward process. Specifically, \textsc{Spark SQL} leveraged several
-\textsc{Scala} language features that were incompatible with our \textsc{Avro}
+While building on {Spark SQL} enabled cross-language support, it was not
+a straightforward process. Specifically, {Spark SQL} leveraged several
+{Scala} language features that were incompatible with our {Avro}
 schema representation. To address this, we built automation that translates
-between \textsc{Spark SQL}'s desired representation and \textsc{Avro} at compile
+between {Spark SQL}'s desired representation and {Avro} at compile
 time.
 
 \begin{figure}[h]
 \begin{center}
 \includegraphics[width=0.8\linewidth]{graphs/binding.pdf}
 \end{center}
-\caption{With the move to support \textsc{Spark SQL}, we added a binding scheme
-  to the \textsc{GenomicRDD} hierarchy. This figure depicts the alternative
-  bindings available for the \textsc{AlignmentRecordRDD}, which is
-  representative of the core \textsc{GenomicRDD} types. The dotted lines around
-  the concrete implementations of the abstract \textsc{AlignmentRecordRDD} class
+\caption{With the move to support {Spark SQL}, we added a binding scheme
+  to the {GenomicRDD} hierarchy. This figure depicts the alternative
+  bindings available for the {AlignmentRecordRDD}, which is
+  representative of the core {GenomicRDD} types. The dotted lines around
+  the concrete implementations of the abstract {AlignmentRecordRDD} class
   signify that these classes are protected and cannot be instantiated outside of
-  the \textsc{ADAM} library.}
+  the {ADAM} library.}
 \label{fig:binding}
 \end{figure}
 
-Since translating between a \textsc{Spark} RDD and a \textsc{Spark SQL}
+Since translating between a {Spark} RDD and a {Spark SQL}
 DataFrame requires a (de)serialization pass, we introduced a scheme that we call
 ``lazy binding'' to minimize serialization overhead. In Figure~\ref{fig:grdd},
-you may have noticed that most of the core \textsc{GenomicRDD} types were
+you may have noticed that most of the core {GenomicRDD} types were
 sealed abstract classes. In practice, they are all implemented using the lazy
 binding scheme. Figure~\ref{fig:binding} depicts the bound variants of the
-\textsc{AlignmentRecordRDD} type. In this scheme, we track whether the last
-transformation applied to the \textsc{GenomicRDD} was applied to the DataFrame
+{AlignmentRecordRDD} type. In this scheme, we track whether the last
+transformation applied to the {GenomicRDD} was applied to the DataFrame
 or RDD representation of the genomic data. The next phase of computation will
 run on top of the bound output of the prior stage. Avoiding a conversion between the RDD and SQL DataFrame representations can provide a major
-performance win if running \textsc{Spark SQL} queries, as the \textsc{Spark SQL}
+performance win if running {Spark SQL} queries, as the {Spark SQL}
 query optimizer performs major optimizations to amortize the method call
 overhead of chained transformations~\cite{armbrust15}. A further optimization
-deals with loading data from \textsc{Apache Parquet}. While data that is being
+deals with loading data from {Apache Parquet}. While data that is being
 loaded from legacy file formats like BAM or VCF must be loaded as an RDD,
-\textsc{Parquet} can be loaded as either an RDD or DataFrame, and \textsc{Spark
+{Parquet} can be loaded as either an RDD or DataFrame, and {Spark
   SQL} can make further optimizations if it knows that it is loading data from
-\textsc{Parquet}. To handle this, we added the ``unbound'' \textsc{GenomicRDD}.
+{Parquet}. To handle this, we added the ``unbound'' {GenomicRDD}.
 This datatype does not bind to the RDD or DataFrame representation of a
-\textsc{Parquet} table until a transformation is invoked. We believe that there
+{Parquet} table until a transformation is invoked. We believe that there
 are further opportunities to extend lazy binding to legacy genomic file formats,
 which we discuss in~\S\ref{sec:lazy-bind}.
 
 \part{Algorithms and Tools}
 
-\chapter{Automatic Parallelization of Legacy Tools with \textsc{Cannoli}}
+\chapter{Automatic Parallelization of Legacy Tools with {Cannoli}}
 \label{chap:cannoli}
 
-While \textsc{ADAM} provides a general API for implementing genomic analyses
-using \textsc{Apache Spark}, we will never be able to fully eliminate single
+While {ADAM} provides a general API for implementing genomic analyses
+using {Apache Spark}, we will never be able to fully eliminate single
 node tools from genomic workflows. Beyond the small set of tools discussed
 in~\S\ref{sec:distributed-genome-analysis}, the majority of genomics tools are
 designed to run on a single node. Additionally, due to memory access and
 allocation patterns, tools like aligners pay a steep performance penalty when
-moving out of C/C++ to the JVM. An example of this is the \textsc{SNAP} aligner,
-which was originally written on \textsc{Apache Spark}, before being rewritten in
+moving out of C/C++ to the JVM. An example of this is the {SNAP} aligner,
+which was originally written on {Apache Spark}, before being rewritten in
 C++ for performance~\cite{zaharia11}. Finally, while it is possible to
-reimplement common genomic analyses like variant calling using \textsc{ADAM}, it
+reimplement common genomic analyses like variant calling using {ADAM}, it
 is not feasible to do this across the hundreds of extant genomic analyses.
 
 As discussed in~\S\ref{sec:distributed-genome-analysis}, there are many tools
-that provide customized solutions to this problem. The GATK's \textsc{Queue}
+that provide customized solutions to this problem. The GATK's {Queue}
 engine~\cite{depristo11} could be used to run the GATK in parallel, and the
-\textsc{FreeBayes} variant caller~\cite{garrison12} can be run in parallel
-through the \textsc{SpeedSeq} pipeline~\cite{chiang15}. Additionally, a variety
-of tools are parallelized by \textsc{Hadoop}-ecosystem wrappers. These include
-tools like the \textsc{Seal} tool which parallelizes \textsc{BWA} using
-\textsc{Pydoop}~\cite{leo10, pireddu11}, \textsc{Rail-RNA}~\cite{nellore16},
-which was built on top of \textsc{Hadoop}, and tools built on top of
-\textsc{Hadoop Streaming} like \textsc{CrossBow}~\cite{langmead09crossbow} for
-SNP calling and \textsc{Cloudburst}~\cite{schatz09} for alignment.
-Additionally, several tools have built on top of \textsc{Apache Spark},
-including \textsc{CloudScale-BWAMEM}~\cite{chen16} and
-\textsc{BWASpark}~\cite{abuin16}.
+{FreeBayes} variant caller~\cite{garrison12} can be run in parallel
+through the {SpeedSeq} pipeline~\cite{chiang15}. Additionally, a variety
+of tools are parallelized by {Hadoop}-ecosystem wrappers. These include
+tools like the {Seal} tool which parallelizes {BWA} using
+{Pydoop}~\cite{leo10, pireddu11}, {Rail-RNA}~\cite{nellore16},
+which was built on top of {Hadoop}, and tools built on top of
+{Hadoop Streaming} like {CrossBow}~\cite{langmead09crossbow} for
+SNP calling and {Cloudburst}~\cite{schatz09} for alignment.
+Additionally, several tools have built on top of {Apache Spark},
+including {CloudScale-BWAMEM}~\cite{chen16} and
+{BWASpark}~\cite{abuin16}.
 
 Instead of expecting developers to create a proliferation of custom wrappers for
 parallelizing tools on distributed analysis systems, we should be able to build
@@ -1933,43 +1933,43 @@ process setup, distribution of reference files, and streaming data, we should
 be able to automatically parallelize a large number of genomic analysis tools.
 
 In this chapter, we introduce a two part architecture for automatically
-parallelizing genomic analyis tools. First, we describe ADAM's \textsc{pipe}
+parallelizing genomic analyis tools. First, we describe ADAM's {pipe}
 API, which performs the automated chunking, resource distribution, and process
-coordination. Then, we describe the \textsc{Cannoli} tool, which contains
+coordination. Then, we describe the {Cannoli} tool, which contains
 wrappers for a set of common genomic analysis tools. This approach is general
-but not universal: while the \textsc{pipe} API can be used to parallelize the
+but not universal: while the {pipe} API can be used to parallelize the
 majority of analysis steps, it cannot be used for tools that require an
 all-reduce. All-reduce patterns are found in RNA-seq quantification tools like
-\textsc{Kallisto}~\cite{bray16} or \textsc{Salmon}~\cite{patro17}, or tools
+{Kallisto}~\cite{bray16} or {Salmon}~\cite{patro17}, or tools
 that perform a global normalization, like the XHMM copy number variant
 caller~\cite{fromer12}. However, this approach works well for tools whose
 computation can be described as mapping over unaligned reads, or mapping over
 data aligned to a genomic locus range.
 
-\section{Accomodating Single-node Tools in \textsc{ADAM} With the \textsc{Pipe} API}
+\section{Accomodating Single-node Tools in {ADAM} With the {Pipe} API}
 \label{sec:pipe-api}
 
-The \textsc{pipe} API is an API in \textsc{ADAM} that provides a simple
+The {pipe} API is an API in {ADAM} that provides a simple
 mechanism for automatically parallelizing a command across a cluster running
-\textsc{Apache Spark}. The user specifies the command to be run, files that need
+{Apache Spark}. The user specifies the command to be run, files that need
 to be distributed to each worker running the command, and any environment
-settings that are needed. \textsc{ADAM} then uses the attached genomic reference
+settings that are needed. {ADAM} then uses the attached genomic reference
 metadata~(see~\S\ref{sec:metadata}) to infer the proper partitioning to apply to
 the data, partitions the data, and runs the user specified command. The input
 format to provide to the command and the output format to expect from the
-command is determined at compile-time in \textsc{Scala} and at runtime in R and
-\textsc{Python}.
+command is determined at compile-time in {Scala} and at runtime in R and
+{Python}.
 
 \begin{figure}[h]
 \begin{center}
 \includegraphics[width=0.95\linewidth]{graphs/pipe.pdf}
 \end{center}
-\caption{The implementation of the \textsc{pipe} API.}
+\caption{The implementation of the {pipe} API.}
 \label{fig:pipe}
 \end{figure}
 
-Figure~\ref{fig:pipe} illustrates how the \textsc{pipe} API is executed by
-\textsc{ADAM}. The \textsc{pipe} implementation starts by checking the genome
+Figure~\ref{fig:pipe} illustrates how the {pipe} API is executed by
+{ADAM}. The {pipe} implementation starts by checking the genome
 reference metadata~(see~\S\ref{sec:metadata}) to see if the dataset is aligned
 to a reference genome. If the data is not aligned, then we assume that no
 specific partitioning scheme is needed, and skip repartitioning. If the data is
@@ -1986,27 +1986,27 @@ and from the running process:
 
 \begin{itemize}
 \item To create the input for the running process, we use the
-  \textsc{InFormatter} trait. This trait receives an iterator over a single
-  partition of a \textsc{GenomicRDD}, and encodes that iterator into the format
+  {InFormatter} trait. This trait receives an iterator over a single
+  partition of a {GenomicRDD}, and encodes that iterator into the format
   that the running process is expecting. Each implementation of the
-  \textsc{InFormatter} trait is required to also implement the
-  \textsc{InFormatterCompanion} trait, which defines a singleton object that
+  {InFormatter} trait is required to also implement the
+  {InFormatterCompanion} trait, which defines a singleton object that
   can create an instance of the class. This pattern is necessary to expose
-  the metadata stored in a \textsc{GenomicRDD} to the \textsc{InFormatter} by
+  the metadata stored in a {GenomicRDD} to the {InFormatter} by
   guaranting that there will be a static method that can build an
-  \textsc{InFormatter} with access to the metadata stored in a
-  \textsc{GenomicRDD}. This approach is necessary since \textsc{Scala} cannot
+  {InFormatter} with access to the metadata stored in a
+  {GenomicRDD}. This approach is necessary since {Scala} cannot
   guarantee that each implementation of a trait provides a constructor with a
   given type signature, and we need metadata to construct properly formatted
-  BAM and VCF streams. The \textsc{InFormatter} runs asynchronously in a new
+  BAM and VCF streams. The {InFormatter} runs asynchronously in a new
   thread.
 \item To read the data from the running process, we use the
-  \textsc{OutFormatter} trait. This trait decodes the output of an invocation of
-  the running process and creates an iterator. The \textsc{OutFormatter} does
-  not need access to the metadata from a \textsc{GenomicRDD}, so we do not need
-  an \textsc{OutFormatterCompanion} trait. The \textsc{OutFormatter} is run
-  synchronously in the thread that called the process. The \textsc{OutFormatter}
-  provides an iterator so that we can leverage \textsc{Apache Spark}'s pulling
+  {OutFormatter} trait. This trait decodes the output of an invocation of
+  the running process and creates an iterator. The {OutFormatter} does
+  not need access to the metadata from a {GenomicRDD}, so we do not need
+  an {OutFormatterCompanion} trait. The {OutFormatter} is run
+  synchronously in the thread that called the process. The {OutFormatter}
+  provides an iterator so that we can leverage {Apache Spark}'s pulling
   model, which limits the number of records that must be materialized into
   memory at a given instant.
 \end{itemize}
@@ -2015,19 +2015,19 @@ This API allows for a very concise, yet general framework. With the
 formatter pattern, we can support a broad range of formats while exposing a
 very simple API to the user. Specifically, we can pipe sequence fragments as
 interleaved FASTQ, reads as SAM/BAM/CRAM, variants/genotypes as VCF, and
-features as BED/GTF/GFF2/GFF3/\-\textsc{IntervalList}/\-\textsc{NarrowPeak}. If
+features as BED/GTF/GFF2/GFF3/\-{IntervalList}/\-{NarrowPeak}. If
 a program needs reference files to be available locally on each node, they can
 achieve this by passing an array containing the URLs of each file. We use an
-internal \textsc{Apache Spark} API to copy these files locally on each machine.
+internal {Apache Spark} API to copy these files locally on each machine.
 Along with this, we provide a simple syntax that allows the user to symbolically
 add the local path to this file into their command, which we know at runtime.
 
 To demonstrate how concise the API is, Listings~\ref{lst:pipe-bwa}
-and~\ref{lst:pipe-freebayes} demonstrate how to use the \textsc{pipe}
-API to call BWA~\cite{li09bwa} from \textsc{Python} and
-\textsc{FreeBayes}~\cite{garrison12} from R.
+and~\ref{lst:pipe-freebayes} demonstrate how to use the {pipe}
+API to call BWA~\cite{li09bwa} from {Python} and
+{FreeBayes}~\cite{garrison12} from R.
 
-\begin{lstlisting}[caption=Calling BWA using the \textsc{Python pipe} API, label=lst:pipe-bwa]
+\begin{lstlisting}[caption=Calling BWA using the {Python pipe} API, label=lst:pipe-bwa]
 from bdgenomics.adam.adamContext import ADAMContext
 
 ac = ADAMContext(sc)
@@ -2041,7 +2041,7 @@ alignedReads = reads.pipe(
   "org.bdgenomics.adam.api.java.FragmentsToAlignmentRecordsConverter")
 \end{lstlisting}
 
-\begin{lstlisting}[caption=Calling \textsc{FreeBayes} using the R \textsc{pipe} API, label=lst:pipe-freebayes]
+\begin{lstlisting}[caption=Calling {FreeBayes} using the R {pipe} API, label=lst:pipe-freebayes]
 library(bdg.adam)
 
 ac <- ADAMContext(sparkR.session())
@@ -2060,7 +2060,7 @@ lines of code. We believe that the power of this API lies in its simplicity.
 With a minimal API, we can replace the manual sharding that was historically
 implemented using workflow management systems~\cite{depristo11, chiang15} or
 custom wrappers~\cite{langmead09crossbow, schatz09, pireddu11, nellore16}. Since this
-API is built in the query layer of the \textsc{ADAM} stack, it can run
+API is built in the query layer of the {ADAM} stack, it can run
 independent of both the file format used to save the data and the storage
 system used to store the data. This latter point is a significant improvement
 over workflow systems that expect a shared POSIX file system, as these systems
@@ -2071,45 +2071,45 @@ Additionally, this approach makes it possible to integrate a command line
 program into a larger programmatic workflow. We discuss a possible use case that
 would leverage this pattern in~\S\ref{sec:efficient-consensus}.
 
-\section{Packaging Parallelized Single-node Tools in \textsc{Cannoli}}
+\section{Packaging Parallelized Single-node Tools in {Cannoli}}
 \label{sec:parallelizing-in-cannoli}
 
-To make the automated parallelization of the \textsc{pipe} API more accessible
-to users, we introduced the \textsc{Cannoli} tool, which provides a command line
-interface~(CLI) for executing common tools using the \textsc{pipe} API. Our
-goals were to provide a minimal wrapper around the \textsc{pipe} API that would:
+To make the automated parallelization of the {pipe} API more accessible
+to users, we introduced the {Cannoli} tool, which provides a command line
+interface~(CLI) for executing common tools using the {pipe} API. Our
+goals were to provide a minimal wrapper around the {pipe} API that would:
 
 \begin{itemize}
 \item Allow the user to use reference files that were already present locally on
   all nodes in the cluster, or automatically distribute the necessary reference
   files to all nodes.
 \item Support running the tool from a locally installed executable or a
-  \textsc{Docker} container, as \textsc{Docker} is becoming a widely used method
+  {Docker} container, as {Docker} is becoming a widely used method
   for distributing pre-built genomic analysis tools~\cite{vivian17}.
 \end{itemize}
 
 To support this, we have control logic that parses out the arguments passed to
 the CLI. If the user has requested that we distribute all of the files to the
 workers, we then elaborate out the paths needed by the tool and add the files
-to the \textsc{pipe} call. We do this since many tools that require prebuilt
+to the {pipe} call. We do this since many tools that require prebuilt
 resources use a multitude of resource files that are all at a base path. For
 example, BWA~\cite{li09bwa} uses seven index files, SNAP~\cite{zaharia11} uses
-four index files, and \textsc{SnpEff}~\cite{cingolani12} uses a large directory of
-resource files. If the user has requested to run the tool via a \textsc{Docker}
+four index files, and {SnpEff}~\cite{cingolani12} uses a large directory of
+resource files. If the user has requested to run the tool via a {Docker}
 container, we then ensure that the directory containing the distributed
 index files are accessible within the container. Currently, we support a list of
 tools including but not limited to BWA, SNAP, and
-\textsc{Bowtie2}~\cite{langmead09bowtie} for alignment;
-\textsc{FreeBayes}~\cite{garrison12} and \textsc{mpileup}~\cite{li11} for
-variant calling; and \textsc{SnpEff} and \textsc{BEDTools}~\cite{quinlan10} for
+{Bowtie2}~\cite{langmead09bowtie} for alignment;
+{FreeBayes}~\cite{garrison12} and {mpileup}~\cite{li11} for
+variant calling; and {SnpEff} and {BEDTools}~\cite{quinlan10} for
 annotation. We evaluate the performance and concordance of the tools implemented
-in \textsc{Cannoli} in~\S\ref{sec:benchmarking-cannoli}.
+in {Cannoli} in~\S\ref{sec:benchmarking-cannoli}.
 
-\chapter{Scalable Alignment Preprocessing with \textsc{ADAM}}
+\chapter{Scalable Alignment Preprocessing with {ADAM}}
 \label{chap:adam}
 
-In \textsc{ADAM}, we have implemented the three most commonly used pre-processing stages from the
-\textsc{GATK} pipeline~\cite{depristo11}. In this section, we describe the stages that we have
+In {ADAM}, we have implemented the three most commonly used pre-processing stages from the
+{GATK} pipeline~\cite{depristo11}. In this section, we describe the stages that we have
 implemented, and the techniques we have used to improve performance and accuracy when running on
 a distributed system. These pre-processing stages include:
 
@@ -2130,7 +2130,7 @@ on disk, we are able to properly handle chimeric read pairs.
 \item \textbf{Local realignment:} In local realignment, we correct areas where variant alleles cause reads to be
 locally misaligned from the reference genome. Local misalignments are typically caused by the presence of
 insertion/deletion (INDEL) variants~\cite{depristo11}. In this algorithm, we first identify regions
-as targets for realignment. In the \textsc{GATK}, this identification is done by traversing sorted read alignments. In our implementation,
+as targets for realignment. In the {GATK}, this identification is done by traversing sorted read alignments. In our implementation,
 we fold over partitions where we generate targets, and then we merge the tree of targets. This process allows us
 to eliminate the data shuffle needed to achieve the sorted ordering. As part of this fold, we must
 compute the convex hull of overlapping regions in parallel. We discuss this in more detail later in this section.
@@ -2163,7 +2163,7 @@ At a high level, we associate sequenced bases with possible error covariates, an
 true error rate of this covariate. Once the true error rate of all covariates has been estimated, we then apply
 the corrected covariate.
 
-The original BQSR engine in \textsc{ADAM} was generic and placed
+The original BQSR engine in {ADAM} was generic and placed
 no limitations on the number or type of covariates that could be applied. A
 covariate describes a parameter space where variation in the covariate parameter
 may be correlated with a sequencing error. However, supporting generic covariates
@@ -2172,24 +2172,24 @@ recalibration was generally run with two specified covariates. Currently, we
 support two covariates that map to common sequencing errors~\cite{nakamura11}:
 
 \begin{itemize}
-\item \textsc{CycleCovariate}: This covariate expresses which cycle the base was
+\item {CycleCovariate}: This covariate expresses which cycle the base was
   sequenced in. Read errors are known to occur most frequently at the start or
   end of reads. Additionally, a reagent error can occur in a way that corrupts
   bases from a single cycle.
-\item \textsc{DinucCovariate}: This covariate covers biases due to the sequence
+\item {DinucCovariate}: This covariate covers biases due to the sequence
   context surrounding a site. The two-mer ending at the sequenced base is used
   as the covariate parameter value.
 \end{itemize}
 
 These covariates are calculated for each sequenced base. We then merge the
-covariates into a \textsc{CovariateKey}, which also includes the read group
+covariates into a {CovariateKey}, which also includes the read group
 that the sample was from~(see~\S\ref{sec:metadata}) and the quality score
 assigned to the base. To generate the covariate observation table, we
 aggregate together the number of observed and error bases per covariate.
 Algorithms~\ref{alg:emit-observations} and \ref{alg:create-table} demonstrate
-this process. In Algorithm~\ref{alg:emit-observations}, the \textsc{Observation}
+this process. In Algorithm~\ref{alg:emit-observations}, the {Observation}
 class stores the number of bases seen and the number of errors seen. For
-example, \textsc{Observation(1, 1)} creates an \textsc{Observation} object that
+example, {Observation(1, 1)} creates an {Observation} object that
 has seen one base, which was an erroneous base.
 
 \begin{algorithm}
@@ -2234,18 +2234,18 @@ performance optimizations:
 
 \begin{itemize}
 \item By hard-coding the types of covariates we used, we reduced the cost of
-  identifying whether two \textsc{CovariateKey} objects represented the same
+  identifying whether two {CovariateKey} objects represented the same
   covariate.
 \item Additionally, hard-coding the covariates greatly reduced the size of the
-  \textsc{CovariateKey} object in memory, which allows us to achieve higher
+  {CovariateKey} object in memory, which allows us to achieve higher
   cache hit rates when caching the output of the first stage of BQSR.
 \item Merging the two base observations originally required
-  updating and merging the new and old \textsc{Observation} values. By rewriting
-  as a \textsc{reduceByKey}, we were able to eliminate the need for mutable
-  objects. We did not move this codepath to \textsc{Spark SQL}, since this
-  refactor predated the introduction of \textsc{Spark SQL} support into ADAM.
+  updating and merging the new and old {Observation} values. By rewriting
+  as a {reduceByKey}, we were able to eliminate the need for mutable
+  objects. We did not move this codepath to {Spark SQL}, since this
+  refactor predated the introduction of {Spark SQL} support into ADAM.
   However, this is a straightforward modification.
-\item In the process of rewriting the \textsc{CovariateKey} representation, we
+\item In the process of rewriting the {CovariateKey} representation, we
   optimized the implementation of the code that assigned dinucleotide and cycle
   covariates to a given base. This yielded a $2\times$ speedup when creating
   covariates.
@@ -2258,15 +2258,15 @@ likelihood and a Beta(1, 1) prior.
 
 \begin{equation}
 \label{eqn:bqsr-err}
-\mathbf{E}(P_{err}|{cov}) = \frac{\textsc{\#errors}(cov) + 1}{\textsc{\#observations}(cov) + 2}
+\mathbf{E}(P_{err}|{cov}) = \frac{{\#errors}(cov) + 1}{{\#observations}(cov) + 2}
 \end{equation}
 
 After these probabilities are estimated, we go back across the input read
 dataset and reconstruct the quality scores of the read by using the covariate
 assigned to the read to look into the covariate table. However, this process is
 expensive if implemented na\"{i}vely. To handle covariate specific errors, we
-use the hierarchical model from the \textsc{GATK}~\cite{depristo11}. In this
-model, we generate the empirical quality of a \textsc{CovariateKey} by
+use the hierarchical model from the {GATK}~\cite{depristo11}. In this
+model, we generate the empirical quality of a {CovariateKey} by
 hierarchically computing the empirical error rates for the covariate
 groups that it falls into. We treat the read group as the highest order
 covariate, then the quality score, and then the two error covariates.
@@ -2291,7 +2291,7 @@ Algorithm~\ref{alg:invert-cov} demonstrates this approach.
 
 In the original BQSR implementation, this inversion would be called on every
 read base. This is inefficient, as the empirical quality is equal across all
-bases from a given \textsc{CovariateKey}. We eliminated this by inverting all
+bases from a given {CovariateKey}. We eliminated this by inverting all
 covariates after all of the observations had been collected. Then, evaluating
 the new empirical quality score for a base assigned to a covariate was performed
 by looking up the covariate key in a hash map, which is computationally
@@ -2350,9 +2350,9 @@ algorithm for finding the maximal convex hulls that describe a genomic dataset.
 \end{algorithmic}
 \end{algorithm}
 
-The \textsc{generateTarget} function projects each datapoint into a Red-Black tree that contains a
+The {generateTarget} function projects each datapoint into a Red-Black tree that contains a
 single region. The performance of the fold depends on the efficiency of the merge function. We achieve
-efficient merges with the tail-call recursive \textsc{mergeTargetSets} function that is described in
+efficient merges with the tail-call recursive {mergeTargetSets} function that is described in
 Algorithm~\ref{alg:join-targets}.
 
 \begin{algorithm}
@@ -2443,7 +2443,7 @@ map to the same sites. Only the highest scoring read/read pair is kept, where th
 scores in the read that are greater than 15.
 
 To eliminate a shuffle, we leveraged an insight from
-\textsc{SAMBLASTER}~\cite{faust14}, which runs directly on the output of an
+{SAMBLASTER}~\cite{faust14}, which runs directly on the output of an
 aligner, that will group all reads from a single fragment together~(also known
 as query grouped). The fragment schema introduced in~\S\ref{sec:read-schemas}
 describes a set of query grouped reads, and is equivalent to the output of the
@@ -2451,24 +2451,24 @@ step in duplicate marking that groups reads by read name. When reads are grouped
 by sequencing fragment, we can eliminate a shuffle. Fragment-grouped reads are
 found when loading reads from a query grouped
 SAM/BAM/CRAM file, or when running on the output of reads aligned using
-\textsc{Cannoli}. We describe the performance benefit of this change
+{Cannoli}. We describe the performance benefit of this change
 in~\S\ref{sec:benchmarking-duplicate-markers}.
 
-\chapter{Rapid Variant Calling with \textsc{Avocado}}
+\chapter{Rapid Variant Calling with {Avocado}}
 \label{chap:avocado}
 
-This chapter introduces \textsc{Avocado}, a substitution and short INDEL variant
-caller that is built natively on top of the \textsc{ADAM} APIs. For highest
-accuracy, \textsc{Avocado} is run as a two phase tool. In the first phase, we
+This chapter introduces {Avocado}, a substitution and short INDEL variant
+caller that is built natively on top of the {ADAM} APIs. For highest
+accuracy, {Avocado} is run as a two phase tool. In the first phase, we
 reassemble or realign our reads around INDEL variants. In the second phase, we
 apply a probabilistic model built around a biallelic model to the reads to
 identify variants.
 
-\textsc{Avocado}'s INDEL reassembly process cleans up all reads that are aligned
+{Avocado}'s INDEL reassembly process cleans up all reads that are aligned
 near INDEL variants. We do this as a two step process. In the first step, we
 pass over all the reads and use our novel indexed de Bruijn algorithm to extract
 and canonicalize all of the INDEL variants. For best accuracy, we use the
-\textsc{ADAM} INDEL realigner described
+{ADAM} INDEL realigner described
 in~\S\ref{sec:indel-realignment-implementation} to realign known INDELs. This
 approach improves variant calling accuracy over solely using the indexed de Bruijn
 algorithm.
@@ -2489,7 +2489,7 @@ locations covered by a read.
 \end{enumerate}
 
 All of these stages are implemented as a parallel application that runs on top of
-\textsc{Apache Spark}~\cite{zaharia10, zaharia12} using the \textsc{ADAM}
+{Apache Spark}~\cite{zaharia10, zaharia12} using the {ADAM}
 library~\cite{massie13, nothaft15}.
 
 \section{INDEL Reassembly}
@@ -2507,7 +2507,7 @@ reference. We then show how this approach
 can be implemented efficiently without building a de Bruijn graph per read,
 or even adding each read to a de Bruijn graph. Once we have extracted a
 canonical set of INDELs, we realign the reads to each INDEL sequence using
-\textsc{ADAM}'s INDEL realigner, in known INDELs mode. For a full description
+{ADAM}'s INDEL realigner, in known INDELs mode. For a full description
 of the INDEL realignment process, see~\S\ref{sec:indel-realignment-implementation}.
 
 \subsection{Preliminaries}
@@ -2598,8 +2598,8 @@ previously unseen $k$-mers. A substitution is the only possible explanation for 
 paths between $s_1$ and $s_2$.
 \end{proof}
 
-To visualize the graph corresponding to a substitution, take the two example sequences \textsc{CCACTGT}
-and \textsc{CCAATGT}. These two sequences differ by a \textsc{C} $\leftrightarrow$ \textsc{A} edit at
+To visualize the graph corresponding to a substitution, take the two example sequences {CCACTGT}
+and {CCAATGT}. These two sequences differ by a {C} $\leftrightarrow$ {A} edit at
 position three. With $k$-mer length $k = 3$, this corresponds to the graph in Figure~\ref{fig:sne}.
 
 \begin{figure}[h]
@@ -2643,7 +2643,7 @@ $s_1$ and $s_2$.
 \end{proof}
 
 To visualize the graph corresponding to a canonical INDEL, take the two example sequences
-\textsc{CACTGT} and \textsc{CACCATGT}. Here, we have a \textsc{CA} insertion after position two. With
+{CACTGT} and {CACCATGT}. Here, we have a {CA} insertion after position two. With
 $k$-mer length $k = 3$, this corresponds to the graph in Figure~\ref{fig:indel}.
 
 \begin{figure}[h]
@@ -2675,7 +2675,7 @@ can further limit this bound by limiting the maximum number of INDEL edits to $d
 l_{\mathcal{L}_j} |$. This allows us to use an alignment algorithm that limits the number of INDEL
 edits~(e.g., Ukkonen's algorithm~\cite{ukkonen85}). By this, we can achieve $O(n(d + 1))$ cost.
 Alternatively, we can decide to not further canonicalize the site, and to express it as a combined
-insertion and deletion. For simplicity and performance, we use this approach in \textsc{Avocado}.
+insertion and deletion. For simplicity and performance, we use this approach in {Avocado}.
 
 \subsection{Implementation}
 \label{sec:implementation}
@@ -2695,7 +2695,7 @@ for each read~\cite{li09}. We do this by:
 \item Iterating over each operator in the CIGAR string. We coalesce the operators
 into a structure that we call an ``alignment block'':
 \begin{itemize}
-\item If the operator is a sequence match~(CIGAR \textsc{=}, or CIGAR \textsc{M}
+\item If the operator is a sequence match~(CIGAR {=}, or CIGAR {M}
 with MD tag indicating an exact sequence match) that is longer than our $k$-mer
 length, we can create an alignment block that indicates a convergence in the
 indexed de Bruijn block~(a sequence match block).
@@ -2709,7 +2709,7 @@ each side. We call these blocks realignment blocks.
 \end{itemize}
 \item We then loop over each alignment block. Since the sequence match blocks
 are exact sequence matches, they do not need any further processing and can be
-directly emitted as a CIGAR \textsc{=} operator. If the block is a realignment
+directly emitted as a CIGAR {=} operator. If the block is a realignment
 block, we then apply the observations from~\S\ref{sec:formulation}. Again, we
 can apply our approaches without building de Bruijn graphs for the bubble.
 Specifically, both of the canonical placement rules that we formulate
@@ -2717,14 +2717,14 @@ in~\S\ref{sec:formulation} indicate that the variant in a bubble can be recovere
 by trimming any matching flanking sequence. We begin by trimming the matching
 sequences from the reference and read, starting from the right, followed
 by the left. We then emit a CIGAR insertion, deletion, or sequence
-mismatch~(\textsc{X}) operator for this block, along with a match operator if
+mismatch~({X}) operator for this block, along with a match operator if
 either side of the flanking sequence was longer than $k$.
 \end{itemize}
 
 This process is very efficient, as it can be done wholly with standard string
 operators in a single loop over the read. To avoid the cost of looking up the
 reference sequence from a reference genome, we require that all reads are
-tagged with the SAM \textsc{MD} tag. MD tags allow us to reconstruct the
+tagged with the SAM {MD} tag. MD tags allow us to reconstruct the
 reference sequence for a bubble from the read sequence and CIGAR.
 
 One problem with this method is that it can be misled by sequencing errors
@@ -2736,9 +2736,9 @@ to be used as an input to a local realignment scheme.  To implement this
 approach, we used our indexed de Bruijn algorithm to canonicalize INDEL variants,
 and then we used our variant discovery algorithm~(see~\S\ref{sec:discovery})
 with filtration disabled to collect all canonical INDELs. We then fed these
-INDELs and our input reads into \textsc{ADAM}'s INDEL realignment
+INDELs and our input reads into {ADAM}'s INDEL realignment
 engine~\cite{massie13, nothaft15}. This tool is based on the algorithms used in
-the \textsc{GATK}'s INDEL realigner~\cite{depristo11}, and calculates the quality-score
+the {GATK}'s INDEL realigner~\cite{depristo11}, and calculates the quality-score
 weighted Hamming edit distance between a set of reads, a consensus sequence~(a
 haplotype containing a potential INDEL variant), and the reference sequence. If
 the sum weighted edit distance between the reads and the consensus sequence
@@ -2753,7 +2753,7 @@ state-of-the-art, while improving INDEL calling accuracy by 2--5\%.
 \section{Genotyping}
 \label{sec:genotyping}
 
-\textsc{Avocado} performs genotyping as a several stage process where variants
+{Avocado} performs genotyping as a several stage process where variants
 are discovered from the input reads and filtered, joined back against the input
 reads, and then scored. We use a biallelic likelihood model to score
 variants~\cite{li11}, and run all stages in parallel. Our approach does not
@@ -2764,9 +2764,9 @@ If the input reads must be sorted, this can lead to large work imbalances
 between nodes in a distributed system, which negatively impacts strong scaling.
 An alternative approach is to use previously known data about genome coverage
 to statically partition tasks into balanced chunks~\cite{chiang15}. Unlike the
-static partitioning approach used by \textsc{SpeedSeq} that discards regions with
+static partitioning approach used by {SpeedSeq} that discards regions with
 very high coverage, this allows us to call variants in regions with very high
-coverage. However, as is also noted in the \textsc{SpeedSeq} paper~\cite{chiang15}, variant calls
+coverage. However, as is also noted in the {SpeedSeq} paper~\cite{chiang15}, variant calls
 in these regions are likely to be caused by artifacts in the reference genome that
 confound mapping and thus are uninformative or spurious, and are hard filtered by
 our pipeline~(see~\S\ref{sec:variant-filtration}).
@@ -2777,7 +2777,7 @@ our pipeline~(see~\S\ref{sec:variant-filtration}).
 To identify a set of variants to score, we scan over all of the input reads,
 and generate a set of variants per read where each variant is tagged with the
 mean quality score of all bases in the read that were in this variant. We then
-use \textsc{Apache Spark}'s \textsc{reduceByKey} functionality to compute
+use {Apache Spark}'s {reduceByKey} functionality to compute
 the number of times each variant was observed with high quality. We do this
 to discard sequence variants that were observed in a read that represent a
 sequencing error, and not a true variant. By default, we set the quality
@@ -2809,9 +2809,9 @@ approach differs in several ways:
   likelihood of a compound heterozygous variant, and to make a partial no-call.
 \end{itemize}
 
-An early variant of \textsc{Avocado} used a strict biallelic model, but this
+An early variant of {Avocado} used a strict biallelic model, but this
 generated incorrect calls for compound heterozygous sites and INDEL variants.
-This early version of \textsc{Avocado} performed the following process to score variants.
+This early version of {Avocado} performed the following process to score variants.
 For each variant, we check to see if the read supports the variant allele.
 If the variant is present, we treat the read as positive
 evidence supporting the variant. If the read contains the reference allele at
@@ -2844,7 +2844,7 @@ log space. For all sites, we also compute a reference model that can be used in
 joint genotyping in a quasi-gVCF approach. Additionally, we support a gVCF mode where
 all sites are scored, even if they are not covered by a putative variant.
 
-The new scoring model used in \textsc{Avocado} checks to see if the read matches
+The new scoring model used in {Avocado} checks to see if the read matches
 the alternate allele we are testing, the reference allele, another alternate
 allele that overlaps with the allele we are testing, or none of the above. 
 To do this, we use the ``one sided'' variant of
@@ -2869,7 +2869,7 @@ over all of the reads. For each variant covered by the read being observed, the
 scoring function will emit a record that contains the mapping and base
 qualities, and whether the read supported the reference allele, the alternate
 allele under test, another alternate allele, or no known alleles. These records
-are converted into a \textsc{Spark SQL} DataFrame, and we join these values
+are converted into a {Spark SQL} DataFrame, and we join these values
 against a small table containing all of the pre-computed one-sided likelihoods.
 We then run an aggregation over all reads covering a given variant, for all
 variants in parallel. Once we have aggregated all of the observations for a given
@@ -2898,7 +2898,7 @@ can be set separately for INDELs and SNPs.
 
 \part{Evaluation}
 
-\chapter{Benchmarking the \textsc{ADAM} Stack}
+\chapter{Benchmarking the {ADAM} Stack}
 \label{chap:benchmarking}
 
 \section{Benchmarking Preprocessing Algorithms}
@@ -2917,11 +2917,11 @@ can be set separately for INDELs and SNPs.
 \label{sec:compression}
 
 These representations achieve high compression versus the legacy formats. We provide a detailed breakdown of
-compression in~\S\ref{sec:compression}. \textsc{ADAM} data stored in \textsc{Parquet} achieves an
-approximately 25\% reduction in file size over compressed \textsc{BAM} for read data, and a 66\% reduction
-over \textsc{GZIP}ped \textsc{VCF} for variant data.
+compression in~\S\ref{sec:compression}. {ADAM} data stored in {Parquet} achieves an
+approximately 25\% reduction in file size over compressed {BAM} for read data, and a 66\% reduction
+over {GZIP}ped {VCF} for variant data.
 
-\section{Benchmarking \textsc{Cannoli}}
+\section{Benchmarking {Cannoli}}
 \label{sec:benchmarking-cannoli}
 
 \chapter{The Simons Genome Diversity Dataset Recompute}
@@ -2933,46 +2933,46 @@ over \textsc{GZIP}ped \textsc{VCF} for variant data.
 \label{chap:future-work}
 
 In this dissertation, we have articulated a set of overarching goals for
-\textsc{ADAM} and the \textsc{Big Data Genomics} project. We aimed to make it
+{ADAM} and the {Big Data Genomics} project. We aimed to make it
 easier to write genomic analyses that could be run on large datasets using
 distributed computing. With these APIs, we started working on the
-\textsc{Avocado} variant caller, with the goal of making variant calling both
+{Avocado} variant caller, with the goal of making variant calling both
 faster and more accurate. From this work, we have identified several important
 future directions. In this section, we will discuss possible avenues for
-improving query performance in \textsc{ADAM} by providing more genomics specific
+improving query performance in {ADAM} by providing more genomics specific
 query optimizations, extending the variant calling algorithms in
-\textsc{Avocado}, and mapping genomics analysis tasks directly into hardware.
+{Avocado}, and mapping genomics analysis tasks directly into hardware.
 
-\section{Further Query Optimization in \textsc{ADAM}}
+\section{Further Query Optimization in {ADAM}}
 \label{sec:extensions-adam}
 
-\textsc{ADAM} provides several interfaces that either provide genomics-specific
+{ADAM} provides several interfaces that either provide genomics-specific
 query APIs, or that perform a runtime optimization. These interfaces include the
-region join API described in~\S\ref{sec:query-patterns}, the \textsc{pipe} API
+region join API described in~\S\ref{sec:query-patterns}, the {pipe} API
 described in~\S\ref{sec:pipe-api}, and the lazy binding optimization described
 in~\S\ref{sec:multi-languge}. We can improve the performance of the region join
-and \textsc{pipe} APIs by eliminating shuffles when data is already presorted.
-We can also improve the performance of the \textsc{pipe} API by applying the
+and {pipe} APIs by eliminating shuffles when data is already presorted.
+We can also improve the performance of the {pipe} API by applying the
 lazy binding techinque to the various genomic file formats. Additionally, we
 discuss how we can make it easier to understand the performance of distributed
-code in \textsc{Apache Spark}, and how we can make it easier to manipulate
+code in {Apache Spark}, and how we can make it easier to manipulate
 genomic metadata.
 
-\subsection{Preserving Sorted Knowledge in \textsc{ADAM}}
+\subsection{Preserving Sorted Knowledge in {ADAM}}
 \label{sec:sorted-knowledge}
 
-An inefficiency in \textsc{ADAM}'s region join API stems from the need to
+An inefficiency in {ADAM}'s region join API stems from the need to
 achieve an equivalent partitioning between the two datasets being joined. We
-recently added functionality to \textsc{ADAM} that saves metadata to disk if the
-dataset is being saved as a sorted table of \textsc{Apache Parquet} data, with
+recently added functionality to {ADAM} that saves metadata to disk if the
+dataset is being saved as a sorted table of {Apache Parquet} data, with
 the sort order being defined lexicographically by the contig names. While this
 approach can eliminate shuffles for some joins, it has several limitations:
 
 \begin{itemize}
 \item Since the region join API requires records that straddle the partition
   boundaries to be replicated across the boundary, this approach only works for
-  \textsc{Apache Parquet}. Conceptually, we could implement this with a sharded
-  codec, but \textsc{Hadoop-BAM}'s support for sharded file formats is limited.
+  {Apache Parquet}. Conceptually, we could implement this with a sharded
+  codec, but {Hadoop-BAM}'s support for sharded file formats is limited.
   As a result, we cannot eliminate shuffles for data coming in from a standard
   genomic file format that defines a sort order.
 \item Additionally, the current partitioning scheme requires a lexicographical
@@ -2994,12 +2994,12 @@ orderings and file formats. In this approach, we make several changes:
   Since this approach doesn't require records to be replicated, it is compatible
   with all file formats.
 \item In the current implementation, once data is loaded as sorted, this is
-  encoded by setting a field that is protected to the \textsc{GenomicRDD} trait.
+  encoded by setting a field that is protected to the {GenomicRDD} trait.
   This makes it more difficult to implement methods that can be optimized to
   make use of sort order. Specifically, if a method can optimize for sort order,
   the method needs to check this field and select the sorted or unsorted
   codepath at runtime. In the new implementation, we make sorted and unsorted
-  traits. If an implementation of \textsc{GenomicRDD} has behavior that can
+  traits. If an implementation of {GenomicRDD} has behavior that can
   be optimized for data that is known to be sorted, that implementation should
   provide the optimized variant in a class that implements the sorted trait, and
   an unoptimized variant in the unsorted trait.
@@ -3011,10 +3011,10 @@ orderings and file formats. In this approach, we make several changes:
 
 Beyond broadening the opportunities for eliminating a shuffle in the region join
 codepath, an additional benefit of this new approach is that it allows us to
-harmonize the partitioning scheme used by the \textsc{pipe} API with the scheme
+harmonize the partitioning scheme used by the {pipe} API with the scheme
 used by the region join API. Currently, these two schemes are not harmonious
 because the region join's partitioning scheme does not allow a flanking length
-to be specified. In the \textsc{pipe} API, we allow the user to specify the
+to be specified. In the {pipe} API, we allow the user to specify the
 width of flanking sequence to include in each call. Since this new partitioning
 scheme uses a flanking length to decide which record to copy from the start of
 a partition to the end of the prior partition, we can unify these two schemes.
@@ -3024,19 +3024,19 @@ approach on read world datasets.
 \subsection{Lazily Binding To Genomic File Formats}
 \label{sec:lazy-bind}
 
-An inefficiency in the \textsc{pipe} API occurs when reading data from a file
+An inefficiency in the {pipe} API occurs when reading data from a file
 stored in a legacy file format and then piping this data into a command using
 that same file format. An example of this would be loading reads from a SAM file
-and then \textsc{pipe}ing these reads into a variant caller using SAM input.
+and then {pipe}ing these reads into a variant caller using SAM input.
 This is inefficient because we wind up converting the reads into the
-\textsc{ADAM} schema, just to convert the data back into the legacy file format.
+{ADAM} schema, just to convert the data back into the legacy file format.
 
 One possible approach to eliminate this issue would be to change how we
-implement the conversion/view system in \textsc{ADAM}. Currently, the view
+implement the conversion/view system in {ADAM}. Currently, the view
 mechanism is implemented using monolithic datatype conversion classes. These
 classes provide methods that convert a single record from a legacy data file
-into \textsc{ADAM}'s schema records. The \textsc{GATK4}~\cite{gatk4} uses an
-alternative approach. In this approach, the \textsc{GATK4} wraps the record
+into {ADAM}'s schema records. The {GATK4}~\cite{gatk4} uses an
+alternative approach. In this approach, the {GATK4} wraps the record
 types that it converts from in an interface that these records then implement.
 The conversions are then implemented through the methods in the wrapper classes.
 
@@ -3050,12 +3050,12 @@ anomalies. Due to the nature of genomic data, faults are typically easy to
 diagnose, as the faults are localized to a set of genomic loci. These loci can
 then be isolated, and used for debugging. A bigger challenge can be isolating
 performance anomalies, especially since many performance anomalies may be
-related to complex genomic loci. Additionally, \textsc{Apache Spark}'s execution
+related to complex genomic loci. Additionally, {Apache Spark}'s execution
 model pipelines multiple transformations into a single analysis
 stage~\cite{zaharia12}, which can obfuscate the contribution of multiple
 functions to a performance anomaly.
 
-In \textsc{ADAM}, we attempted to address the latter problem through a library
+In {ADAM}, we attempted to address the latter problem through a library
 enhancement that was contributed by an open source developer. In this approach,
 we wrap the RDD API in a way that wraps all RDD function calls in timers. These
 timers are high resolution timers and are specified at a very fine granularity
@@ -3068,7 +3068,7 @@ aiding in the causal discovery of performance anomalies. One approach that would
 be useful would time slice the statistics further, and would couple them with
 timewise reports of events that indicate a performance issue, such as long or
 frequent GC pauses. By coupling this tool with a performance visualizaton
-tool like \textsc{Ganglia}~\cite{massie04}, there would be an opportunity to
+tool like {Ganglia}~\cite{massie04}, there would be an opportunity to
 visualize the instrumented performance of a method along with other indicators
 such as JVM garbage collection epochs and stats, network/disk/memory bandwith
 utilization, CPU utilization, and other performance indicators.
@@ -3082,13 +3082,13 @@ cause several orders of magnitude increased coverage. It might be possible to us
 statistical model that predicts performance~\cite{venkataraman16ernest} to isolate
 key-specific/skew-driven performance issues.
 
-\section{Extensions to \textsc{Avocado}}
+\section{Extensions to {Avocado}}
 \label{sec:extending-avocado}
 
-There are several extensions that we are considering to the \textsc{Avocado}
-variant caller. In this dissertation, we have discussed \textsc{Avocado}'s
+There are several extensions that we are considering to the {Avocado}
+variant caller. In this dissertation, we have discussed {Avocado}'s
 INDEL reassembly and single sample germline genotyping methods. There is ongoing
-work to add more joint variant calling methods to \textsc{Avocado}, such as a
+work to add more joint variant calling methods to {Avocado}, such as a
 pedigree-aware caller~(currently only supports mother/father/offspring trios).
 In this section, we discuss support for incremental joint variant calling,
 tumor-normal variant calling, and methods for merging the output of multiple
@@ -3130,7 +3130,7 @@ whenever a novel INDEL variant is observed in the cohort.
 \label{sec:somatic-variant-calling}
 
 Although the reassembly algorithm introduced in~\S\ref{sec:indel-reassembly} can
-run on data that does not have known copy number, the \textsc{Avocado} genotyper
+run on data that does not have known copy number, the {Avocado} genotyper
 described in~\S\ref{sec:genotyping-model} requires known copy number to call a
 variant. While this genotyping model can be used as a first step in a variant
 caller that assumes a popuation structure, it is not compatible with somatic
@@ -3138,8 +3138,8 @@ variant calling. In somatic mutation calling, we are looking for the variants
 that appear in one sequencing run from a sample that do not appear in another
 sequencing run from a sample. Typically, this technique is used to call mutations
 in a tumor, and it would be desirable to support somatic variant calling using
-\textsc{Apache Spark}. We have worked to port the
-\textsc{Mutect}~\cite{cibulskis13} algorithm over to \textsc{Avocado}, but have
+{Apache Spark}. We have worked to port the
+{Mutect}~\cite{cibulskis13} algorithm over to {Avocado}, but have
 not completed this effort.
 
 One critical part of somatic variant calling is coming up with a statistical
@@ -3151,9 +3151,9 @@ with base quality recalibration. Specifically, we could use an advanced form of
 base quality recalibration to try to capture sequence specific error models,
 while using the germline variants as the known variants for masking. Then, we
 could use contamination estimation to try to identify a background rate of
-sequence contamination. We have implemented an \textsc{ADAM}-based variant of
-the \textsc{ContEst}~\cite{cibulskis11} tool in \textsc{Quinine}, which is
-the \textsc{Big Data Genomics}' quality control tool. From here, we would need
+sequence contamination. We have implemented an {ADAM}-based variant of
+the {ContEst}~\cite{cibulskis11} tool in {Quinine}, which is
+the {Big Data Genomics}' quality control tool. From here, we would need
 to merge these two approaches into a novel probabilistic model.
 
 \subsection{Efficient Consensus Methods}
@@ -3168,7 +3168,7 @@ variant calling pipelines and can substantially increase computational cost.
 
 One approach that may be tractible is to use a machine learning approach to run
 a limited consensus approach. A possible implementation might use a setup
-similar to the \textsc{GATK}'s~\cite{depristo11} variant quality score
+similar to the {GATK}'s~\cite{depristo11} variant quality score
 recalibration~(VQSR) algorithm, which fits a Gaussian mixture model to annotated
 genotypes. To do this, we would use a read dataset that has good ground truth
 data, such as one of the GIAB truth sets~\cite{zook15}. We would then run the
@@ -3196,7 +3196,7 @@ the variant site~\cite{bloniarz14}.
 
 As we increase the I/O bandwidth that can be achieved by running many tasks in
 parallel across a horizontally scalable file system, single thread performance
-becomes an issue. As we have seen with the \textsc{Cannoli} tool, the JVM can
+becomes an issue. As we have seen with the {Cannoli} tool, the JVM can
 provide good performance, but it is difficult to outperform C/C++ from within
 the JVM. However, the marginal performance gain from moving to a lower level
 language is unclear. To gain an even higher performance gain, we should consider
@@ -3204,30 +3204,30 @@ moving to a hardware accelerator, which can be highly specialized to our
 specific application patterns~\cite{asanovic17}. There has already been
 commercial work towards building hardware accelerated solutions for genomic data
 analysis~\cite{dragen}, as well as academic work towards accelerating the
-\textsc{BWA} alignment algorithm~\cite{chen16, chen15} and alignment for de novo
+{BWA} alignment algorithm~\cite{chen16, chen15} and alignment for de novo
 assembly~\cite{turakhia17}.
 
-To this end, we have been working on the \textsc{Darwin} project, which
+To this end, we have been working on the {Darwin} project, which
 implements the preprocessing algorithms introduced in Chapter~\ref{chap:adam} in
 a library which can be synthesized to target both field programmable gate
 arrays~(FPGAs) and application specific integrated circuits~(ASIC). The FPGA
 form factor is especially desirable as commercial cloud vendors like
 AWS~\cite{f1} and Microsoft Azure~\cite{putnam14} have moved to support FPGAs in
 the datacenter. This library provides a 2--10$\times$ performance improvement
-over \textsc{ADAM}'s read preprocessing library. In the immediate short term, we
-will continue to validate the algorithms in \textsc{Genie}, and will work to add
+over {ADAM}'s read preprocessing library. In the immediate short term, we
+will continue to validate the algorithms in {Genie}, and will work to add
 variant calling.
 
 While FPGAs hold promise for accelerating complex and computationally intensive
 genomic data analysis pipelines, they face the same accessibility problem
-as \textsc{Apache Spark}, which was described in Chapter~\ref{chap:cannoli}. To
+as {Apache Spark}, which was described in Chapter~\ref{chap:cannoli}. To
 address this problem, we have used the Q100~\cite{wu14} architecture, which uses
 a SQL-like programming methodology to drive a high-level synthesis workflow.
 This greatly increases the accessibility of hardware design, which is currently
 restricted to people who are willing to learn a hardware description language,
 which typically have programming patterns that are divergent from software
 design~\cite{bachrach12}. One possible direction for future work is to use the
-\textsc{Apache Spark SQL} library to drive a high level synthesis flow, as the
+{Apache Spark SQL} library to drive a high level synthesis flow, as the
 SQL query captured by the query engine could be turned into synthesizable
 hardware. This would make the programming model accessible to a larger group of
 programmers.
@@ -3236,12 +3236,12 @@ One significant remaining question is how to process user defined
 functions~(UDFs) that are specified outside of the SQL dialect. UDFs cannot
 typically be optimized by a query planner~\cite{armbrust15, kornacker15}, but
 are critical for genomic data analysis. While the duplicate marker and base
-recalibrator can be implemented in \textsc{Genie} with modest extensions to SQL,
+recalibrator can be implemented in {Genie} with modest extensions to SQL,
 the INDEL realigner is implemented as a monolithic UDF. One option is to use a
 dataflow methodology~\cite{bhattacharyya08}, which would map the dataflow
 described by a program into hardware. This would be compatible with a purely
 functional programming methodology that relies on list comprehensions, which is
-a idiomatic programming style in the \textsc{Scala}~\cite{odersky04} language.
+a idiomatic programming style in the {Scala}~\cite{odersky04} language.
 This approach could be used to synthesize hardware from a UDF, which would make
 it increasingly possible to implement genomic analysis tasks in hardware.
 
@@ -3258,7 +3258,7 @@ it increasingly possible to implement genomic analysis tasks in hardware.
 \section{Alignment Record Schema}
 \label{sec:alignment-record}
 
-\begin{lstlisting}[caption=\textsc{ADAM} read schema]
+\begin{lstlisting}[caption={ADAM} read schema]
 record AlignmentRecord {
  
   union { int, null } readInFragment = 0;
@@ -3312,7 +3312,7 @@ record AlignmentRecord {
 \section{Fragment Schema}
 \label{sec:fragment}
 
-\begin{lstlisting}[caption=\textsc{ADAM} fragment schema]
+\begin{lstlisting}[caption={ADAM} fragment schema]
 record Fragment {
 
   union { null, string } readName = null;
@@ -3329,7 +3329,7 @@ record Fragment {
 \section{Variation Schemas}
 \label{sec:variation-schemas}
 
-\begin{lstlisting}[caption=\textsc{ADAM} core variant and genotype schemas]
+\begin{lstlisting}[caption={ADAM} core variant and genotype schemas]
 record Variant {
 
   union { null, string } contigName = null;
@@ -3397,7 +3397,7 @@ record Genotype {
 \subsection{Variant Annotation Schemas}
 \label{sec:variant-annotation-schemas}
 
-\begin{lstlisting}[caption=\textsc{ADAM} variant annotation schemas]
+\begin{lstlisting}[caption={ADAM} variant annotation schemas]
 record TranscriptEffect {
   union { null, string } alternateAllele = null;
 
@@ -3464,7 +3464,7 @@ record VariantAnnotation {
 \subsection{Genotype Annotation Schema}
 \label{sec:genotype-annotation-schema}
 
-\begin{lstlisting}[caption=\textsc{ADAM} genotype annotation schema]
+\begin{lstlisting}[caption={ADAM} genotype annotation schema]
 record VariantCallingAnnotations {
 
   union { null, boolean } filtersApplied = null;
@@ -3493,7 +3493,7 @@ record VariantCallingAnnotations {
 \section{Feature Schema}
 \label{sec:feature-schema}
 
-\begin{lstlisting}[caption=\textsc{ADAM}'s feature schemas]
+\begin{lstlisting}[caption={ADAM}'s feature schemas]
 enum Strand {
   FORWARD,
   REVERSE,
