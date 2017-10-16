@@ -1288,7 +1288,7 @@ processing the growing volume of genomic sequencing data in a reasonable
 timeframe~\cite{schadt10, stein10}. While the per-run latency of current genomic
 pipelines such as the \textsc{GATK} could be improved by manually partitioning
 the input dataset and distributing work, native support for distributed
-computing is not provided. As a stopgap solution, projects like
+computing was not provided. As a stopgap solution, projects like
 \textsc{Cloudburst}~\cite{schatz09} and \textsc{Crossbow}~\cite{langmead09crossbow}
 have ported individual analytics tools to run on top of \textsc{Hadoop}. While
 this approach has served well for proofs of concept, this approach provides poor
@@ -1335,7 +1335,7 @@ in~\S\ref{sec:metadata}.
 
 \begin{figure}[h]
 \begin{center}
-\includegraphics[width=0.95\linewidth]{graphs/grdd.pdf}
+\includegraphics[width=\linewidth]{graphs/grdd.pdf}
 \end{center}
 \caption{The \textsc{GenomicRDD} class hierarchy. Ovals are traits, trapezoids
   are abstract classes, rectangles are classes, and a bold border means that the
@@ -1350,12 +1350,12 @@ While the \textsc{ADAMContext} API has existed since the beginning of the
 \textsc{ADAM} project, the \textsc{GenomicRDD} API is a fairly recent
 introduction, having been added in 2016, three years into the project. Despite
 its recent addition, the \textsc{GenomicRDD} API has been critical to achieving
-the vision behind \textsc{ADAM}:
+\textsc{ADAM}'s vision:
 
 \begin{itemize}
 \item The \textsc{GenomicRDD} wraps the \textsc{Apache Spark}
   RDD~\cite{zaharia12} and \textsc{Spark SQL} DataFrame~\cite{armbrust15} APIs
-  with genomics-specific and genomic-datatype specific functionality. This
+  with genomics-specific and genomic-datatype specific functionality. Access to both APIs from a single class
   enables the use of both generic~(RDD/DataFrame) and specialized APIs~(the
   region join and \textsc{pipe} APIs) to process genomic data in a natively
   distributed manner.
@@ -1428,7 +1428,7 @@ contribute to realizing the stack vision in the following ways:
   \textsc{Spark}'s RDD API, any tools that optimize at the RDD level can be used
   to enrich the evidence access layer~\cite{tu16, morrow17}.
 \item The presentation layer~(6) provides datatype~(e.g., read/feature/variant)
-  specific methods on top of the \textsc{GenomicRDD} API. This includes
+  specific methods on top of the \textsc{GenomicRDD} API. This layer includes
   many of the operations introduced in Chapter~\ref{chap:adam}.
 \item The application layer~(7) is where the user builds their code, and this is
   built by using the \textsc{ADAMContext} to load in a \textsc{GenomicRDD},
@@ -1438,9 +1438,7 @@ contribute to realizing the stack vision in the following ways:
 While many of these layers have been unchanged since we introduced our stack
 model in our original technical report~\cite{massie13} and our SIGMOD
 manuscript~\cite{nothaft15}, the evidence access and presentation layers~(5 and
-6) have changed. While the \textsc{ADAMContext} API has existed in \textsc{ADAM}
-since the beginning of the project, the \textsc{GenomicRDD} API was only
-introduced in 2016, three years into the project. The introduction of the
+6) have changed. The introduction of the
 \textsc{GenomicRDD} API was symbolic of larger changes, which included:
 
 \begin{itemize}
@@ -1460,7 +1458,7 @@ introduced in 2016, three years into the project. The introduction of the
   \textsc{GenomicRDD} API is that we were better able to track the layout of
   data, and to specialize queries given a known layout. We describe one such
   mechanism for accelerating queries in the genomic coordinate space
-  in~\S\textsc{sec:query-patterns}.
+  in~\S\ref{sec:query-patterns}.
 \item The presentation layer~(6) was originally implemented by enhancing the
   schemas. Specifically, the \textsc{AlignmentRecord}
   schema~(see~\S\ref{sec:read-schemas}) was accompanied by a
@@ -1505,7 +1503,7 @@ degradation.
 We made several high level choices when designing the schemas used in
 \textsc{ADAM}~\cite{massie13}. Over time, we have gone backwards on some of
 these design decisions. First, the schemas were originally fully denormalized.
-Our rationale for thie decision was that this would reduce the cost of metadata
+Our rationale for this decision was that this would reduce the cost of metadata
 access while simplifying metadata distribution. We believed we would be able to
 gain these benefits without greatly increasing the cost of memory access because
 our backing store~(\textsc{Parquet}) made use of run length and dictionary
@@ -1520,7 +1518,7 @@ common sequence quality control algorithms such as Flagstat~\cite{massie13,
 
 \begin{figure}[h]
 \begin{center}
-\includegraphics[width=0.95\linewidth]{graphs/bdg.pdf}
+\includegraphics[width=0.65\linewidth]{graphs/bdg.pdf}
 \end{center}
 \caption{A UML diagram showing the dependencies and structure of the ADAM
   schemas. ADAM's read schema is fairly flat, which contrasts with the other
@@ -1545,7 +1543,7 @@ from the current state of representing genomic variation and features.
 
 Our read schema~(\S\ref{sec:alignment-record}) maps closely to the logical layout of data presented by
 \textsc{SAM} and \textsc{BAM}. Unlike the \textsc{SAM} format, we split the
-flags out from a single field into many fields. This makes it much simpler to
+flags out from a single field into many fields. Separating the flags makes it much simpler to
 extract state from a record. Additionally, we promote several commonly used
 fields from \textsc{SAM} attributes to fields. These fields include the original
 quality, position, and CIGAR fields, which are set during
@@ -1553,7 +1551,7 @@ realignment~(see~\S\ref{sec:indel-realignment-implementation}) and base quality
 recalibration~(see~\S\ref{sec:bqsr-implementation}).
 
 Additionally, we support a schema that groups together all of the reads from a
-single sequenced fragment~(\S\ref{sec:fragment}). This fragment enables a traversal over read data that
+single sequenced fragment~(\S\ref{sec:fragment}). The fragment data structure enables a traversal over read data that
 is similar to \textsc{SAM}'s read-name grouping.
 We feel that the fragment schema is preferable to the queryname sort order and
 query grouping invariants that \textsc{SAM} allows one to specify. By using this
@@ -1574,7 +1572,7 @@ as opposed to a \textsc{VCF} row, where all individuals are collected together. 
 a biallelic representation. In a biallelic representation, we describe the genotype of a sample at a position or
 interval as the composition of a reference allele and a single alternate allele. If multiple alternate alleles segregate at
 the site (e.g., there are two known SNPs in a population at this site), we create multiple biallelic variants for the site.
-This differs from \textsc{VCF}, which allows multiallelic records. By limiting
+Restricting records to be biallelic differs from \textsc{VCF}, which allows multiallelic records. By limiting
 ourselves to a biallelic representation, we are able to clarify the meaning of many of the variant calling annotations. If a
 site contains a multiallelic variant (e.g., in \textsc{VCF} parlance this could be a \textsc{1/2} genotype), we split the
 variant into two or more biallelic records. The sufficient statistics for each allele should then be computed under
@@ -1594,7 +1592,7 @@ later, expanded the variant schema to include a nested structural variant
 description. This structural variant schema was removed during a large refactor
 after the ADAM SIGMOD paper that improved support for variant annotations. We
 have also played with flattening the variant schema out of the genotype schema
-for performance reasons. During our work on \textsc{Mango}~cite{tu16, morrow17},
+for performance reasons. During our work on \textsc{Mango}~\cite{tu16, morrow17},
 we realized that nesting the variant field decreased the performance of range
 queries by approximately an order of magnitude. In the variant annotation
 refactor, we added the variant annotation schemas~(\S\ref{sec:variant-annotation-schemas}).
@@ -1676,7 +1674,7 @@ feature record.
 \label{sec:metadata}
 
 A major evolution of the \textsc{ADAM} schemas relates to how we manage and
-store metadata. In our original schemas, the metdata was denormalized across the
+store metadata. In our original schemas, the metadata was denormalized across the
 record. For example, all of the metadata from the sequencing run and prior
 processing steps were packed into record group metadata fields, as opposed to
 being stored in a file header. Our rationale was that this metadata describes
@@ -1737,7 +1735,7 @@ variant using the quality characteristics of all reads that overlap the
 putative variant.
 
 To support these algorithms, we provide the region join primitive. The algorithm
-used is described in algorithm~\ref{alg:region-join} and takes as input two RDDs
+used is described in Algorithm~\ref{alg:region-join} and takes as input two RDDs
 of \textsc{ReferenceRegions}, a data structure that represents intervals along
 the 1-D genomics coordinate space. It produces the set of all overlapping
 \textsc{ReferenceRegion} pairs. This join can be implemented using either a
@@ -1762,7 +1760,7 @@ the broadcast approach.
 Our implementation of the broadcast region join has been refactored twice. The
 first implementation was described in our SIGMOD manuscript~\cite{nothaft15} and
 required the computation of the convex hulls of the left side of the dataset.
-This was done using an algorithm similar to the one described
+Computing the convex hulls was done using an algorithm similar to the one described
 in~\S\ref{sec:convex-hull}. Additionally, this approach required both sides to
 be hash-partitioned. The first rewrite of the broadcast join was very similar to
 Algorithm~\ref{alg:region-join}. However, it used an interval
@@ -1828,7 +1826,7 @@ languages, \textsc{Apache Parquet} did not, and since we used \textsc{Avro} to
 manage in-memory serialization but \textsc{Parquet} to manage on-disk
 serialization, users could not load our \textsc{Parquet} files from disk in
 non-JVM languages. Additionally, even if we had support for reading
-\textsc{Parquet} files from these other languages, it would've been prohibitive
+\textsc{Parquet} files from these other languages, it would have been prohibitive
 to port all of the logic in our stack~(mostly at the materialized data and
 presentation layers) over to other languages.
 
@@ -1866,7 +1864,7 @@ time.
 
 \begin{figure}[h]
 \begin{center}
-\includegraphics[width=0.5\linewidth]{graphs/binding.pdf}
+\includegraphics[width=0.8\linewidth]{graphs/binding.pdf}
 \end{center}
 \caption{With the move to support \textsc{Spark SQL}, we added a binding scheme
   to the \textsc{GenomicRDD} hierarchy. This figure depicts the alternative
@@ -1887,7 +1885,7 @@ binding scheme. Figure~\ref{fig:binding} depicts the bound variants of the
 \textsc{AlignmentRecordRDD} type. In this scheme, we track whether the last
 transformation applied to the \textsc{GenomicRDD} was applied to the DataFrame
 or RDD representation of the genomic data. The next phase of computation will
-run on top of the bound output of the prior stage. This can provide a major
+run on top of the bound output of the prior stage. Avoiding a conversion between the RDD and SQL DataFrame representations can provide a major
 performance win if running \textsc{Spark SQL} queries, as the \textsc{Spark SQL}
 query optimizer performs major optimizations to amortize the method call
 overhead of chained transformations~\cite{armbrust15}. A further optimization
