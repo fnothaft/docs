@@ -899,9 +899,9 @@ specifications. This led to the initial goals for the {ADAM} project:
 To achieve these goals, we designed a decoupled, stack-oriented architecture
 centered around schemas that provided a logical view over the genomic
 data being manipulated. This architecture was implemented on top of
-{Apache Spark}'s RDD APIs, and provided the user with a distributed
-collection of genomic data which were encoded in {Apache
-  Avro}~\cite{avro} and allowed for queries to be described at a high level
+{Apache Spark}'s Resilient Distributed Dataset~(RDD) APIs~\cite{zaharia12},
+and provided the user with a distributed collection of genomic data which were
+encoded in {Apache Avro}~\cite{avro} and allowed for queries to be described at a high level
 through {Spark}'s RDD APIs, which would execute the queries rapidly by
 running parallel scans over the data. Over time, our goals grew in scope to
 include:
@@ -955,7 +955,7 @@ This approach is undesirable for two reasons:
   single genomic position. Writing against low level APIs can lead to errors in user code.
 \item A natural consequence of the first point is that low level APIs obscure
   the actual query pattern that is being implemented. For example, a duplicate
-  marker typically groups together all reads that aligned to a single genomic
+  marker typically groups together all reads that are aligned to a single genomic
   locus. This pattern is clear when duplicate marking is written as a high
   level algorithm, but is unclear from a low level implementation of duplicate
   marking on a sorted iterator.
@@ -1009,13 +1009,13 @@ a monolithic pipeline.
 The combination of these two issues yields a final problem: it is difficult for
 a domain scientist to parallelize these queries. To parallelize single node
 tools across a large cluster, existing tools typically use a ``scatter-gather''
-pattern~(see discussion of many-task workflow patterns in Zheng et
-al.~\cite{zhang15, zhang16}) that chunks a genomic dataset into many small
+pattern, as discussed in Zheng et al.~\cite{zhang15, zhang16}. This
+scatter-gather pattern chunks a genomic dataset into many small
 parts~(contiguous ranges of the genome) that are then processed independently.
 This scatter-gather pattern presents several problems:
 
 \begin{itemize}
-\item Due to bias caused by repeated sequence in the genome, we cannot achieve
+\item Due to bias caused by repeated sequences in the genome, we cannot achieve
   optimal load balance with a partitioner that na\"{i}vely partitions the genome
   into uniformly sized ranges~\cite{chiang15}.
 \item This query pattern is restricted to storage systems that support efficient
@@ -1062,8 +1062,8 @@ has begun rewriting parts of {Hadoop-BAM} to add more stringent record
 validation tests. These more stringent tests reduce the number of false positive
 record start positions to 0.
 
-A general exception is files compressed with the GZIP codec, which is not
-splittable. GZIP is used in bioinformatics because of its high compression rate,
+A general exception is files compressed with the un-splittable GZIP codec.
+GZIP is used in bioinformatics because of its high compression ratio,
 which is useful for storing textual read data, such as FASTQ files. To allow
 splitting, many tools use the BGZF codec~\cite{li11tabix}, which is splittable.
 BGZF incurs a small performance and compression overhead relative to the raw
@@ -1106,7 +1106,8 @@ for supporting the goals introduced in the next section.
 
 Our overarching goal was to abstract away from APIs that derived directly from
 the genomic file formats, towards higher level APIs for manipulating genomic
-data. In doing this, we had several specific goals:
+data. We had several specific goals that we felt we could achieve through
+building a higher-level API:
 
 \begin{enumerate}
 \item Minimize the amount of code needed to implement a query.
@@ -1167,7 +1168,7 @@ included:
 \item Supporting interactive latency for exploratory queries and data
   visualization.
 \item Being able to optimize queries to take advantage of presorted data.
-\item Allowing legacy tools to be reused and parallelized.
+\item Enabling legacy tools to be reused and parallelized.
 \end{enumerate}
 
 There were several reasons that we added these design goals. We had
@@ -1175,7 +1176,8 @@ originally intended {ADAM} to mainly support batch analyses, and deferred
 support for interactive analysis to query engines like {Impala}. However,
 we felt that there was a good opportunity to reshape interactive genomic data
 analysis by enabling exploratory data analysis using {ADAM}'s APIs.
-Thus, we needed a way to lower the latency of typical {Spark} queries.
+Thus, we needed a way to lower the latency of typical {Spark} queries to the
+interactive ($<500$ms) time range.
 The {Mango} project~\cite{tu16, morrow17} improved latency by introducing
 better support for using primary indices on genomic position, as well as an
 efficient in-memory caching layer. These implementations replaced the default
@@ -1203,7 +1205,7 @@ Additionally, the experiences of our coworkers during the {SNAP}
 project~\cite{zaharia11} led us to realize that {Spark}'s APIs were not
 a good fit to all genomic data analysis problems. Specifically, the large
 indices used during short read alignment are difficult to manage efficiently in
-the Java Virtual Machine's~(JVM) managed memory model. Additionally, the prior
+the Java Virtual Machine's~(JVM) managed memory model. Additionally, prior
 work which used {Hadoop} or {Spark} to manually wrap and
 parallelize legacy tools~\cite{schatz09, langmead09crossbow, abuin15, abuin16,
   chen15, chen16} led us to believe that there was interest in having a general
@@ -1238,8 +1240,10 @@ single interface to be compatible with the rest of the stack.
 \label{fig:stack-model}
 \end{figure}
 
-Unlike conventional scientific systems that leverage custom data formats like BAM or SAM~\cite{li09},
-or CRAM~\cite{fritz11}, we believe that the use of an explicit schema for data interchange is critical.
+Unlike conventional scientific systems that depend on custom data formats like BAM or SAM~\cite{li09},
+or CRAM~\cite{fritz11}, we believe that the use of an explicit schema for data interchange is critical,
+as it allows bioinformaticians to program at a level of abstraction that hides the implementation details
+of the file format.
 In our stack model shown in Figure~\ref{fig:stack-model}, the schema becomes the ``narrow waist''
 of the stack. Most importantly, placing the schema as the narrow waist enforces a strict separation
 between data storage/access and data processing. Additionally, this enables literate programming
