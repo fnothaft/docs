@@ -1935,7 +1935,7 @@ node tools from genomic workflows. Beyond the small set of tools discussed
 in~\S\ref{sec:distributed-genome-analysis}, the majority of genomics tools are
 designed to run on a single node. Additionally, due to memory access and
 allocation patterns, tools like aligners pay a steep performance penalty when
-moving out of C/C++ to the JVM. An example of this is the {SNAP} aligner,
+moving from C/C++ to the JVM. An example of this is the {SNAP} aligner,
 which was originally written on {Apache Spark}, before being rewritten in
 C++ for performance~\cite{zaharia11}. Finally, while it is possible to
 reimplement common genomic analyses like variant calling using {ADAM}, it
@@ -1957,7 +1957,7 @@ including {CloudScale-BWAMEM}~\cite{chen16} and
 {BWASpark}~\cite{abuin16}.
 
 Instead of expecting developers to create a proliferation of custom wrappers for
-parallelizing tools on distributed analysis systems, we should be able to build
+parallelizing tools on distributed analysis systems, we should build
 a general infrastructure to automatic this process. Since many genomics tools
 are built around a streaming paradigm, if we can provide automated chunking,
 process setup, distribution of reference files, and streaming data, we should
@@ -2095,7 +2095,7 @@ API is built in the query layer of the {ADAM} stack, it can run
 independent of both the file format used to save the data and the storage
 system used to store the data. This latter point is a significant improvement
 over workflow systems that expect a shared POSIX file system, as these systems
-often use indexed range query into a file to perform sharding~\cite{chiang15}.
+often use indexed range queries into a file to perform sharding~\cite{chiang15}.
 Range queries are difficult to apply generally on a cloud file store like S3, as the
 tool being run in parallel must be able to natively query the cloud file system.
 Additionally, this approach makes it possible to integrate a command line
@@ -2119,10 +2119,10 @@ goals were to provide a minimal wrapper around the {pipe} API that would:
   for distributing pre-built genomic analysis tools~\cite{vivian17}.
 \end{itemize}
 
-To support this, we have control logic that parses out the arguments passed to
+To support switching between these modes, we have control logic that parses out the arguments passed to
 the CLI. If the user has requested that we distribute all of the files to the
 workers, we then elaborate out the paths needed by the tool and add the files
-to the {pipe} call. We do this since many tools that require prebuilt
+to the {pipe} call. We elaborate the paths because many tools that require prebuilt
 resources use a multitude of resource files that are all at a base path. For
 example, BWA~\cite{li09bwa} uses seven index files, SNAP~\cite{zaharia11} uses
 four index files, and {SnpEff}~\cite{cingolani12} uses a large directory of
