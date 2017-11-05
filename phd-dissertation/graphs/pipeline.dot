@@ -1,0 +1,21 @@
+digraph pipeline {
+  rankdir = LR;
+  node [shape=record];
+
+  cannoli [label="Cannoli BWA"];
+  
+  realign [label="ADAM Realign INDELs"];
+  sort [label="ADAM Sort"];
+  
+  discover [label="Avocado Discover Variants"];
+  merge [label="Avocado Merge Variants" style="filled" fillcolor="grey"];
+  genotype [label="Avocado Genotype Sample"];
+  joint [label="Avocado Joint Genotype" style="filled" fillcolor="grey"];
+
+  coverage [label="DECA Coverage"];
+  cnv [label="DECA Call CNVs" style="filled" fillcolor="grey"];
+
+  cannoli -> realign -> discover -> merge -> genotype -> joint;
+  realign -> genotype;
+  realign -> sort -> coverage -> cnv -> genotype;
+}

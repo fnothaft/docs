@@ -90,7 +90,7 @@ morestring=[b]"}
 The rapid decrease in sequencing cost has made large scale sequencing
 tractible. The dramatic improvement in sequencing cost since the Human
 Genome Project has enabled a human whole genome sequence~(WGS) to be
-generated for under \$1,000 in wetlab costs~\cite{nhgri}. Costs
+generated and analyzed for under \$1,000 in total costs~\cite{nhgri}. Costs
 will continue to decrease for the forseeable future, as sequencing vendors like
 Illumina unveil new sequencers such as the NovaSeq that provide even
 higher throughput while also decreasing cost, and as radically new
@@ -115,6 +115,10 @@ the processing cost to analyze the data is high. Due to historical design
 decisions, much of this processing is currently restricted to single node
 architectures that assume POSIX storage APIs. As a result, it can take
 upwards of 100 hours to analyze the raw read data from a single genome.
+Because the computational cost of processing genomic data is so high, working
+with large genomic datasets is often limited to large sequencing centers. As
+such, one of our goals is to democratize genomic data analysis by develop tools
+that make it easy and efficient to process large genomics datasets.
 
 We believe that distributed computing architectures are a good match for
 genomic data analysis. Horizontally scalable storage architectures can
@@ -124,25 +128,29 @@ on analyzing the genomic data at disparate genomic loci without coordination
 between them, most genomic analysis tasks can be executed in parallel. Even more
 importantly, these analysis patterns cleanly map onto quasi-relational primitives
 that are powerful and can be executed in parallel. Finally, by building upon
-widely used open-source distributed processing architectures like {Apache
+widely used open-source, horizontally-scalable distributed processing architectures like {Apache
 Spark}~\cite{zaharia12} and {Hadoop}~\cite{hadoop}, genomics can benefit
 from the engineering contributions that advance these large open source projects.
 
-In this thesis, we introduce {ADAM}, an application programming
-interface~(API) for processing genomic data using Apache Spark. {ADAM}
+In this thesis, we introduce {ADAM}, an Application Programming
+Interface~(API) for processing genomic data using Apache Spark. {ADAM} targets
+bioinformaticians who need to implement custom queries across large genomic
+datasets, and who want to reduce the latency/increase the throughput of their
+queries by using cluster or cloud computing. ADAM
 is based around a novel stack-oriented architecture that uses schemas to define
 the narrow waist in the stack. On top of the schemas, we provide high-level
 APIs that allow computational biologists and bioinformaticians to manipulate
 collections of genomic data in a parallel fashion. The high level APIs extend
 {Apache Spark}'s Resilient Distributed Dataset~(RDD, see Zahaira et
 al.~\cite{zaharia12}) abstraction with genomics-specific functionality, and
-eliminates the low level ``walker'' pattern~\cite{mckenna10} that is common in
+eliminates the low level ``walker'' pattern~\cite{mckenna10} that provides a
+sorted iterator over a genomic dataset, which is common in
 genomics. At lower levels in the stack, we provide efficient implementations
 of the common genomics query models. By having clearly defined APIs between
 each level of the stack, we are able to exchange layers to optimize query
 performance for a given query, input data type, or cluster/cloud configuration.
 
-Our work on {ADAM} has resulted in the broad ecosystem of projects,
+Since 2013, our work on {ADAM} has resulted in the broad ecosystem of projects,
 which Figure~\ref{fig:bdg} depicts. We refer to the tools built on {ADAM}
 as the ``Big Data Genomics''~(BDG) project. In this dissertation, we will limit
 our focus to {ADAM}'s architecture and APIs, and the tools and algorithms
@@ -240,7 +248,7 @@ ExAC~\cite{lek16} project. While population-scale sequencing has largely been
 done in academic settings to date, these sequencing projects are beginning
 to move into industrial and medical settings. These include the collaboration
 between the United Kingdom's Biobank, GlaxoSmithKline, and Regeneron to sequence
-the 500,000 individuals in the UK Biobak~\cite{ukbiobank}, and the Geisenger
+the 500,000 individuals in the UK Biobank~\cite{ukbiobank}, and the Geisenger
 MyCode collaboration with Regeneron~\cite{carey16}.
 
 \section{The Case for Distributed Computing for Genomic Analysis}
@@ -305,14 +313,14 @@ power of distributed computing to bioinformatics users who are writing in the
 Python or R languages, as opposed to previous tools that were centered either
 around Java or the Pig scripting language~\cite{nordberg13, schumacher14}.
 
-To demonstrate {ADAM}, we have built an end-to-end variant calling
+To demonstrate {ADAM}, we have built an end-to-end alignment and variant calling
 pipeline. This pipeline includes distributed implementations of alignment, read
 preprocessing, and variant calling. The pipeline can run end-to-end on a
 $60\times$ coverage whole genome in under an hour, at a cost of $<$\$15 on
 cloud computing. This pipeline provides results comparable to state-of-the-art
 for single nucleotide variant~(SNV) calling, and high accuracy~(97\%) for
 insertion and deletion~(INDEL) variant calling. Additionally, the alignment
-step in this pipeline is implemented on top of a general interface for
+step in this pipeline is implemented on top of a generalized interface for
 parallelizing single-node genomics tools, which makes it possible to leverage
 distributed computing without reimplementing a tool or developing custom shims,
 unlike prior approaches~\cite{langmead09crossbow, schatz09}.
@@ -320,12 +328,17 @@ unlike prior approaches~\cite{langmead09crossbow, schatz09}.
 As a result, {ADAM} improves over conventional genomics tools by providing:
 
 \begin{itemize}
-\item Schemas which can support loading data from a large variety of formats.
+\item Schemas which can support loading data from a large variety of formats,
+  which improves programmer productivity by allowing queries against genomic
+  datasets to be written in a format-independent manner.
 \item High level, quasi-relational APIs for manipulating genomic data in both
-  single node and cluster environments.
-\item Parallel I/O across genomics file formats.
+  single node and cluster environments, that abstract away low level details
+  like sort-order invariants.
+\item Parallel I/O across genomics file formats, which enables efficient ad hoc
+  query over large datasets.
 \item A simple API for parallelizing single node genomic tools with a minimal
-  amount of code.
+  amount of code, which enables the reuse of common bioinformatics tools in a
+  distributed computing architecture.
 \end{itemize}
 
 In the rest of this dissertation, we explain the design goals behind 
