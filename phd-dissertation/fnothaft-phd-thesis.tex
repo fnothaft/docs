@@ -356,7 +356,7 @@ dissertation focuses on the ``genome resequencing'' pipeline. In resequencing,
 we start with a known genome assembly, and identify the edits between an
 individual genome and the genome assembly for their species. In practice, a
 genome resequencing analysis pipeline will typically take short sequenced
-reads~(100-300 base pairs, bp), align them to the reference genome, perform
+reads~(100-300 base pairs, bp), align them to a reference genome, perform
 preprocessing on the reads to eliminate errors, and then probabilistically
 identify true variation from the reads. In this chapter, we will start by
 describing how the reads are sequenced~(\S\ref{sec:genome-sequencing}) and
@@ -392,6 +392,9 @@ preparation stage converts the biological sample into DNA fragments, which we
 can sequence. In the simplest case~(sequencing a genome), we start by extracting
 DNA from a collection of cells. We then slice the long DNA strands into shorter
 fragments, before selecting fragments of a certain length (``size selection'').
+Depending on the sample collection methodology and the sequencing assay, we may
+replicate DNA sequences via a polymerase chain reaction~(PCR). Errors during PCR
+can lead to duplication of specific fragments, which biases variant calling.
 The size of fragments collected depends on both the sequencing instrument that
 is being used, and the biological assay being conducted.
 
@@ -422,7 +425,9 @@ bases, we would select all fragments that were approximately 1,000 bases long
 second read, 250 bases for the second read). There are many variants on this
 process, including those that have negative insert sizes, and ``mate pair''
 libraries that have very long insert sizes~\cite{mardis13}. Additionally,
-library preparation varies tremendously between sequencing vendors. For long
+library preparation varies tremendously between sequencing vendors. While we
+focus on short reads sequenced using Illumina platforms that are typically
+generated from fragments that are less than 1,000 bases long, long
 read sequencers such as the Pacific Biosciences sequencers~\cite{eid09} or
 the Oxford Nanopore sequencers~\cite{clarke09}, the libraries include long DNA
 fragments~($>$5,000 bases) that generate a single, full length read.
@@ -443,8 +448,9 @@ variant calling, as we expect a variant to occur at one in every one thousand
 bases.
 
 Many of the analyses that use reads generated from Illumina sequencers are
-analyzed with mapping-based approaches. In this class of approaches, we rely on
-the existence of a ``reference genome'' for an organization. The reference genome is a curated
+analyzed with mapping-based approaches, as opposed to de novo analyses. In
+alignment-based methods, we rely on
+the existence of a ``reference genome'' for an organism. The reference genome is a curated
 dataset that consists of the DNA sequences for all of the chromosomes in the
 genome of a species. For humans, the first reference genome was generated
 through the Human Genome Project~\cite{lander01}. New genome references are
@@ -455,6 +461,13 @@ release of the human genome~(GRCh38, see~\cite{church15}) was released at the
 end of 2014. A reference genome defines a two dimensional coordinate space, with
 one coordinate selecting the chromosome and the second coordinate defining the
 position on this chromosome.
+
+Unlike alignment-based methods, de novo methods do not posit the existence of a
+reference genome. De novo methods are commonly used when a reference genome is
+not available (e.g., to assemble a genome that has not been previously
+assembled), or when performing an analysis that can be biased by the use of a
+reference genome, like structural variant discovery. These methods are outside
+of the scope of this dissertation.
 
 \section{Genomic Analysis Tools and Architectures}
 \label{sec:genomic-analysis}
@@ -489,14 +502,14 @@ mpileup} variant caller~\cite{li11}, and the {GATK
 UnifiedGenotyper}~\cite{depristo11}. However, the aligned reads frequently
 include errors that can lead to incorrect variant calls. To eliminate these
 errors, we rely on several preprocessing stages that are run between mapping and
-variant calling. In this paper, we will focus on three preprocessing stages:
+variant calling. In this dissertation, we will focus on three preprocessing stages:
 duplicate removal, local realignment, and base quality score recalibration.
 The variant calling pipeline has been targeted for hardware acceleration in the
 unpublished Edico {DRAGEN} processor~\cite{dragen}.
 
 The duplicate removal stage identifies DNA fragments that were duplicated during
 library preparation. If we are starting from a biological sample that contains
-very little DNA, we will commonly use a polymerase chain reaction~(PCR) during
+very little DNA, we will commonly use PCR during
 library preparation. This reaction will take our input DNA and replicate it,
 thereby increasing the amount of DNA that we can provide to the sequencer.
 However, as part of the PCR process, some fragments will be excessively
@@ -528,7 +541,7 @@ light emitted from the floursecent dye. In practice, sequencing errors correlate
 with various factors, including sequence context (the bases around the base that
 is being sequenced) and the stage when the base was sequenced (due to errors
 with the sequencing chemistry during that sequencing cycle). The base quality
-recalibration stage associated each base with error covariates, and then
+recalibration stage associates each base with error covariates, and then
 calculates the empirical error rate for the bases in that covariate by measuring
 the frequency with which bases in that covariate mismatch the reference genome.
 These error rates are then converted back into probabilites, which replace the
@@ -598,7 +611,7 @@ Although there exist myriad tools for analyzing genomic data, very few tools
 espouse a systematic architecture for traversing and processing genomic data.
 Instead, most tools are built around a UNIX-inspired philosophy that asserts
 that ``a tool should do a single task well''~\cite{rodriguez11}, and simply
-traverse a stream of data. The most promiment example of a genomic analysis
+traverse a serial stream of data. The most promiment example of a genomic analysis
 architecture is the quasi-map-reduce architecture employed by the legacy
 versions of the GATK~\cite{mckenna10}. This architecture uses an iterator-based
 model called a ``walker'' to traverse over data aligned to reference genome
@@ -609,7 +622,8 @@ Base Quality Score Recalibration~(BQSR) tables. While this API could
 conceptually be used in a distributed setting, the GATK has historically
 only run as a multithreaded application on a single node. Instead,
 multi-node execution was provided through the {Queue}~\cite{depristo11}
-workflow manager.
+workflow manager. This is resolved in the newest version of the GATK, which is
+implemented on Apache Spark.
 
 While the UNIX-like design philosophy embraced by many bioinformatics tools
 allows for the creation of tools with well defined boundaries, this seems to be
@@ -680,7 +694,7 @@ performance. For simplicity, we assume constant read length. This is a reasonabl
 callers discussed target Illumina reads that have constant length, unless the reads have been trimmed
 during quality control.
 
-In this paper, we introduce the indexed de Bruijn graph and demonstrate how it can be used to
+In this dissertation, we introduce the indexed de Bruijn graph and demonstrate how it can be used to
 reduce the asymptotic complexity of reassembly. An indexed de Bruijn graph is identical to a
 traditional de Bruijn graph, with one modification: when we create the graph, we annotate each
 $k$-mer with the index position of that $k$-mer in the sequence it was observed in. This simple addition
@@ -691,9 +705,9 @@ To further improve the efficiency of this approach, we demonstrate in~\S\ref{sec
 how we can implement the canonicalization scheme that we demonstrate using indexed de Bruijn
 graphs without constructing a de Bruijn graph that contains both sequences.
 
-Current variant calling pipelines depend heavily on realignment based approaches for accurate
+Current variant calling pipelines depend heavily on realignment-based approaches for accurate
 genotyping~\cite{li14}. Although there are several approaches that do not make explicit use of reassembly,
-all realignment based variant callers use an algorithmic structure similar to the one described
+all realignment-based variant callers use an algorithmic structure similar to the one described
 above. In non-assembly approaches like {FreeBayes}~\cite{garrison12}, stages
 one and two are replaced with a single step where the variants observed in the reads aligned to a given
 haplotyping region are filtered for quality and integrated directly into the reference haplotype in that region.
@@ -713,9 +727,9 @@ the data structures used for realignment~($\mathcal{O}(l_r \max(l_h))$ storage c
 These methods typically retain \emph{only} the best local realignment per read per haplotype, thus
 bounding storage cost at $\mathcal{O}(h r)$.
 
-For non-reassembly based approaches, the cost of generating candidate haplotypes is $\mathcal{O}(r)$,
+For non-reassembly-based approaches, the cost of generating candidate haplotypes is $\mathcal{O}(r)$,
 as each read must be scanned for variants, using the pre-existing alignment. These variants are typically
-extracted from the CIGAR string, but may need to be normalized~\cite{li14}. de Bruijn graph based 
+extracted from the CIGAR string, but may need to be normalized~\cite{li14}. de Bruijn graph-based 
 reassembly methods have similar $\mathcal{O}(r)$ time complexity for building the de Bruijn
 graph as each read must be sequentially broken into $k$-mers, but these methods have a different
 storage cost. Specifically, storage cost for a de Bruijn graph is similar to $\mathcal{O}(k
@@ -767,16 +781,16 @@ analysis tools. In the open source world, this has spawned the {Apache
 of Google's {MapReduce}. {Hadoop} led to the development of
 scripting languages like {Pig}~\cite{olston08}, query systems like
 {Hive}~\cite{thusoo09}, and resource management frameworks like
-{YARN}~\cite{vavilapalli13} and {Mesos}~\cite{hindman11}. While
-traditional map-reduce platforms were well suited to extract, transform,
-load~(ETL) pipelines that made a single pass over a large dataset, they were
+Apache {YARN}~\cite{vavilapalli13} and Apache {Mesos}~\cite{hindman11}. While
+traditional map-reduce platforms are well suited to extract, transform,
+load~(ETL) pipelines that made a single pass over a large dataset, they are
 a poor fit to ``advanced analytics'' applications---like machine learning, or
 graph processing---that made several passes over a dataset. This inefficiency was due to
 their reliance on the output of every computational phase being written to
 disk to ensure fault tolerance. A new set of distributed data processing tools
 were designed to address this problem by storing data in memory, and relying
 on different models for fault resilience. These systems include
-{Spark}~\cite{zaharia10, zaharia12} and {Flink}~\cite{carbone15}.
+Apache {Spark}~\cite{zaharia10, zaharia12} and Apache {Flink}~\cite{carbone15}.
 Additionally, a set of highly efficient query engines came out, such as
 {Cloudera Impala}~\cite{kornacker15} and {Spark
   SQL}~\cite{armbrust15}.
