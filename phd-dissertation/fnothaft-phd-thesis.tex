@@ -1492,8 +1492,8 @@ manuscript~\cite{nothaft15}, the evidence access and presentation layers~(5 and
   schema as well. While these enriched classes have not been eliminated from
   {ADAM}, we have eliminated the public API exposure of these classes.
   While these classes were useful for implementing some of the algorithms in the
-  {ADAM} core, they ultimately proved difficult to understand the
-  performance characteristics of. They leveraged the {Scala} language's
+  {ADAM} core, it ultimately proved difficult to understand their
+  performance characteristics. They leveraged the {Scala} language's
   compile-time implicit conversion functionality~\cite{odersky04}, which allows for
   the compile-time inclusion of a method that can satisfy a given type
   signature. Additionally, the enriched classes typically augmented the raw
@@ -1526,7 +1526,7 @@ that enables ``legacy'' formats to be processed identically to data stored in {P
 degradation.
 
 We made several high level choices when designing the schemas used in
-{ADAM}~\cite{massie13}. Over time, we have gone backwards on some of
+{ADAM}~\cite{massie13}. Over time, we have revised some of
 these design decisions. First, the schemas were originally fully denormalized.
 Our rationale for this decision was that this would reduce the cost of metadata
 access while simplifying metadata distribution. We believed we would be able to
@@ -1571,14 +1571,14 @@ Our read schema~(\S\ref{sec:alignment-record}) maps closely to the logical layou
 flags out from a single field into many fields. Separating the flags makes it much simpler to
 extract state from a record. Additionally, we promote several commonly used
 fields from {SAM} attributes to fields. These fields include the original
-quality, position, and CIGAR fields, which are set during
+quality, position, and Compact Ideosyncratic Gapped Alignment Representation~(CIGAR) fields, which are set during
 realignment~(see~\S\ref{sec:indel-realignment-implementation}) and base quality
 recalibration~(see~\S\ref{sec:bqsr-implementation}).
 
 Additionally, we support a schema that groups together all of the reads from a
 single sequenced fragment~(\S\ref{sec:fragment}). The fragment data structure enables a traversal over read data that
 is similar to {SAM}'s read-name grouping.
-We feel that the fragment schema is preferable to the queryname sort order and
+We feel that the fragment schema is preferable to the query name sort order and
 query grouping invariants that {SAM} allows one to specify. By using this
 schema, we can reduce the cost of duplicate marking by
 50\%~(see~\S\ref{sec:benchmarking-duplicate-markers}). Additionally, this
@@ -1799,9 +1799,9 @@ overlaps our search value. In the interval array, we also compute and store the
 length of the longest region in the array. We then search forward in the array
 until we have searched the distance of the longest element. Since this data
 structure is flat, it is inexpensive to (de)serialize. Binary search provides
-the same $\mathcal{O}(\log n)$ time complexity as searching into an interval
+the same $\mathcal{O}(\log n)$ time complexity as searching an interval
 tree. However, since we require an additional linear search, we can only
-guarantee the best case $\Theta(\log n)$ complexity for searching into our
+guarantee the best case $\Theta(\log n)$ complexity for searching our
 interval array.
 
 While the join described above is a broadcast join, a region join can also be
@@ -1830,7 +1830,7 @@ that cross partition boundaries into both partitions.
 \end{algorithmic}
 \end{algorithm}
 
-These joins serve as a core that we can use to build other abstractions with.
+These joins serve as a core that we can use to build other abstractions.
 For example, self-region joins and multi-region joins are common in genomics,
 and can be easily implemented using the above implementations. We are currently
 working to implement further parallel spatial functions such as sliding windows,
@@ -1869,7 +1869,7 @@ chose this for several reasons:
 \item The {DataFrame} API is a close match to the programming models
   commonly used in {Python} and R~\cite{armbrust15}, such as the
   {Pandas}~\cite{mckinney10} and {Dyplr}~\cite{wickham15} libraries.
-\item A major performance pitfall in {PySpark} and {SparkR} was
+\item A major performance pitfall in {PySpark} and {SparkR} is
   serializer performance. Specifically, to use {PySpark}, we would have
   needed to transform our binary {Avro} records into textual records that
   {PySpark} would pickle for use in {Python}.
@@ -1882,7 +1882,7 @@ chose this for several reasons:
 
 While building on {Spark SQL} enabled cross-language support, it was not
 a straightforward process. Specifically, {Spark SQL} leveraged several
-{Scala} language features that were incompatible with our {Avro}
+{Scala} language features that are incompatible with our {Avro}
 schema representation. To address this, we built automation that translates
 between {Spark SQL}'s desired representation and {Avro} at compile
 time.
@@ -1904,14 +1904,14 @@ time.
 Since translating between a {Spark} RDD and a {Spark SQL}
 DataFrame requires a (de)serialization pass, we introduced a scheme that we call
 ``lazy binding'' to minimize serialization overhead. In Figure~\ref{fig:grdd},
-you may have noticed that most of the core {GenomicRDD} types were
+observe that most of the core {GenomicRDD} types were
 sealed abstract classes. In practice, they are all implemented using the lazy
 binding scheme. Figure~\ref{fig:binding} depicts the bound variants of the
 {AlignmentRecordRDD} type. In this scheme, we track whether the last
 transformation applied to the {GenomicRDD} was applied to the DataFrame
 or RDD representation of the genomic data. The next phase of computation will
 run on top of the bound output of the prior stage. Avoiding a conversion between the RDD and SQL DataFrame representations can provide a major
-performance win if running {Spark SQL} queries, as the {Spark SQL}
+performance win when running {Spark SQL} queries, as the {Spark SQL}
 query optimizer performs major optimizations to amortize the method call
 overhead of chained transformations~\cite{armbrust15}. A further optimization
 deals with loading data from {Apache Parquet}. While data that is being
