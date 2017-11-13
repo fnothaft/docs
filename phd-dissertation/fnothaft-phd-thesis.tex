@@ -3028,11 +3028,49 @@ Parquet.
 \chapter{The Simons Genome Diversity Dataset Recompute}
 \label{chap:sgdd}
 
+To validate that ADAM could scale to a large cohort, we used Cannoli, ADAM, and
+Avocado to align, preprocess, and call variants on 270 genomes from the Simons
+Genome Diversity Dataset~(SGDP, see Mallick et al. \cite{mallick16}). This dataset
+is comprised of high
+coverage~(approximately 40$\times$ average coverage per sample) genomes from a
+wide range of human populations. We generated both SNP and short INDEL calls, as
+well as copy number variant~(CNV) calls using Deca~\cite{linderman17}. We ran this
+evaluation on our internal cluster, which is comprised of 55 compute nodes, with
+two eight-core Intel Xeon E5-2670 CPUs with 2$\times$ hyperthreading, 256 GB RAM
+and 4TB of HDD (four 1TB 7200RPM HDDs connected via 6Gpbs SATA). In total, this
+recompute took nine days of computational time, which represents an average
+elapsed processing time of 48 minutes per sample.
+
 \section{Analysis Pipeline}
 \label{sec:analysis-pipeline}
 
+To analyze the genomes in this dataset, we ran the pipeline depicted in
+Figure~\ref{fig:sgdp-pipeline}. In this pipeline, we used Cannoli's parallel
+implementation of BWA~\cite{li13} to align reads before using ADAM's
+INDEL realigner, which was discussed in~\S\ref{sec:indel-realignment-implementation}.
+To call copy number variants, we sorted the reads, and then used Deca to compute
+the average coverage over 10kbp windows in the genome. We then used Deca to call
+CNVs from this coverage data. The reads and CNV calls were then fed into
+Avocado's biallelic genotyper, which was described in~\S\ref{sec:genotyping-model}.
+Avocado was used to generate genome-VCF~(gVCF) style output, where each position
+in the genome is scored, even if the position does not show evidence of
+variation.
+
+\begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=0.95\linewidth]{graphs/pipeline.pdf}
+  \end{center}
+  \caption{Analysis pipeline for the SGDP recompute.}
+  \label{fig:sgdp-pipeline}
+\end{figure}
+
+
+
 \section{Computational Characteristics}
 \label{sec:computational-characteristics}
+
+\section{Observations from Joint Variant Calling}
+\label{sec:joint-calling}
 
 \part{Conclusion and Future Work}
 
