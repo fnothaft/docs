@@ -3060,14 +3060,96 @@ variation.
   \begin{center}
     \includegraphics[width=0.95\linewidth]{graphs/pipeline.pdf}
   \end{center}
-  \caption{Analysis pipeline for the SGDP recompute.}
+  \caption{Analysis pipeline for the SGDP recompute. Filled in boxes were run
+    jointly across all samples.}
   \label{fig:sgdp-pipeline}
 \end{figure}
 
+Originally, we had planned to run the pipeline depicted in
+Figure~\ref{fig:original-sgdp-pipeline} instead. The two pipelines perform the
+same processing for alignment, preprocessing, and CNV calling. However, the two
+pipelines have different variant calling steps. In the original variant calling
+pipeline, we planned to run variant discovery across all samples. We would then
+merge the variants across all samples, and pass these variants as sites to call
+in Avocado's variant calling module. Our original intention was to minimize the
+amount of sites that needed to be scored by only scoring variant sites. As we
+discuss in~\S\ref{sec:joint-calling}, this approach did not work due to
+serialization limitations. Instead, we ran Avocado in gVCF mode. 
 
+\begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=0.95\linewidth]{graphs/pipeline-original.pdf}
+  \end{center}
+  \caption{Original analysis pipeline for the SGDP recompute. Filled in boxes
+    were run jointly across all samples.}
+  \label{fig:original-sgdp-pipeline}
+\end{figure}
+
+The pipeline was encoded as a set of Toil~\cite{vivian17} scripts. These scripts
+used native executables of ADAM, Avocado, Cannoli, and Deca, instead of Docker
+containers. The scripts are available from the BDG workflows
+repository~\cite{workflows}.
 
 \section{Computational Characteristics}
 \label{sec:computational-characteristics}
+
+We captured traces of the cluster-wide disk and CPU metrics for all phases of
+this experiment. Figure~\ref{fig:phase1} depicts the disk and CPU metrics for
+alignment, preprocessing, and the per-sample portion of copy number variant
+calling, while Figure~\ref{fig:phase2} depicts the disk and CPU metrics for
+single-sample variant calling. In the disk bandwidth plots, solid dark blue
+represents mean read bandwidth, solid light blue represents mean write
+bandwidth, and the dotted lines represent maximum read/write bandwidth. The
+mean and maximum plots are both stacked: mean write bandwidth stacks on top
+of mean read bandwidth, and max write bandwidth stacks on top of max read
+bandwidth.
+
+There are several notable observations from Figure~\ref{fig:phase1}. First,
+note that disk bandwidth is fairly low during alignment. This is caused by two
+factors: alignment is largely CPU bound, and alignment is our only shuffle-free
+phase. Since we only run INDEL realignment during preprocessing, we achieve both
+high disk bandwidth (due to the shuffles needed to identify the convex hull of
+targets and needed to group reads by targets) and high CPU utilization (due to
+the inner loop of the realignment process). In the coverage computation phase,
+we achieve high disk bandwidth, but relatively lower CPU utilization. Note that
+this stage runs the per-sample sort and coverage computation in a single phase.
+In this step, our resource utilization is limited by scheduling; since the jobs
+are short lived (sort and coverage counting is $<5$ minutes per sample), we
+often wind up with cores sitting idle. As we see in the next section, we can
+achieve both higher disk and CPU utilization.
+
+\begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=0.95\linewidth]{graphs/phase1-disk.png}
+    \includegraphics[width=0.95\linewidth]{graphs/phase1-cpu.png}
+  \end{center}
+  \caption{Disk and CPU metrics for alignment, preprocessing, coverage
+    computation, and variant discovery.}
+  \label{fig:phase1}
+\end{figure}
+
+We originally ran per-sample variant discovery at the end of the computation
+shown in Figure~\ref{fig:phase1}, as we were running through the original
+computational workflow from Figure~\ref{fig:original-sgdp-pipeline}. While we
+abandoned the results from this stage, it is instructive to look at before we
+examine the results from Figure~\ref{fig:phase2}. Specifically, in the full
+Avocado genotyping run, we run single-sample variant discovery before running
+genotyping. Variant discovery performs a rapid scan over the reads to identify
+locations where there is a putative sequence edit, and takes approximately
+thirty seconds per sample. While we achieved very high read bandwidth when
+running just variant discovery, we see that this is mediated when we run
+discovery followed by genotyping, as the more computationally intensive
+genotyping phase is a substantially larger amount of the runtime.
+
+\begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=0.95\linewidth]{graphs/phase2-disk.png}
+    \includegraphics[width=0.95\linewidth]{graphs/phase2-cpu.png}
+  \end{center}
+  \caption{Disk and CPU metrics for single-sample genotyping.}
+  \label{fig:phase2}
+\end{figure}
+
 
 \section{Observations from Joint Variant Calling}
 \label{sec:joint-calling}
