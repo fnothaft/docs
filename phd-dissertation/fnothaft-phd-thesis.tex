@@ -3179,9 +3179,13 @@ performance penalty due to skew in the reads.
 
 \begin{figure}[h]
   \begin{center}
+    \includegraphics[width=0.95\linewidth]{graphs/variant_counts.pdf}
   \end{center}
   \caption{The number of discovered variants, as a function of the population
-    size.}
+    size. While the number of observed variants grows rapidly over the first
+    ten samples, the growth is roughly affine after that point. Once the
+    growth becomes affine, each new sample contributes approximately fifty
+    thousand novel variants.}
   \label{fig:variants-in-population}
 \end{figure}
 
@@ -3609,6 +3613,120 @@ it increasingly possible to implement genomic analysis tasks in hardware.
 
 \chapter{Conclusion}
 \label{chap:conclusion}
+
+In this dissertation, we have introduced ADAM and the Big Data Genomics project.
+We have then taken a deep dive into ADAM's variant calling pipeline, which has
+included running single node tools in parallel using Cannoli, read preprocessing
+using ADAM, and genotyping using Avocado. After diving into our variant calling
+pipeline, we discussed how we validated our pipeline on standard genomics
+``ground truth'' datasets, and by reprocessing 270 genomes from the Simons
+Genome Diversity Dataset. We have demonstrated the ability to rapidly process
+a single sample using thousands of cores in a compute cluster, as we were able
+to process samples at a rate of one sample per 48 minutes during the Simons
+Genome Diversity recompute. Our pipeline is able to attain this latency while
+being competitive in accuracy with other state-of-the-art variant calling
+pipelines.
+
+\section{Impact and Adoption}
+\label{sec:impact}
+
+It is difficult to assess the impact of ADAM. While the two manuscripts we
+published about ADAM's architecture~\cite{massie13, nothaft15} have gone on to
+become well-cited, ADAM's adoption has been slow. We believe there are several
+reasons for this:
+
+\begin{itemize}
+\item While we delivered a performant set of read preprocessing stages early in
+  the project, we struggled to deliver an end-to-end variant calling pipeline.
+  This was caused by both architectural and algorithmic limitations. As we
+  discussed in~\S\ref{sec:metadata}, the original schema designs used in ADAM
+  caused extreme memory bloat. This made the ADAM preprocessing stages unstable
+  unless we provided ADAM with an extremely large amount of memory. To eliminate
+  this issue, we undertook a major refactor in the ADAM core which took
+  approximately a year and a half to complete. Similarly in Avocado, we made use
+  of query patterns in Apache Spark that would materialize all of the reads that
+  covered a single locus in a single partition, which caused failures when we
+  encountered data with pathologically high coverage. To resolve this issue, we
+  did a ground-up rewrite of Avocado that took six months to complete. In both
+  cases, we were able to resolve the issues we encountered, but it came at the
+  cost of significant amounts of time.
+\item We had an insufficient focus on backwards-compatibility early in the
+  project. This hurt us in two ways. From a data ingest/egress perspective,
+  people were hesitant to use ADAM since they were unsure whether they could
+  export their data back into formats that other tools depended on. During the
+  large refactor of the ADAM core, we focused on data ingress/egress, and
+  resolved the data egress compatibility issues. The second way that we hurt
+  ourselves was that we discarded much of the extant genomics tooling. In the
+  context of the variant calling pipeline, this meant that we would have needed
+  to develop our own Spark-based aligner as well. Over the course of the
+  project, this became an increasingly obvious cost, which led to the
+  development of the pipe API, which was introduced in
+  Chapter~\ref{chap:cannoli}.
+\item Beyond the issue of backwards compatibility with formats and tools, we
+  chose to develop ADAM in Scala, which is a language that is not widely used
+  in bioinformatics and which requires significant ramp-up to become productive
+  in. We contrast this decision against the decision to develop
+  Toil~\cite{vivian17} as a Python library. While the Python and R languages are
+  the lingua franca of bioinformatics, Scala served to dissuade developers from
+  our project. Once performant support for Python and R via Spark SQL emerged,
+  it still took over a year for us to provide Python and R APIs for ADAM. This
+  was due to the decision to use the Avro serialization library to describe our
+  data model, which was incompatible with the architecture that Spark SQL
+  decided on. While we could not have anticipated this development when we chose
+  Avro, we did choose Avro to provide cross-language compatibility benefits that
+  it never delivered on.
+\item Finally, we did a poor job of messaging what ADAM could do. Early on, we
+  strongly emphasized that ADAM was a unique solution for scan-based genomic
+  queries, i.e., queries that touched a whole dataset and which could not be
+  accelerated in an obvious way with an index. However, we did a poor job of
+  articulating what these queries were, why they were important, and how you
+  would map them to ADAM.
+\end{itemize}
+
+While these were a few failings that hindered our adoption, over the last year,
+ADAM has seen increased adoption in industrial settings. As discussed in the
+next section, we have surpassed 75 contributors across the BDG project.
+As ADAM has matured, it has begun to drive several genomic data warehousing
+use cases, such as computing read distributions across large cohorts, or for
+training machine learning models across multisample datasets. Additionally, the
+introduction of the pipe API has made ADAM an attractive platform for
+accelerating a broad range of analyses, which has spurred the use of ADAM as a
+platform for deploying multiple different aligners using cloud computing.
+
+\section{Big Data Genomics as an Open Source Project}
+\label{sec:oss}
+
+While not mentioned as a design goal in Chapter~\ref{chap:design}, one of the
+earliest goals of ADAM was to be a permissively licensed alternative to the
+GATK, which was licensed under a proprietary license that allowed free access to
+the GATK for academic use only. We chose to license all of our software under
+the permissive Apache 2 open source license. Throughout the project, we always
+aimed to engage our community of users and developers, with an aim towards
+openness of code and methods.
+
+\begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=0.95\linewidth]{graphs/authors.pdf}
+  \end{center}
+  \caption{The total number of unique contributors across core Big Data Genomics
+    projects over time. Contributors who have contributed to multiple projects
+    are counted in the project they contributed to first. While the Utils
+    project has not been discussed extensively in this dissertation, it contains
+    non-genomics utility functionality that is used heavily in ADAM and other
+    BDG projects.}
+  \label{fig:oss}
+\end{figure}
+
+We believe that this commitment to an open source model was a significant
+contributor to the success of the project. As seen in Figure~\ref{fig:oss}, the
+Big Data Genomics project grew steadily over the last five years, and has
+received contributions from more than 75 developers. Our engagement with the
+open source community has led to several major feature contributions~(e.g.,
+the debugging features mentioned in~\S\ref{sec:improving-debug}), and has led
+to three separate engineers joining our team at UC Berkeley. We see the
+continued movement towards open science and open source scientific software as
+a huge positive force in science, and have been glad to see projects like the
+GATK move to re-license themselves under an open license.
 
 \appendix
 
