@@ -3285,7 +3285,9 @@ shuffle in the middle of joint genotyping. In the intermediate term, we can work
 to lessen this problem by moving to a banded gVCF model, which merges adjacent
 sites with similar qualities into a single gVCF record. In the longer term, we
 need to identify why the shuffle was failing, which may be either architectural
-or a configuration issue.
+or a configuration issue. Additionally, this problem may be obviated by moving
+to an incremental joint genotyping approach, as described
+in~\S\ref{sec:incremental-joint-variant-calling}.
 
 \part{Conclusion and Future Work}
 
