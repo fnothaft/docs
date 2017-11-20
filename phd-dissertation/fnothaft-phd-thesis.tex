@@ -2133,8 +2133,7 @@ tools including but not limited to BWA, SNAP, and
 {Bowtie2}~\cite{langmead09bowtie} for alignment;
 {FreeBayes}~\cite{garrison12} and {mpileup}~\cite{li11} for
 variant calling; and {SnpEff} and {BEDTools}~\cite{quinlan10} for
-annotation. We evaluate the performance and concordance of the tools implemented
-in {Cannoli} in~\S\ref{sec:benchmarking-cannoli}.
+annotation.
 
 \chapter{Scalable Alignment Preprocessing with {ADAM}}
 \label{chap:adam}
@@ -2183,8 +2182,6 @@ mishandled if the two reads in the pair overlap.
 \end{enumerate}
 
 In the rest of this section, we discuss the high level implementations of these algorithms.
-We evaluate the performance and concordance of these algorithms against other
-tools in~\S\ref{sec:benchmarking-preprocessing}.
 
 \section{BQSR Implementation}
 \label{sec:bqsr-implementation}
@@ -2482,8 +2479,7 @@ step in duplicate marking that groups reads by read name. When reads are grouped
 by sequencing fragment, we can eliminate a shuffle. Fragment-grouped reads are
 found when loading reads from a query grouped
 SAM/BAM/CRAM file, or when running on the output of reads aligned using
-{Cannoli}. We describe the performance benefit of this change
-in~\S\ref{sec:benchmarking-duplicate-markers}.
+{Cannoli}.
 
 \chapter{Rapid Variant Calling with {Avocado}}
 \label{chap:avocado}
@@ -2759,7 +2755,7 @@ tagged with the SAM {MD} tag. MD tags allow us to reconstruct the
 reference sequence for a bubble from the read sequence and CIGAR.
 
 One problem with this method is that it can be misled by sequencing errors
-that are proximal to a true variant. As can be seen in~\S\ref{sec:benchmarking-indel-realigners},
+that are proximal to a true variant. As can be seen in Chapter~\ref{chap:benchmarking},
 solely using our indexed de Bruijn algorithm to clean up INDEL alignments leads
 to lower accuracy than the state-of-the-art toolkit. However, if the INDEL
 variant in a read that is discovered is a true variant, it is a good candidate
@@ -2777,7 +2773,7 @@ represents a suffient improvement over the sum weighted edit distance between
 the reads and the reference genome, the read alignments are moved to their
 lowest weighted edit distance position relative to the consensus sequence.
 A detailed description of this algorithm can be found in~\S\ref{sec:indel-realignment-implementation}.
-As seen in~\S\ref{sec:benchmarking-indel-realigners}, coupling local realignment with our INDEL
+As seen in Chapter~\ref{chap:benchmarking}, coupling local realignment with our INDEL
 canonicalization scheme improves SNP calling accuracy to comparable with the
 state-of-the-art, while improving INDEL calling accuracy by 2--5\%.
 
@@ -2932,17 +2928,115 @@ can be set separately for INDELs and SNPs.
 \chapter{Benchmarking the {ADAM} Stack}
 \label{chap:benchmarking}
 
-\section{Benchmarking Preprocessing Algorithms}
-\label{sec:benchmarking-preprocessing}
+In this dissertation, we have introduced ADAM, and then discussed how we
+parallelize single node analyses using Cannoli, and introduced the Avocado
+variant caller. In this chapter, we benchmark ADAM and our variant calling
+pipeline on widely used genomics datasets. We compare to other widely used
+tools, and where possible, we evaluate against ``ground truth'' datasets.
 
-\subsection{Benchmarking Duplicate Markers}
-\label{sec:benchmarking-duplicate-markers}
+\section{Benchmarking The Cannoli/ADAM/Avocado Pipeline}
+\label{sec:end-to-end}
 
-\subsection{Benchmarking INDEL Realigners}
-\label{sec:benchmarking-indel-realigners}
+To benchmark \textsc{Avocado}'s accuracy, we used the high coverage, PCR-free
+whole genome sequencing~(WGS) run of NA12878 from the 1,000 Genomes
+project~\cite{1kg}. We chose this dataset because NA12878 has extensive
+orthogonal verification data that is available through the National Institute
+for Standards and Time's~(NIST's) Genome-in-a-Bottle~(GIAB)
+project~\cite{zook15}, and the high coverage~($\sim58\times$) WGS
+preparation of NA12878 for the 1,000 Genomes project. We verified our calls
+usingthe Global Alliance for Genomics and Health's~(GA4GH's) benchmarking suite.
+As our input reads are from an Illumina sequencing platform, we limited our
+evaluation to variants that the GIAB's orthogonal validation mechanism were
+able to observe on an Illumina sequencing platform.
 
-\subsection{Benchmarking Recalibrators}
-\label{sec:benchmarking-recalibrators}
+We processed the data through \textsc{Avocado}, the \textsc{GATK}'s
+\textsc{HaplotypeCaller}~\cite{depristo11}, SAMTools Mpileup/BCFtools
+Call~\cite{li11}, and FreeBayes~\cite{garrison12}. We ran the
+\textsc{HaplotypeCaller} with the ``Best Practices'' settings, using
+\textsc{Toil}~\cite{vivian17}. The specific commands used are described
+in~\S\ref{sec:cmds}. Figure~\ref{fig:precision-recall} contains the
+precision/recall curve for the variant callers we evaluated, sweeping
+over variant quality. Substitution and INDEL variants have been separated into
+different charts. As is evident from the chart, all variant callers perform
+comparably on substitution variants. For INDEL variants, the GATK outperforms
+Avocado, and SAMTools provides significantly worse results.
+
+\begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=0.45\linewidth]{graphs/roc/snp.pdf}
+    \includegraphics[width=0.45\linewidth]{graphs/roc/indel.pdf}
+  \end{center}
+  \caption{Precision/Recall curves for SNP and INDEL calling.}
+  \label{fig:precision-recall}
+\end{figure}
+
+Table~\ref{tab:accuracy} summarizes the precision and recall values across the
+whole dataset. This table also contains the runtime when running on a single
+node. To run Avocado on a single node, we ran Avocado on a cluster configured
+with a single Spark executor. Each experiment was run on a 32-core node. Both
+FreeBayes and SAMTools are implemented as single-threaded applications, but
+with support for efficiently reading a subset of an indexed BAM file. To run
+these applications in parallel on a single node, we used the GNU Parallel
+utility, as described in~\S\ref{sec:cmds}. This is similar in methodology to
+the freebayes-parallel script which is packaged with FreeBayes. However, we
+were not able to successfully run the freebayes-parallel script on our
+cluster.
+
+\begin{table}[h]
+\centering
+\caption{Accuracy on NA12878}
+\label{tab:accuracy}
+\begin{tabular}{ l | c c c c }
+\hline
+ & GATK & Avocado & Mpileup & FreeBayes \\
+\hline
+\hline
+SNP Recall & 99.9\% & 99.6\% & 96.8\% & 99.8\% \\
+SNP Precision & 99.0\% & 99.0\% & 98.9\% & 98.3\% \\
+\hline
+INDEL Recall & 99.2\% & 96.1\% & 80.4\% & 97.0\% \\
+INDEL Precision & 98.6\% & 95.3\% & 64.4\% & 97.4\% \\
+\hline
+Single Node Runtime & 35h49m & 7h11m & 3h56 & 11h58  \\
+\end{tabular}
+\end{table}
+
+While Avocado is not as accurate as the GATK's HaplotypeCaller, it is
+faster by approximately $5\times$. A more interesting tradeoff is between
+Avocado and FreeBayes, as FreeBayes is closer to the GATK in terms of INDEL
+calling accuracy, and both tools have comparable SNP calling accuracy.
+FreeBayes is approximately $1.7\times$ slower than Avocado, but this figure
+does not include the time cost of running ADAM's INDEL realigner, which adds
+6h36m of runtime to the cost of running Avocado. This means that the cumulative
+ADAM/Avocado pipeline takes 13h47m to run, which is slightly slower than
+FreeBayes.
+
+\section{Parallel Efficiency and Strong Scaling}
+\label{sec:parallel-efficiency}
+
+To test the efficiency of ADAM's implementations of the various algorithms that
+are used in our variant calling pipeline, we ran the strong scaling experiment
+depicted in Figure~\ref{fig:speedup}. In this experiment, we used the high
+coverage genome from the previous section. We held the executor configuration
+constant, and stepped from one to four executors before doubling until we
+reached 32 executors. This represented slightly more parallelism than we could
+obtain with our input dataset, which maxes out at a paralellism of 935 tasks
+with our default configuration.
+
+\begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=0.6\linewidth]{graphs/speedup.pdf}
+  \end{center}
+  \caption{Speedup achieved when scaling the number of nodes used to process
+    data for a fixed input size.}
+  \label{fig:speedup}
+\end{figure}
+
+In general, most of the algorithms in ADAM and Avocado scale linearly as the
+amount of compute resources is increased. The significant exception is BQSR,
+which is explained by the large broadcast which runs during BQSR. This
+introduces a serial several minute step, as the multiple gigabyte mask table
+is broadcast to all of the nodes in the cluster.
 
 \section{Evaluating Compression Techniques}
 \label{sec:compression}
@@ -2966,7 +3060,7 @@ the whole genome.
 
 \begin{figure}[h]
   \begin{center}
-    \includegraphics[width=0.95\linewidth]{graphs/bam.pdf}
+    \includegraphics[width=0.5\linewidth]{graphs/bam.pdf}
   \end{center}
   \caption{Storage cost of a 60x coverage WGS aligned dataset.}
   \label{fig:read-storage}
@@ -2987,7 +3081,7 @@ benchmarks.
 
 \begin{figure}[h]
   \begin{center}
-    \includegraphics[width=0.95\linewidth]{graphs/gff.pdf}
+    \includegraphics[width=0.5\linewidth]{graphs/gff.pdf}
   \end{center}
   \caption{Storage cost of genome annotations.}
   \label{fig:annotation-storage}
@@ -2995,7 +3089,7 @@ benchmarks.
 
 \begin{figure}[h]
   \begin{center}
-    \includegraphics[width=0.95\linewidth]{graphs/bed.pdf}
+    \includegraphics[width=0.5\linewidth]{graphs/bed.pdf}
   \end{center}
   \caption{Storage cost of coverage data.}
   \label{fig:coverage-storage}
@@ -3016,14 +3110,11 @@ Parquet.
 
 \begin{figure}[h]
   \begin{center}
-    \includegraphics[width=0.95\linewidth]{graphs/vcf.pdf}
+    \includegraphics[width=0.5\linewidth]{graphs/vcf.pdf}
   \end{center}
   \caption{Storage cost of variant data.}
   \label{fig:variant-storage}
 \end{figure}
-
-\section{Benchmarking {Cannoli}}
-\label{sec:benchmarking-cannoli}
 
 \chapter{The Simons Genome Diversity Dataset Recompute}
 \label{chap:sgdd}
@@ -4034,6 +4125,15 @@ record Feature {
   map<string> attributes = {};
 }
 \end{lstlisting}
+
+\chapter{Commands Used For Evaluation}
+\label{sec:cmds}
+
+\section{GATK Best Practices Pipeline}
+\label{sec:gatk-best-practices}
+
+The \textsc{Toil} scripts used can be found at
+\url{https://github.com/BD2KGenomics/toil-scripts/tree/master/src/toil_scripts/gatk_germline}.
 
 \backmatter
 
