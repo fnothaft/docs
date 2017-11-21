@@ -27,7 +27,7 @@ def label(name, t):
     yticks(locs, yn)
 
     ylabel ("Speedup")
-    xlabel ("Number of Cores")
+    xlabel ("Number of Threads")
     legend (loc=2)
     title (t)
     grid (True)

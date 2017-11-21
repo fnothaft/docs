@@ -3718,12 +3718,18 @@ Genome Diversity recompute. Our pipeline is able to attain this latency while
 being competitive in accuracy with other state-of-the-art variant calling
 pipelines.
 
-\section{Impact and Adoption}
+\section{Impact, Adoption, and Lessons Learned}
 \label{sec:impact}
 
-It is difficult to assess the impact of ADAM. While the two manuscripts we
+It is difficult to assess the impact of ADAM. The two manuscripts we
 published about ADAM's architecture~\cite{massie13, nothaft15} have gone on to
-become well-cited, ADAM's adoption has been slow. We believe there are several
+become well-cited, and there was significant early industrial interest in ADAM
+as a technology, as evidenced by industrial blog posts~\cite{friedman16,
+  siegel16}, talks~\cite{day15, laserson14}, and book chapters~\cite{white15,
+  wills15} that built on top of ADAM. Additionally, ADAM was used as a driving
+application for performance research in distributed
+systems~\cite{venkataraman16ernest}. However, ADAM's adoption as a
+bioinformatics tool has been slow. We believe there are several major
 reasons for this:
 
 \begin{itemize}
@@ -3774,6 +3780,8 @@ reasons for this:
   would map them to ADAM.
 \end{itemize}
 
+We do a deep dive into the lessons learned from building ADAM later in this
+chapter.
 While these were a few failings that hindered our adoption, over the last year,
 ADAM has seen increased adoption in industrial settings. As discussed in the
 next section, we have surpassed 75 contributors across the BDG project.
@@ -3783,6 +3791,161 @@ training machine learning models across multisample datasets. Additionally, the
 introduction of the pipe API has made ADAM an attractive platform for
 accelerating a broad range of analyses, which has spurred the use of ADAM as a
 platform for deploying multiple different aligners using cloud computing.
+
+\subsection{Lessons Learned: Successes}
+\label{sec:successes}
+
+\subsubsection{Project Management: Commitment to Open Source}
+\label{sec:win-oss}
+
+\subsubsection{Architecture: Schemas and High Level APIs}
+\label{sec:win-schemas-high-level-apis}
+
+\subsubsection{Implementation: Latency}
+\label{sec:win-latency}
+
+\subsubsection{Implementation: Compatibility}
+\label{sec:win-compatibility}
+
+\subsection{Lessons Learned: Mistakes}
+\label{sec:mistakes}
+
+\subsubsection{Project Management: Execution and Focus}
+\label{sec:fail-execution-and-focus}
+
+The biggest barrier to adoption for ADAM was that we failed to deliver concrete
+wins that users could deploy early on in the project. When we wrote the ADAM
+technical report, we had a clearly defined focus on the read preprocessing
+algorithms that were in the GATK, as these were widely used kernels that were
+expensive to run. While these kernels were not production-quality, we achieved
+performance numbers that were sufficient to validate the architectural merit of
+ADAM. Instead of working to harden the implementations of these kernels, we
+decided to increase the scope of the ADAM project to address a very wide range of
+genomics applications.
+
+As a result, we started a broad range of projects and interface refactors and
+added code to support these projects that bloated the ADAM codebase and API.
+For example, we began to work on an RNA-seq fusion transcript caller and
+quantification stack, utilities for pairwise alignment of long read datasets,
+and a read error corrector, while also performing a major refactor of the
+schemas for representing variation data. Several of these projects wound up not
+coming to fruition, and some of the major refactors to the ADAM core and schemas
+were only partially completed.
+
+In retrospect, we should have focused our effort in Spring of 2014 on delivering
+an end-to-end variant calling pipeline, and ensuring that we could better
+interoperate with legacy bioinformatics tools. Fully concordant support for
+exporting data from ADAM back to conventional bioinformatics formats did not
+materialize until 2016, and a pipeline to run alignment through variant calling
+on ADAM did not exist until early 2017. This made it impossible to use ADAM for
+anything other than exploratory data analysis, which drastically limited ADAM's
+utility. We would have benefitted from reifying our scope down even further. If
+we had chosen to build our schemas, concordant import/export to legacy formats,
+and the pipe API early in the project, we could have very easily provided
+myriad genomics processing pipelines that were parallelized on Apache Spark,
+which would have been a great way to gain mindshare around the project.
+
+\subsubsection{Project Management: Positioning and Messaging}
+\label{sec:fail-positioning}
+
+While implementing many of the algorithms that were in the GATK seemed like a
+logical way to demonstrate the benefits of ADAM's architecture, it had the
+effect of positioning us as a direct competitor to the GATK. While we do
+have many features that compete with equivalents that are in the GATK, this
+diluted the message around ADAM, which was that by choosing to properly build
+an architecture around schemas and clean APIs for transforming parallel
+collections, we could implement complex computational kernels on large genomic
+datasets using a minimal amount of code.
+
+Simultaneously, germline variant calling has grown to be a bad space to work
+in. While there are open questions around accuracy in germline variant
+calling~\cite{li14}, many bioinformatics users perceive the accuracy of germline
+variant calls to be sufficient. Additionally, since alignment and variant
+calling is one of the most computationally expensive steps in a conventional
+bioinformatics pipeline, multiple companies have invested in the space. These
+include the commercial software products from Microsoft~\cite{msr16},
+Sention~\cite{freed17}, and GENALICE~\cite{pluss17}, the hardware accelerated
+DRAGEN genomics analysis product from Edico~\cite{dragen}, and the investments
+by AWS, Cloudera, Google, IBM, Intel, and Microsoft towards porting the GATK4
+over to Apache Spark~\cite{broad16}. As a relatively small team of academic
+researchers, it has been difficult to compete with the velocity and engineering
+expertise that well-funded industrial teams can bring to bear.
+
+\subsubsection{Project Management: Communication and Delivery}
+\label{sec:fail-delivery}
+
+
+
+\subsubsection{Project Management: Collaboration and Community Management}
+\label{sec:fail-collaborations-community}
+
+As we discuss in~\S\ref{sec:oss}, we believe that ADAM was a highly successful
+open source project, as it grew from a small team of developers centered at
+Berkeley into a project that received contributions from more than 75
+developers. While this is true, we also could have engaged more productively
+with the community. Although we attempted to make developing on ADAM a good
+experience by investing heavily in build and test infrastructure, we did a
+poor job of documenting ADAM's internals and high level APIs. Our documentation
+was often insufficient in detail, and we did a poor job of communicating how
+the high-level ideals we discussed in our manuscripts mapped directly to
+implementation choices in code. Additionally, while Apache Spark and Scala were
+powerful frameworks to build upon, they were unfamiliar to many of our users
+and we invested insufficiently in user education. While a stream of blog posts
+and book chapters grew around ADAM, most of these resources were aimed at a
+computer science audience instead of a bioinformatics audience. As a result,
+many of our open source contributions came from computer engineers who were
+curious about bioinformatics, and we struggled to gain traction with
+bioinformaticians since we did not provide the appropriate materials to show
+them how to use ADAM's architecture to solve problems that were relevant to
+them.
+
+\subsubsection{Architecture: Implementation Lock-in}
+\label{sec:fail-lock-in}
+
+The principles we espoused in our architecture are fairly general, and include
+building transformations centered around schemas instead of file formats, and
+having APIs that allowed us to manipulate data in parallel on top of existing
+distributed systems projects. In spite of this, we decided to tie our
+implementation directly to Apache Avro, Parquet, and Spark. While this decision
+seemed reasonable at the time, it burned us in the long run.
+
+The biggest example of where this caused issues was with Avro. Avro was selected
+because it provided good serialization runtime, an abstract schema description
+language, and cross-language support. Beyond ADAM, we pushed for the GA4GH
+to adopt Avro in their schema definition project. Avro wound up being a huge
+problem: Avro's cross-language support was fairly weak in comparison to other
+libraries like Google's Protocol Buffers, or Apache Thrift, which led to the
+GA4GH dropping Avro. Additionally, it was difficult to reason about the cost
+of data in Avro, especially when reading from Parquet. The memory cost of a
+single record read from disk vs. serialized over the wire would vary by up to an
+order of magnitude, which preciptated the year long refactor to our schemas
+described in~\S\ref{sec:metadata} which resolved long term memory issues.
+Finally, Avro wound up being incompatible with broader industry trends, like
+the introduction of Spark SQL~\cite{armbrust15}, which meant that we had to add
+a shim compatibility layer to work around these compatibility issues.
+
+While neither Apache Spark nor Parquet caused such significant and persistent
+issues, they were problematic at times. While Apache Spark has become a very
+polished project, it has been difficult to tune and there was a stretch where
+the codebase was growing too quickly, which led to significant technical debt.
+This caused tensions with collaborators~\cite{rubinsteyn14}, who wound up
+spending several months investigating performance problems in Spark by rewriting
+their applications on other computational platforms, like Apache Hadoop MR.
+Additionally, Parquet has failed at times to deliver on its promises. While
+Parquet is based on the architecture used by Google's Dremel~\cite{melnik10}
+which is optimized for storing columnar data with nested layouts, Parquet has
+had dissapointing performance in the real world on nested data. At times, we
+have refactored schemas (especially highly nested schemas, like the Genotype
+schema) to work around performance anomalies in Parquet at the cost of a worse
+schema representation.
+
+\subsubsection{Architecture: Optimization}
+\label{sec:fail-optimization}
+
+
+
+\subsubsection{Implementation: Single Thread Performance}
+\label{sec:fail-performance}
 
 \section{Big Data Genomics as an Open Source Project}
 \label{sec:oss}
@@ -3806,6 +3969,27 @@ openness of code and methods.
     non-genomics utility functionality that is used heavily in ADAM and other
     BDG projects.}
   \label{fig:oss}
+\end{figure}
+
+Figure~\ref{fig:contributors} contains a representation of the cumulative number
+of commits to BDG projects broken out by contributor. As mentioned earlier in
+this section, we have been able to attract a large number of contributors to the
+project, but it has been difficult to turn many of these contributors into long
+term contributors to the tool. At any given point in time, we have typically
+relied on a core cast of 3--5 contributors to the BDG project.
+
+\begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=0.45\linewidth]{graphs/contributions_by_author.pdf}
+    \includegraphics[width=0.45\linewidth]{graphs/commit_distribution.pdf}
+  \end{center}
+  \caption{These plots show the contribution patterns of contributors to our
+    project. The first plot shows the contributions to the project over time,
+    broken out by contributor. The plot is ordered vertically by when the user
+    first contributed to the project; i.e., the share starting at 0 represents
+    Matt Massie, who was the initial committer to ADAM. The second graph shows
+    the number of commits that each user has contributed.}
+  \label{fig:contributors}
 \end{figure}
 
 We believe that this commitment to an open source model was a significant

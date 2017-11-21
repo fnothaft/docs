@@ -1,5 +1,5 @@
 from datetime import date
-from pylab import stackplot, ylabel, xlabel, title, grid, savefig, show, legend, xticks, yticks, figure, xlim
+from pylab import hist, stackplot, ylabel, xlabel, title, grid, savefig, show, legend, xticks, yticks, figure, xlim, ylim
 from matplotlib.patches import Patch
 
 start_date = date(2013, 1, 1)
@@ -90,7 +90,6 @@ stackplot(dates, adam, avocado, cannoli, formats, utils,
                     "#0000FF",
                     "#FF00FF",
                     "#808080"])
-xlim(0, (last_date - start_date).days)
 legend([Patch(color="#FF0000"),
         Patch(color="#00FF00"),
         Patch(color="#0000FF"),
@@ -98,6 +97,7 @@ legend([Patch(color="#FF0000"),
         Patch(color="#808080")],
        ['ADAM', 'Avocado', 'Cannoli', 'bdg-formats', 'bdg-utils'],
        loc=2)
+xlim(0, (last_date - start_date).days)
 xticks([0,
         (date(2014, 1, 1) - start_date).days,
         (date(2015, 1, 1) - start_date).days,
@@ -111,3 +111,83 @@ xticks([0,
         '1/1/2017',
         '1/1/2018'])
 savefig('authors.pdf')
+
+fp = open("authors.raw.txt")
+
+authors = {}
+names = []
+dates = []
+
+for line in fp:
+
+    line = line.strip().rstrip().split()
+
+    author = line[1].strip().rstrip()
+    commit_date = line[2]
+
+    # parse date...
+    commit_date = commit_date.split('T')[0].split('-')
+    year = int(commit_date[0])
+    month = int(commit_date[1])
+    day = int(commit_date[2])
+
+    commit_date = date(year, month, day)
+
+    days = abs(commit_date - start_date).days
+
+    dates.append(days)
+
+    for name in authors.keys():
+        contributions = authors[name]
+        contributions.append(contributions[-1])
+
+        if name != author:            
+            contributions.append(contributions[-1])
+
+    if author in authors:
+        contributions = authors[author]
+        contributions.append(contributions[-1] + 1)
+
+    else:
+        names.append(author)
+        contributions = [0] * len(dates)
+        contributions.append(1)
+
+        authors[author] = contributions
+
+    dates.append(days)
+
+contributions = []
+commits = []
+for name in names:
+
+    contributions.append(authors[name])
+    commits.append(authors[name][-1])
+    
+figure()
+ylim(0, 2500)
+title('Cumulative contributions by individual authors over time')
+xlabel('Time')
+ylabel('Contributions')
+stackplot(dates, contributions, colors=['r', 'g', 'b', 'y', 'm', 'c'], edgecolor='none')
+xlim(0, (last_date - start_date).days)
+xticks([0,
+        (date(2014, 1, 1) - start_date).days,
+        (date(2015, 1, 1) - start_date).days,
+        (date(2016, 1, 1) - start_date).days,
+        (date(2017, 1, 1) - start_date).days,
+        (date(2018, 1, 1) - start_date).days],
+       ['1/1/2013',
+        '1/1/2014',
+        '1/1/2015',
+        '1/1/2016',
+        '1/1/2017',
+        '1/1/2018'])
+savefig('contributions_by_author.pdf')
+
+figure()
+title('Distribution of contributions by author')
+xlabel('Commits')
+ylabel('Authors')
+hist(commits, bins=50)
+savefig('commit_distribution.pdf')
