@@ -3798,14 +3798,33 @@ platform for deploying multiple different aligners using cloud computing.
 \subsubsection{Project Management: Commitment to Open Source}
 \label{sec:win-oss}
 
-\subsubsection{Architecture: Schemas and High Level APIs}
-\label{sec:win-schemas-high-level-apis}
-
-\subsubsection{Implementation: Latency}
-\label{sec:win-latency}
+As we discuss in~\S\ref{sec:win-oss}, early in the project, we made a commitment
+to running ADAM as an open-source project. Over the course of the project, this
+led to us receiving contributions from more than 75 developers. While many of
+these contributions were small---but still highly valuable, of course!---some of
+the contributions were significant, such as an instrumentation framework for
+tracing method-level performance in Spark jobs, performance improvements for
+parsing reference genomes, and signficant code style improvements. Additionally,
+our commitment to open source served as a positive marketing item for ADAM and
+the Big Data Genomics project. While we greatly benefitted from the open source
+community, we think that we could have benefitted even more. We discuss how we
+could have better leveraged open source contributors later in this section.
 
 \subsubsection{Implementation: Compatibility}
 \label{sec:win-compatibility}
+
+In Chapter~\ref{chap:cannoli}, we discussed the pipe API, which allows users to
+seamlessly run conventional single node genomics applications on top of Apache
+Spark using ADAM to manage file formats and data distribution. The pipe API was
+originally developed as a quick hack to allow us to run expensive alignment jobs
+on top of ADAM. In spite of the humble beginnings of this API, it has become a
+significant selling point for ADAM. In retrospect, it is not surprising that
+an API that automatically parallelizes single node genomics tools would have
+been popular: there are many projects that have focused on parallelizing a
+single tool~\cite{abuin15, decap15, langmead09crossbow, pireddu11, schatz09}.
+As we discuss later in this section, had we focused earlier on simple APIs that
+would have enabled greater compatibility with the broader genomics ecosystem,
+ADAM would have had a greater reach.
 
 \subsection{Lessons Learned: Mistakes}
 \label{sec:mistakes}
@@ -3870,11 +3889,6 @@ by AWS, Cloudera, Google, IBM, Intel, and Microsoft towards porting the GATK4
 over to Apache Spark~\cite{broad16}. As a relatively small team of academic
 researchers, it has been difficult to compete with the velocity and engineering
 expertise that well-funded industrial teams can bring to bear.
-
-\subsubsection{Project Management: Communication and Delivery}
-\label{sec:fail-delivery}
-
-
 
 \subsubsection{Project Management: Collaboration and Community Management}
 \label{sec:fail-collaborations-community}
@@ -3942,10 +3956,17 @@ schema representation.
 \subsubsection{Architecture: Optimization}
 \label{sec:fail-optimization}
 
-
-
-\subsubsection{Implementation: Single Thread Performance}
-\label{sec:fail-performance}
+When defining some of ADAM's APIs, we defined the APIs in ways that precluded us
+from optimizing the query execution. An example of this is running queries that
+select data aligned to a single genomic locus. Currently, users need to specify
+that they are loading a subset of regions from an indexed BAM file, or they need
+to define a predicate to run over data stored in Parquet. Ideally, we would have
+implemented this so that a user would have give us a region or list of regions
+to filter, and we would have converted that query into predicates to push down
+into Parquet, or filters accelerated using the BAM index, or an in-memory scan.
+We see this as a logical extension over the work-in-progress described in
+\S\ref{sec:sorted-knowledge}, and hope to resolve this abstraction inversion in
+a later release of ADAM.
 
 \section{Big Data Genomics as an Open Source Project}
 \label{sec:oss}
