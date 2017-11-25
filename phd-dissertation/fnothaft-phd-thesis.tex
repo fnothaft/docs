@@ -3765,7 +3765,8 @@ reasons for this:
   the project, we struggled to deliver an end-to-end variant calling pipeline.
   This was caused by both architectural and algorithmic limitations. As we
   discussed in~\S\ref{sec:metadata}, the original schema designs used in ADAM
-  caused extreme memory bloat. This made the ADAM preprocessing stages unstable
+  caused extreme memory bloat. This memory consumption made the ADAM preprocessing
+  stages unstable
   unless we provided ADAM with an extremely large amount of memory. To eliminate
   this issue, we undertook a major refactor in the ADAM core which took
   approximately a year and a half to complete. Similarly in Avocado, we made use
@@ -3794,7 +3795,7 @@ reasons for this:
   Toil~\cite{vivian17} as a Python library. While the Python and R languages are
   the lingua franca of bioinformatics, Scala served to dissuade developers from
   our project. Once performant support for Python and R via Spark SQL emerged,
-  it still took over a year for us to provide Python and R APIs for ADAM. This
+  it still took over a year for us to provide Python and R APIs for ADAM. This delay
   was due to the decision to use the Avro serialization library to describe our
   data model, which was incompatible with the architecture that Spark SQL
   decided on. While we could not have anticipated this development when we chose
@@ -3808,8 +3809,7 @@ reasons for this:
   would map them to ADAM.
 \end{itemize}
 
-We do a deep dive into the lessons learned from building ADAM later in this
-chapter.
+We review the lessons learned from building ADAM in the next section.
 While these were a few failings that hindered our adoption, over the last year,
 ADAM has seen increased adoption in industrial settings. As discussed in the
 next section, we have surpassed 75 contributors across the BDG project.
@@ -3884,7 +3884,7 @@ an end-to-end variant calling pipeline, and ensuring that we could better
 interoperate with legacy bioinformatics tools. Fully concordant support for
 exporting data from ADAM back to conventional bioinformatics formats did not
 materialize until 2016, and a pipeline to run alignment through variant calling
-on ADAM did not exist until early 2017. This made it impossible to use ADAM for
+on ADAM did not exist until early 2017. This omission made it impossible to use ADAM for
 anything other than exploratory data analysis, which drastically limited ADAM's
 utility. We would have benefitted from reifying our scope down even further. If
 we had chosen to build our schemas, concordant import/export to legacy formats,
@@ -3975,7 +3975,7 @@ spending several months investigating performance problems in Spark by rewriting
 their applications on other computational platforms, like Apache Hadoop MR.
 Additionally, Parquet has failed at times to deliver on its promises. While
 Parquet is based on the architecture used by Google's Dremel~\cite{melnik10}
-which is optimized for storing columnar data with nested layouts, Parquet has
+that is optimized for storing columnar data with nested layouts, Parquet has
 had dissapointing performance in the real world on nested data. At times, we
 have refactored schemas (especially highly nested schemas, like the Genotype
 schema) to work around performance anomalies in Parquet at the cost of a worse
