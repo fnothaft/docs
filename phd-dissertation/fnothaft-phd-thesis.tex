@@ -3433,7 +3433,7 @@ query optimizations, extending the variant calling algorithms in
 query APIs, or that perform a runtime optimization. These interfaces include the
 region join API described in~\S\ref{sec:query-patterns}, the {pipe} API
 described in~\S\ref{sec:pipe-api}, and the lazy binding optimization described
-in~\S\ref{sec:multi-languge}. We can improve the performance of the region join
+in~\S\ref{sec:multi-language}. We can improve the performance of the region join
 and {pipe} APIs by eliminating shuffles when data is already presorted.
 We can also improve the performance of the {pipe} API by applying the
 lazy binding techinque to the various genomic file formats. Additionally, we
@@ -3459,13 +3459,14 @@ approach can eliminate shuffles for some joins, it has several limitations:
   As a result, we cannot eliminate shuffles for data coming in from a standard
   genomic file format that defines a sort order.
 \item Additionally, the current partitioning scheme requires a lexicographical
-  contig ordering. This is inconsistent with the karyotypic ordering that is
+  contig ordering. This order is inconsistent with the karyotypic ordering that is
   commonly used in the bioinformatics ecosystem, and which relies on being
-  able to specifiy the ordering of contigs with an index..
+  able to specifiy the ordering of contigs with an index.
 \end{itemize}
 
 We are working on an alternative approach that is compatible with all contig
-orderings and file formats. In this approach, we make several changes:
+orderings and file formats. In this in-progress approach, we have made several
+changes:
 
 \begin{itemize}
 \item Instead of replicating the records that straddle a partition boundary in
@@ -3476,7 +3477,7 @@ orderings and file formats. In this approach, we make several changes:
   driver and appended to the ends of the partitions prior to the join running.
   Since this approach doesn't require records to be replicated, it is compatible
   with all file formats.
-\item In the current implementation, once data is loaded as sorted, this is
+\item In the current implementation, once data is loaded as sorted, it is
   encoded by setting a field that is protected to the {GenomicRDD} trait.
   This makes it more difficult to implement methods that can be optimized to
   make use of sort order. Specifically, if a method can optimize for sort order,
@@ -3495,7 +3496,7 @@ orderings and file formats. In this approach, we make several changes:
 Beyond broadening the opportunities for eliminating a shuffle in the region join
 codepath, an additional benefit of this new approach is that it allows us to
 harmonize the partitioning scheme used by the {pipe} API with the scheme
-used by the region join API. Currently, these two schemes are not harmonious
+used by the region join API. Currently, these two schemes are not compatible
 because the region join's partitioning scheme does not allow a flanking length
 to be specified. In the {pipe} API, we allow the user to specify the
 width of flanking sequence to include in each call. Since this new partitioning
@@ -3511,7 +3512,7 @@ An inefficiency in the {pipe} API occurs when reading data from a file
 stored in a legacy file format and then piping this data into a command using
 that same file format. An example of this would be loading reads from a SAM file
 and then {pipe}ing these reads into a variant caller using SAM input.
-This is inefficient because we wind up converting the reads into the
+This redundancy is inefficient because we wind up converting the reads into the
 {ADAM} schema, just to convert the data back into the legacy file format.
 
 One possible approach to eliminate this issue would be to change how we
@@ -3556,9 +3557,9 @@ visualize the instrumented performance of a method along with other indicators
 such as JVM garbage collection epochs and stats, network/disk/memory bandwith
 utilization, CPU utilization, and other performance indicators.
 
-Additionally, another dimension that would be useful to pair the performance
-instrumentation code with would be the primary key associated with the record
-being processed during an instrumented function invocation. This is particularly
+Additionally, it would be useful to integrate the performance
+instrumentation code with the genomic locus being processed during an
+instrumented function invocation. This pairing is particularly
 important for genomics, as many issues with work imbalance are due to pathological
 regions in the genome where a repeat or a section of low-complexity sequence
 cause several orders of magnitude increased coverage. It might be possible to use a
@@ -3568,7 +3569,7 @@ key-specific/skew-driven performance issues.
 \section{Extensions to {Avocado}}
 \label{sec:extending-avocado}
 
-There are several extensions that we are considering to the {Avocado}
+There are several extensions that we would consider for the {Avocado}
 variant caller. In this dissertation, we have discussed {Avocado}'s
 INDEL reassembly and single sample germline genotyping methods. There is ongoing
 work to add more joint variant calling methods to {Avocado}, such as a
@@ -3590,7 +3591,8 @@ While this process allows the expensive gVCF creation process to be done only
 once per sample, the joint genotyping must be repeated every time the cohort is
 updated.
 
-This is unnecessarily expensive, since genotype priors are generally based upon
+This calculation is unnecessarily expensive, since genotype priors are generally
+based upon
 allele frequency and should be stable as long as the composition of the cohort
 remains uniform as the cohort grows. Ideally, instead of recomputing the prior
 using the whole population, we could make an update to the current prior using
@@ -3722,7 +3724,7 @@ are critical for genomic data analysis. While the duplicate marker and base
 recalibrator can be implemented in {Genie} with modest extensions to SQL,
 the INDEL realigner is implemented as a monolithic UDF. One option is to use a
 dataflow methodology~\cite{bhattacharyya08}, which would map the dataflow
-described by a program into hardware. This would be compatible with a purely
+described by a program into hardware. This choice would be compatible with a purely
 functional programming methodology that relies on list comprehensions, which is
 a idiomatic programming style in the {Scala}~\cite{odersky04} language.
 This approach could be used to synthesize hardware from a UDF, which would make
