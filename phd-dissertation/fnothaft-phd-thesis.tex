@@ -3203,7 +3203,8 @@ of mean read bandwidth, and max write bandwidth stacks on top of max read
 bandwidth.
 
 There are several notable observations from Figure~\ref{fig:phase1}. First,
-note that disk bandwidth is fairly low during alignment. This is caused by two
+note that alignment has the lowest disk bandwidth of all processing stages.
+This reduced use of disk bandwidth can be attributed to two
 factors: alignment is largely CPU bound, and alignment is our only shuffle-free
 phase. Since we only run INDEL realignment during preprocessing, we achieve both
 high disk bandwidth (due to the shuffles needed to identify the convex hull of
@@ -3222,7 +3223,13 @@ achieve both higher disk and CPU utilization.
     \includegraphics[width=0.95\linewidth]{graphs/phase1-cpu.png}
   \end{center}
   \caption{Disk and CPU metrics for alignment, preprocessing, coverage
-    computation, and variant discovery.}
+    computation, and variant discovery. In the disk bandwidth plot, the
+    solid dark blue line is the average read bandwidth, and the solid light blue
+    line is the average write bandwidth. The two solid lines are stacked. The
+    dotted dark blue line is the maximum read bandwidth, and the dotted light
+    blue line is the maximum write bandiwdth. The two dotted lines are stacked.
+    In the CPU utilization plot, the different colors represent the individual
+    nodes in our cluster.}
   \label{fig:phase1}
 \end{figure}
 
@@ -3244,7 +3251,14 @@ genotyping phase is a substantially larger amount of the runtime.
     \includegraphics[width=0.95\linewidth]{graphs/phase2-disk.png}
     \includegraphics[width=0.95\linewidth]{graphs/phase2-cpu.png}
   \end{center}
-  \caption{Disk and CPU metrics for single-sample genotyping.}
+  \caption{Disk and CPU metrics for single-sample genotyping.
+    In the disk bandwidth plot, the
+    solid dark blue line is the average read bandwidth, and the solid light blue
+    line is the average write bandwidth. The two solid lines are stacked. The
+    dotted dark blue line is the maximum read bandwidth, and the dotted light
+    blue line is the maximum write bandiwdth. The two dotted lines are stacked.
+    In the CPU utilization plot, the different colors represent the individual
+    nodes in our cluster.}
   \label{fig:phase2}
 \end{figure}
 
@@ -3338,18 +3352,9 @@ contained three steps:
 
 Unfortunately, this approach did not work. We ran the region join using the
 shuffle strategy, which generated a total shuffle of 17TB.
-Figure~\ref{fig:joint-genotyping} demonstrates the total shuffle traffic during
-this phase. While writing the 17TB shuffle succeeded, we would encounter task
+While writing the 17TB shuffle succeeded, we would encounter task
 failures when reading the shuffle data due to timeouts when connecting to the
 Apache Spark shuffle manager.
-
-\begin{figure}[h]
-  \begin{center}
-    \includegraphics[width=0.95\linewidth]{graphs/jg-shuffle.png}
-  \end{center}
-  \caption{Disk and CPU metrics during single pass joint genotyping.}
-  \label{fig:joint-genotyping}
-\end{figure}
 
 As a workaround, we split this computation up into three separate jobs, where
 the first and third jobs were unchanged. The second job was changed so that it
@@ -3367,7 +3372,13 @@ were merged across all samples.
     \includegraphics[width=0.95\linewidth]{graphs/extract-cpu.png}
   \end{center}
   \caption{Disk and CPU metrics during the per-sample genotype extraction phase
-    of joint genotyping.}
+    of joint genotyping. In the disk bandwidth plot, the
+    solid dark blue line is the average read bandwidth, and the solid light blue
+    line is the average write bandwidth. The two solid lines are stacked. The
+    dotted dark blue line is the maximum read bandwidth, and the dotted light
+    blue line is the maximum write bandiwdth. The two dotted lines are stacked.
+    In the CPU utilization plot, the different colors represent the individual
+    nodes in our cluster.}
   \label{fig:extract-joint-genotyping}
 \end{figure}
 
@@ -3376,7 +3387,14 @@ were merged across all samples.
     \includegraphics[width=0.95\linewidth]{graphs/jg-disk.png}
     \includegraphics[width=0.95\linewidth]{graphs/jg-cpu.png}
   \end{center}
-  \caption{Disk and CPU metrics during the final stage of joint genotyping.}
+  \caption{Disk and CPU metrics during the final stage of joint genotyping.
+    In the disk bandwidth plot, the
+    solid dark blue line is the average read bandwidth, and the solid light blue
+    line is the average write bandwidth. The two solid lines are stacked. The
+    dotted dark blue line is the maximum read bandwidth, and the dotted light
+    blue line is the maximum write bandiwdth. The two dotted lines are stacked.
+    In the CPU utilization plot, the different colors represent the individual
+    nodes in our cluster.}
   \label{fig:final-joint-genotyping}
 \end{figure}
 
@@ -3386,10 +3404,11 @@ we are built on top of Apache Spark, we should be able to handle the $>10$TB
 shuffle in the middle of joint genotyping. In the intermediate term, we can work
 to lessen this problem by moving to a banded gVCF model, which merges adjacent
 sites with similar qualities into a single gVCF record. In the longer term, we
-need to identify why the shuffle was failing, which may be either architectural
-or a configuration issue. Additionally, this problem may be obviated by moving
-to an incremental joint genotyping approach, as described
-in~\S\ref{sec:incremental-joint-variant-calling}.
+need to identify why the shuffle was failing, which we believe is an issue in
+our cluster's configuration, as the task failures indicated that they were
+encountering timeouts when connecting to Spark's shuffle manager. Longer term,
+this problem may be obviated by moving to an incremental joint genotyping
+approach, as described in~\S\ref{sec:incremental-joint-variant-calling}.
 
 \part{Conclusion and Future Work}
 
