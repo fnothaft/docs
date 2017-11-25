@@ -3034,15 +3034,15 @@ with our default configuration.
 
 In general, most of the algorithms in ADAM and Avocado scale linearly as the
 amount of compute resources is increased. The significant exception is BQSR,
-which is explained by the large broadcast which runs during BQSR. This
-introduces a serial several minute step, as the multiple gigabyte mask table
-is broadcast to all of the nodes in the cluster.
+which is explained by the large broadcast which runs during BQSR. The broadcast
+introduces a serial step that runs for several minutes, as the multiple gigabyte
+mask table is broadcast to all of the nodes in the cluster.
 
 \section{Evaluating Compression Techniques}
 \label{sec:compression}
 
-ADAM uses Apache Parquet~\cite{parquet} as a way to store genomic
-data. This is in addition to our support for conventional genomic file formats.
+In addition to ADAM's support for conventional genomics file formats, ADAM uses
+the columnar Apache Parquet~\cite{parquet} file format to store genomic data.
 Parquet is an efficient columnar storage system that is widely used in the
 analytics ecosystem, and integrates with a variety of data management tools and
 query engines. Parquet provides improved storage capacity relative to several
@@ -3056,7 +3056,8 @@ In this benchmark, we have stored a copy of NA12878 aligned to the GRCh37
 reference genome using BWA. We store this genome in BAM, CRAM, and ADAM, using
 the default compression settings for each. BAM and CRAM files were generated
 using htslib. This read file was sequenced at approximately 60x coverage across
-the whole genome.
+the whole genome. Figure~\ref{fig:read-storage} contains the file sizes for each
+of these formats.
 
 \begin{figure}[h]
   \begin{center}
@@ -3069,14 +3070,20 @@ the whole genome.
 ADAM provides a 20\% improvement in storage size over BAM, while CRAM achieves
 a 43\% improvement in storage cost. While CRAM achieves a higher compression
 ratio, CRAM uses reference-based compression techniques that minimize the amount
-of data stored on disk.
+of data stored on disk. This improved compression comes at the cost of
+2--3$\times$ slower encoding performance~\cite{cram-benchmark}.
 
 \subsection{Features}
 \label{sec:feature-storage}
 
-Here, we benchmark both the GFF3 and BED formats. For GFF3, we use the ENSEMBL
-GRCh38 genome annotation file. For BED, we use genome-wide coverage counts
-generated from the NA12878 dataset used in the aligned read
+Here, we benchmark both the GFF3 and BED formats.
+Figure~\ref{fig:annotation-storage} contains a comparison between GFF3 and
+Parquet, using the ENSEMBL GRCh38 genome annotation file. GFF3 is used to store
+functional annotations on the reference genome. Figure~\ref{fig:coverage-storage}
+contains a comparison between BED and Parquet. BED a generic file format for
+describing genomic ``features'', which are a set of labels or numbers attached
+to a genomic coordinate range. To benchmark BED, we use genome-wide read depth
+coverage counts generated from the NA12878 dataset used in the aligned read
 benchmarks.
 
 \begin{figure}[h]
@@ -3103,10 +3110,10 @@ to the compressed BED file.
 \subsection{Genomic Variants}
 \label{variant-storage}
 
-In this benchmark, we used the 1,000 Genomes phase 3 data release VCFs. We
-compared GZIP-compressed VCF and uncompressed VCF to ADAM.
-Compressed VCF is approximately 10\% smaller than genotype data stored as
-Parquet.
+In this benchmark, we used the 1,000 Genomes phase 3 data release VCFs.
+Figure~\ref{fig:variant-storage} compares GZIP-compressed VCF and uncompressed
+VCF to ADAM. Compressed VCF is approximately 10\% smaller than genotype data
+stored as Parquet.
 
 \begin{figure}[h]
   \begin{center}
