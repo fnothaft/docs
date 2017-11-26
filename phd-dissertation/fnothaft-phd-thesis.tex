@@ -1,3 +1,4 @@
+\RequirePackage[hyphens]{url}
 \documentclass[phd]{ucbthesis}
 
 \usepackage{url}
@@ -669,8 +670,7 @@ local reassembler performs the following steps:
 \begin{enumerate}
 \item A de Bruijn graph is constructed from the reads aligned to a region of the reference genome,
 \item All valid paths~(\emph{haplotypes}) between the start and end of the graph are enumerated,
-\item Each read is realigned to each haplotype, typically using a pair Hidden Markov Model~(HMM,
-see Durbin et al~\cite{durbin98}),
+\item Each read is realigned to each haplotype, typically using a pair HMM,
 \item A statistical model uses the read$\leftrightarrow$haplotype alignments to choose the haplotype pair
 that most likely represents the variants hypothesized to exist in the region, 
 \item The alignments of the reads to the chosen haplotype pair are used to generate statistics that are
@@ -829,8 +829,8 @@ using the Java Native Interface~(JNI) on top of {Apache Hadoop}; and
 the {GATK}~\cite{depristo11} using {Apache Hadoop}.
 
 The third
-wave of wrappers has been built around {Apache Spark} and includes
-{SparkBWA}~\cite{abuin16}, a successor to {BigBWA}~\cite{abuin15},
+wave of wrappers has been built around {Apache Spark} and includes \linebreak
+{SparkBWA}~\cite{abuin16}, a successor to {BigBWA}~\cite{abuin15};
 {CloudScale-BWA MEM}~\cite{chen16}, which parallelizes
 {BWA} through the JNI, with the ability to support {FPGA}
 acceleration; and {SparkGA}~\cite{mushtaq17}, which uses a similar
@@ -1582,7 +1582,7 @@ is similar to {SAM}'s read-name grouping.
 We feel that the fragment schema is preferable to the query name sort order and
 query grouping invariants that {SAM} allows one to specify. By using this
 schema, we can reduce the cost of duplicate marking by
-50\%~(see~\S\ref{sec:benchmarking-duplicate-markers}). Additionally, this
+50\%~(see Chapter~\ref{chap:benchmarking}). Additionally, this
 representation provides a useful alternative to the interleaved FASTQ format for
 streaming reads into an aligner. We demonstrate this usage in
 Chapter~\ref{chap:cannoli}.
@@ -1903,7 +1903,7 @@ time.
 \end{figure}
 
 Since translating between a {Spark} RDD and a {Spark SQL}
-DataFrame requires a (de)serialization pass, we introduced a scheme that we call
+DataFrame requires a (de)ser\-ializa\-tion pass, we introduced a scheme that we call
 ``lazy binding'' to minimize serialization overhead. In Figure~\ref{fig:grdd},
 observe that most of the core {GenomicRDD} types were
 sealed abstract classes. In practice, they are all implemented using the lazy
@@ -2047,7 +2047,7 @@ This API allows for a very concise, yet general framework. With the
 formatter pattern, we can support a broad range of formats while exposing a
 very simple API to the user. Specifically, we can pipe sequence fragments as
 interleaved FASTQ, reads as SAM/BAM/CRAM, variants/genotypes as VCF, and
-features as BED/GTF/GFF2/GFF3/\-{IntervalList}/\-{NarrowPeak}. If
+features as BED/GTF/GFF2/GFF3/Interval\-List/Narrow\-Peak. If
 a program needs reference files to be available locally on each node, they can
 achieve this by passing an array containing the URLs of each file. We use an
 internal {Apache Spark} API to copy these files locally on each machine.
