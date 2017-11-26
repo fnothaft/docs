@@ -3747,6 +3747,25 @@ Genome Diversity recompute. Our pipeline is able to attain this latency while
 being competitive in accuracy with other state-of-the-art variant calling
 pipelines.
 
+\begin{figure}[h]
+  \begin{center}
+    \includegraphics[width=0.95\linewidth]{graphs/source.pdf}
+  \end{center}
+  \caption{The total number of lines of code across the core Big Data Genomics
+    projects over time. This figure includes tests, but excludes test resources.
+    Both ADAM and Avocado are composed of multiple modules; for clarity, we have
+    labeled all of ADAM's modules in different shades of red, and all of
+    Avocado's modules are labeled in different shades of green.}
+  \label{fig:source}
+\end{figure}
+
+As shown by Figure~\ref{fig:source}, the Big Data Genomics project was a major
+engineering undertaking. Over more than four years, ADAM and the Big Data
+Genomics project grew to more than 90,000 lines of code, contributed by a body
+of more than 75 contributors. In the rest of this chapter, we will reflect upon
+ADAM's impact, as well as the lessons we have learned about engineering such a
+large-scale research system under an open-source development model.
+
 \section{Impact, Adoption, and Lessons Learned}
 \label{sec:impact}
 
@@ -3757,9 +3776,10 @@ as a technology, as evidenced by industrial blog posts~\cite{friedman16,
   siegel16}, talks~\cite{day15, laserson14}, and book chapters~\cite{white15,
   wills15} that built on top of ADAM. Additionally, ADAM was used as a driving
 application for performance research in distributed
-systems~\cite{venkataraman16ernest}. However, ADAM's adoption as a
-bioinformatics tool has been slow. We believe there are several major
-reasons for this:
+systems~\cite{venkataraman16ernest} and for work at the intersection of hardware
+acceleration, genomics, and distributed systems~\cite{chen16}. However, ADAM's
+adoption as a bioinformatics tool has been slow. We believe there are several
+major reasons for this:
 
 \begin{itemize}
 \item While we delivered a performant set of read preprocessing stages early in
@@ -4052,6 +4072,11 @@ to three separate engineers joining our team at UC Berkeley. We see the
 continued movement towards open science and open source scientific software as
 a huge positive force in science, and have been glad to see projects like the
 GATK move to re-license themselves under an open license.
+
+\backmatter
+
+\bibliographystyle{abbrv}
+\bibliography{fnothaft-phd-thesis}
 
 \appendix
 
@@ -4368,10 +4393,5 @@ record Feature {
 
 The \textsc{Toil} scripts used can be found at
 \url{https://github.com/BD2KGenomics/toil-scripts/tree/master/src/toil_scripts/gatk_germline}.
-
-\backmatter
-
-\bibliographystyle{abbrv}
-\bibliography{fnothaft-phd-thesis}
 
 \end{document}
