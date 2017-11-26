@@ -4424,10 +4424,326 @@ record Feature {
 \chapter{Commands Used For Evaluation}
 \label{sec:cmds}
 
-\section{GATK Best Practices Pipeline}
+\section{GATK 3 Best Practices Pipeline}
 \label{sec:gatk-best-practices}
 
 The \textsc{Toil} scripts used can be found at
 \url{https://github.com/BD2KGenomics/toil-scripts/tree/master/src/toil_scripts/gatk_germline}.
+
+\section{FreeBayes}
+\label{sec:freebayes}
+
+FreeBayes~\cite{garrison12} is a single-threaded tool that is published with a
+script for running the tool in parallel using GNU Parallel. However, we could
+not get the \texttt{freebayes-parallel} script to run properly on our cluster
+due to issues with the VCF parsing utilities in the script. Instead, we executed
+the following command, which used GNU Parallel:
+
+\begin{lstlisting}[caption=FreeBayes Parallel Script]
+parallel --gnu \
+    -a regions -j 32 \
+    freebayes.exec.sh {} {#}
+\end{lstlisting}
+
+The \texttt{regions} file contained 10Mbp subsets of the genomic coordinate
+space. The \linebreak \texttt{freebayes.exec.sh} script contained the following
+commands:
+
+\begin{lstlisting}[caption=FreeBayes Executor Script]
+freebayes \
+    -f reference.fa \
+    sorted.bam \
+    --region ${1} \
+    > ${2}.vcf
+\end{lstlisting}
+
+FreeBayes was built and installed on our network file system~(NFS) share. The
+FA, BAM and VCF files were distributed on a Pure Storage FlashBlade, which was
+connected to the worker nodes in our cluster on a 10GbE network connection. The
+final VCF files were merged using ADAM.
+
+\section{SAMTools Mpileup/BCFTools Call}
+\label{sec:mpileup}
+
+SAMTools Mpileup and BCFTools Call are two single threaded variant calling
+tools that are designed to be run where the output of Mpileup is piped into
+BCFTools Call~\cite{li11}. To parallelize SAMTools Mpileup across 32 threads,
+we used the GNU Parallel utility, similar to how we ran FreeBayes.
+
+\begin{lstlisting}[caption=Samtools Parallel Script]
+parallel --gnu \
+    -a regions -j 32 \
+    samtools.exec.sh {} {#}
+\end{lstlisting}
+
+The \texttt{samtools.exec.sh} script contained the following commands:
+
+\begin{lstlisting}[caption=Mpileup/Call Executor Script]
+samtools mpileup \
+    --reference reference.fa \
+    --region ${1} \
+    -v sorted.bam | bcftools call \
+    -v -m > ${2}.vcf
+\end{lstlisting}
+
+As with FreeBayes, both Samtools and Bcftools were built and installed on our
+network file system~(NFS) share. The
+FA, BAM and VCF files were distributed on a Pure Storage FlashBlade, which was
+connected to the worker nodes in our cluster on a 10GbE network connection. The
+final VCF files were merged using ADAM.
+
+\section{ADAM Pipeline}
+\label{sec:adam}
+
+For all ADAM commands, timing included job submission, executor registration,
+application runtime, and executor deregistration and shutdown. In all code
+snippets below, \texttt{\$\{executors\}} can be subtituted with the number of
+executors we were running (the number of threads divided by 32). Disabling
+dynamic allocation was necessary to prevent Spark-on-YARN from requesting
+more executors than the number of executors requested.
+
+\subsection{Duplicate Marking}
+\label{sec:adam-md}
+
+For benchmarking, we ran ADAM's duplicate marker with the following settings:
+
+\begin{lstlisting}[caption=ADAM Duplicate Marking Command]
+bin/adam-submit \
+    --master yarn \
+    --deploy-mode cluster \
+    --num-executors ${executors} \
+    --executor-memory 200g \
+    --executor-cores 32 \
+    --driver-memory 64g \
+    --conf spark.dynamicAllocation.enabled=false \
+    --conf spark.driver.maxResultSize=0 \
+    --conf spark.yarn.executor.memoryOverhead=8192 \
+    --conf spark.kryo.registrationRequired=true \
+    --conf spark.kryoserializer.buffer.max=1024m \
+    --packages org.apache.parquet:parquet-avro:1.8.2 \
+    -- transformAlignments \
+    aln.adam \
+    mkdups.adam \
+    -mark_duplicate_reads
+\end{lstlisting}
+
+To run the improved duplicate marker that is optimized for reads that are
+grouped by sequencing fragment, we invoked the following command:
+
+\begin{lstlisting}[caption=ADAM Fragment Duplicate Marking Command]
+bin/adam-submit \
+    --master yarn \
+    --deploy-mode cluster \
+    --num-executors ${executors} \
+    --executor-memory 200g \
+    --executor-cores 32 \
+    --driver-memory 64g \
+    --conf spark.dynamicAllocation.enabled=false \
+    --conf spark.driver.maxResultSize=0 \
+    --conf spark.yarn.executor.memoryOverhead=8192 \
+    --conf spark.kryo.registrationRequired=true \
+    --conf spark.kryoserializer.buffer.max=1024m \
+    --packages org.apache.parquet:parquet-avro:1.8.2 \
+    -- transformFragments \
+    frag.adam \
+    mkdups.adam \
+    -mark_duplicate_reads
+\end{lstlisting}
+
+Note that this command invokes ADAM's \texttt{transformFragments} command
+instead of the \texttt{transformAlignments} command.
+
+\subsection{Base Quality Score Recalibration}
+\label{sec:adam-bqsr}
+
+For benchmarking, we ran ADAM's BQSR implementation with the following settings:
+
+\begin{lstlisting}[caption=ADAM BQSR Command]
+bin/adam-submit \
+    --master yarn \
+    --deploy-mode cluster \
+    --num-executors ${executors} \
+    --executor-memory 200g \
+    --executor-cores 32 \
+    --driver-memory 64g \
+    --conf spark.dynamicAllocation.enabled=false \
+    --conf spark.driver.maxResultSize=0 \
+    --conf spark.yarn.executor.memoryOverhead=8192 \
+    --conf spark.kryo.registrationRequired=true \
+    --conf spark.kryoserializer.buffer.max=1024m \
+    --packages org.apache.parquet:parquet-avro:1.8.2 \
+    -- transformAlignments \
+    aln.adam \
+    bqsr.adam \
+    -recalibrate_base_qualities \
+    -known_snps dbsnp.adam
+\end{lstlisting}
+
+The dbSNP database~\cite{sherry01} was pre-converted from VCF into the ADAM
+variant format.
+
+\subsection{INDEL Realignment}
+\label{sec:adam-ir}
+
+For benchmarking, we ran ADAM's INDEL realigner with the following settings:
+
+\begin{lstlisting}[caption=ADAM INDEL Realignment Command]
+bin/adam-submit \
+    --master yarn \
+    --deploy-mode cluster \
+    --num-executors ${executors} \
+    --executor-memory 200g \
+    --executor-cores 32 \
+    --driver-memory 64g \
+    --conf spark.dynamicAllocation.enabled=false \
+    --conf spark.driver.maxResultSize=0 \
+    --conf spark.yarn.executor.memoryOverhead=8192 \
+    --conf spark.kryo.registrationRequired=true \
+    --conf spark.kryoserializer.buffer.max=1024m \
+    --packages org.apache.parquet:parquet-avro:1.8.2 \
+    -- transformAlignments \
+    aln.adam \
+    ri.adam \
+    -realign_indels \
+    -aligned_read_predicate \
+    -max_consensus_number 32 \
+    -max_reads_per_target 256 \
+    -max_target_size 2048 \
+    -limit_projection \
+    -reference reference.fa \
+    -log_odds_threshold 0.5
+\end{lstlisting}
+
+Changing the max number of consensus sequences, target length, and reads per
+target has a negligible impact on variant calling accuracy.
+
+\subsection{Avocado Biallelic Genotyper}
+\label{sec:avocado-bg}
+
+For benchmarking, we ran Avocado's biallelic genotyper with the following
+settings:
+
+\begin{lstlisting}[caption=Avocado Biallelic Genotyper Command]
+bin/avocado-submit \
+    --master yarn \
+    --deploy-mode cluster \
+    --num-executors ${executors} \
+    --executor-memory 216g \
+    --executor-cores 32 \
+    --driver-memory 216g \
+    --conf spark.dynamicAllocation.enabled=false \
+    --conf spark.driver.maxResultSize=0 \
+    --conf spark.yarn.executor.memoryOverhead=16384 \
+    --conf spark.akka.frameSize=1024 \
+    --conf spark.rpc.askTimeout=300 \
+    --conf spark.kryoserializer.buffer.max=2047m \
+    --conf spark.sql.shuffle.partitions=880 \
+    --packages org.apache.parquet:parquet-avro:1.8.2 \
+    -- biallelicGenotyper \
+    aln.adam \
+    gt.adam \
+    -print_metrics \
+    -is_not_grc \
+    -min_genotype_quality 10 \
+    -min_phred_to_discover_variant 15 \
+    -min_observations_to_discover_variant 3 \
+    -min_het_indel_quality_by_depth -1.0 \
+    -min_hom_indel_quality_by_depth -1.0 \
+    -min_het_indel_allelic_fraction 0.2 \
+    -min_het_snp_allelic_fraction 0.125 \
+    -max_het_snp_allelic_fraction 0.8 \
+    -max_het_indel_allelic_fraction 0.85 \
+    -min_indel_rms_mapping_quality 30 \
+    -min_het_snp_quality_by_depth 2.5 \
+    -max_het_indel_allelic_fraction 0.7
+\end{lstlisting}
+
+\section{GATK4 Pipeline}
+\label{sec:gatk4}
+
+The GATK4 was timed using the same methodology used for ADAM in~\S\ref{sec:adam}.
+We ran the GATK in sharded output mode, as we ran into errors when merging files
+when running the GATK in single-file output mode. Additionally, sharded mode will
+provide the best performance, as it avoids introducing latency by merging files.
+
+\subsection{Duplicate Marking}
+\label{sec:gatk-dm}
+
+To mark duplicates with the GATK4, we ran the following command:
+
+\begin{lstlisting}[caption=GATK4 Duplicate Marking Command]
+./gatk-launch MarkDuplicatesSpark --input aln.bam \
+    --output md.bam \
+    --shardedOutput true \
+    -- \
+    --driver-memory 64g \
+    --executor-cores 32 --executor-memory 200g \
+    --sparkRunner SPARK --sparkMaster yarn --deploy-mode cluster \
+    --conf spark.dynamicAllocation.enabled=false \
+    --num-executors ${executors}
+\end{lstlisting}
+
+\subsection{Base Quality Score Recalibration}
+\label{sec:gatk-bqsr}
+
+In the GATK, base quality score recalibration is a two step process where the
+base quality score recalibration table is generated and then applied. We timed
+each stage separately and then summed the two times together. To run table
+generation, we ran the following command:
+
+\begin{lstlisting}[caption=GATK4 BQSR Table Generation Command]
+./gatk-launch BaseRecalibratorSpark --input aln.bam \
+    --output table \
+    --knownSites dbsnp.vcf \
+    --reference reference.2bit \
+    -- \
+    --driver-memory 64g \
+    --executor-cores 32 --executor-memory 200g \
+    --sparkRunner SPARK --sparkMaster yarn --deploy-mode cluster \
+    --conf spark.dynamicAllocation.enabled=false \
+    --num-executors ${executors}
+\end{lstlisting}
+
+Note that currently, the GATK cannot load neither the dbSNP VCF nor the 2Bit
+reference file from HDFS, so we distributed these files using the Pure Storage
+FlashBlade. Additionally, the recalibration table must be written to POSIX
+storage.
+
+To apply the recalibration tables, we ran the following command:
+
+\begin{lstlisting}[caption=GATK4 BQSR Table Apply Command]
+./gatk-launch ApplyBQSRSpark --input aln.bam \
+    --bqsr_recal_file tables \
+    --output bqsr.bam \
+    --shardedOutput true \
+    -- \
+    --driver-memory 64g \
+    --executor-cores 32 --executor-memory 200g \
+    --sparkRunner SPARK --sparkMaster yarn --deploy-mode cluster  \
+    --conf spark.dynamicAllocation.enabled=false \
+    --num-executors ${executors}
+\end{lstlisting}
+
+\subsection{Haplotype Caller}
+\label{sec:gatk-hc}
+
+To run the Haplotype Caller, we ran the following command:
+
+\begin{lstlisting}[caption=GATK4 HaplotypeCaller Command]
+./gatk-launch HaplotypeCallerSpark --input aln.bam \
+    --output hc.vcf \
+    --reference reference.2bit \
+    --shardedOutput true \
+    -VS LENIENT \
+    -- \
+    --driver-memory 64g \
+    --executor-cores 32 --executor-memory 200g \
+    --sparkRunner SPARK --sparkMaster yarn --deploy-mode cluster \
+    --conf spark.dynamicAllocation.enabled=false \
+    --num-executors ${executors}
+\end{lstlisting}
+
+As with BQSR, the 2Bit file cannot be read off of HDFS, so we distributed the
+file using the Pure Storage FlashBlade.
 
 \end{document}
