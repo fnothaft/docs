@@ -2524,7 +2524,7 @@ library~\cite{massie13, nothaft15}.
 \label{sec:indel-reassembly}
 
 As opposed to traditional realignment based approaches, we canonicalize INDELs
-in the reads by looking for bubbles flanked by read vs. reference sequence matches. In a colored de Bruijn
+in the reads by looking for bubbles flanked by read versus reference sequence matches. In a colored de Bruijn
 graph, a bubble refers to a location where the graph diverges between two
 samples. We demonstrate how we can use the
 reconvergence of the de Bruijn graph in the flanking sequence around a bubble
@@ -2938,20 +2938,20 @@ tools, and where possible, we evaluate against ``ground truth'' datasets.
 \section{Benchmarking The Cannoli/ADAM/Avocado Pipeline}
 \label{sec:end-to-end}
 
-To benchmark \textsc{Avocado}'s accuracy, we used the high coverage, PCR-free
+To benchmark {Avocado}'s accuracy, we used the high coverage, PCR-free
 whole genome sequencing~(WGS) run of NA12878 from the 1,000 Genomes
 project~\cite{1kg}. We chose this dataset because NA12878 has extensive
 orthogonal verification data that is available through the National Institute
 for Standards and Time's~(NIST's) Genome-in-a-Bottle~(GIAB)
 project~\cite{zook15}, and the high coverage~($\sim58\times$) WGS
 preparation of NA12878 for the 1,000 Genomes project. We verified our calls
-usingthe Global Alliance for Genomics and Health's~(GA4GH's) benchmarking suite.
+using the Global Alliance for Genomics and Health's~(GA4GH's) benchmarking suite.
 As our input reads are from an Illumina sequencing platform, we limited our
 evaluation to variants that the GIAB's orthogonal validation mechanism were
 able to observe on an Illumina sequencing platform.
 
-We processed the data through \textsc{Avocado}, the \textsc{GATK}'s
-\textsc{HaplotypeCaller}~\cite{depristo11}, SAMTools Mpileup/BCFtools
+We processed the data through {Avocado}, the {GATK}'s
+{HaplotypeCaller}~\cite{depristo11} (both GATK 3 and 4), SAMTools Mpileup/BCFtools
 Call~\cite{li11}, and FreeBayes~\cite{garrison12}. We ran the
 \textsc{HaplotypeCaller} with the ``Best Practices'' settings, using
 \textsc{Toil}~\cite{vivian17}. The specific commands used are described
@@ -3091,7 +3091,7 @@ aligned reads, features, and variants.
 
 In this benchmark, we have stored a copy of NA12878 aligned to the GRCh37
 reference genome using BWA. We store this genome in BAM, CRAM, and ADAM, using
-the default compression settings for each. BAM and CRAM files were generated
+the default lossless compression settings for each. BAM and CRAM files were generated
 using htslib. This read file was sequenced at approximately 60x coverage across
 the whole genome. Figure~\ref{fig:read-storage} contains the file sizes for each
 of these formats.
@@ -3117,7 +3117,7 @@ Here, we benchmark both the GFF3 and BED formats.
 Figure~\ref{fig:annotation-storage} contains a comparison between GFF3 and
 Parquet, using the ENSEMBL GRCh38 genome annotation file. GFF3 is used to store
 functional annotations on the reference genome. Figure~\ref{fig:coverage-storage}
-contains a comparison between BED and Parquet. BED a generic file format for
+contains a comparison between BED and Parquet. BED is a generic file format for
 describing genomic ``features'', which are a set of labels or numbers attached
 to a genomic coordinate range. To benchmark BED, we use genome-wide read depth
 coverage counts generated from the NA12878 dataset used in the aligned read
@@ -3170,9 +3170,10 @@ is comprised of high
 coverage~(approximately 40$\times$ average coverage per sample) genomes from a
 wide range of human populations. We generated both SNP and short INDEL calls, as
 well as copy number variant~(CNV) calls using Deca~\cite{linderman17}. We ran this
-evaluation on our internal cluster, which is comprised of 55 compute nodes, with
+evaluation on our internal cluster, which is comprised of 55 compute nodes, each with
 two eight-core Intel Xeon E5-2670 CPUs with 2$\times$ hyperthreading, 256 GB RAM
-and 4TB of HDD (four 1TB 7200RPM HDDs connected via 6Gpbs SATA). In total, this
+and 4TB of HDD (four 1TB 7200RPM HDDs connected via 6Gpbs SATA). The nodes are
+connected by a Gigabit ethernet network. In total, this
 recompute took nine days of computational time, which represents an average
 elapsed processing time of 48 minutes per sample.
 
@@ -3586,12 +3587,12 @@ tabular format.
 
 While this library is useful, it still doesn't have a sufficient faculty for
 aiding in the causal discovery of performance anomalies. One approach that would
-be useful would time slice the statistics further, and would couple them with
+be useful would be to time slice the statistics further, and to couple them with
 timewise reports of events that indicate a performance issue, such as long or
 frequent GC pauses. By coupling this tool with a performance visualizaton
 tool like {Ganglia}~\cite{massie04}, there would be an opportunity to
 visualize the instrumented performance of a method along with other indicators
-such as JVM garbage collection epochs and stats, network/disk/memory bandwith
+such as JVM garbage collection epochs and statistics, network/disk/memory bandwith
 utilization, CPU utilization, and other performance indicators.
 
 Additionally, it would be useful to integrate the performance
@@ -3699,16 +3700,16 @@ as either true or false positives. Using the variant calling annotations on
 each called genotype, we would then train a statistical model that explained
 when a variant caller would call a variant correctly.
 
-To use this model to decrease concensus calling runtime, we would use the tool
+To use this model to decrease consensus calling runtime, we would use the tool
 that was the most sensitive as a first pass. Once we had called variants with
 this tool, we would look at all sites that appeared to be weak false positives,
-and would run one or more variant caller that the trained model indicated would
+and would run one or more variant callers that the trained model indicated would
 perform well on these sites. This approach would also need the first variant
 caller to either emit a gVCF or to emit calls for all possibly variant sites.
 One natural extension would be to optimize for runtime. Specifically, if two
 variant callers have similar sensitivity, but one of the two variant callers
 achieves this sensitivity with significantly lower runtime, we would likely want
-to use the faster variant caller as our first pass tool. This variant of the
+to use the faster variant caller as our first pass tool. This representation of the
 problem may be more difficult to optimize, as the amount of time needed to
 call a variant may depend on the complexity of the variant and the reads around
 the variant site~\cite{bloniarz14}.
@@ -3721,7 +3722,7 @@ parallel across a horizontally scalable file system, single thread performance
 becomes an issue. As we have seen with the {Cannoli} tool, the JVM can
 provide good performance, but it is difficult to outperform C/C++ from within
 the JVM. However, the marginal performance gain from moving to a lower level
-language is unclear. To gain an even higher performance gain, we should consider
+language is unclear. To enable an even higher performance gain, we should consider
 moving to a hardware accelerator, which can be highly specialized to our
 specific application patterns~\cite{asanovic17}. There has already been
 commercial work towards building hardware accelerated solutions for genomic data
@@ -3732,7 +3733,7 @@ assembly~\cite{turakhia17}.
 To this end, we have been working on the {Darwin} project, which
 implements the preprocessing algorithms introduced in Chapter~\ref{chap:adam} in
 a library which can be synthesized to target both field programmable gate
-arrays~(FPGAs) and application specific integrated circuits~(ASIC). The FPGA
+arrays~(FPGAs) and application specific integrated circuits~(ASICs). The FPGA
 form factor is especially desirable as commercial cloud vendors like
 AWS~\cite{f1} and Microsoft Azure~\cite{putnam14} have moved to support FPGAs in
 the datacenter. This library provides a 2--10$\times$ performance improvement
@@ -3884,7 +3885,7 @@ platform for deploying multiple different aligners using cloud computing.
 \label{sec:win-oss}
 
 As we discuss in~\S\ref{sec:win-oss}, early in the project, we made a commitment
-to running ADAM as an open-source project. Over the course of the project, this
+to building ADAM as an open-source project. Over the course of the project, this
 led to us receiving contributions from more than 75 developers. While many of
 these contributions were small---but still highly valuable, of course!---some of
 the contributions were significant, such as an instrumentation framework for
@@ -3943,7 +3944,7 @@ exporting data from ADAM back to conventional bioinformatics formats did not
 materialize until 2016, and a pipeline to run alignment through variant calling
 on ADAM did not exist until early 2017. This omission made it impossible to use ADAM for
 anything other than exploratory data analysis, which drastically limited ADAM's
-utility. We would have benefitted from reifying our scope down even further. If
+utility. We would have benefitted from reducing our scope down even further. If
 we had chosen to build our schemas, concordant import/export to legacy formats,
 and the pipe API early in the project, we could have very easily provided
 myriad genomics processing pipelines that were parallelized on Apache Spark,
@@ -4016,7 +4017,7 @@ problem: Avro's cross-language support was fairly weak in comparison to other
 libraries like Google's Protocol Buffers, or Apache Thrift, which led to the
 GA4GH dropping Avro. Additionally, it was difficult to reason about the cost
 of data in Avro, especially when reading from Parquet. The memory cost of a
-single record read from disk vs. serialized over the wire would vary by up to an
+single record read from disk versus serialized over the wire would vary by up to an
 order of magnitude, which preciptated the year long refactor to our schemas
 described in~\S\ref{sec:metadata} which resolved long term memory issues.
 Finally, Avro wound up being incompatible with broader industry trends, like
@@ -4046,7 +4047,7 @@ from optimizing the query execution. An example of this is running queries that
 select data aligned to a single genomic locus. Currently, users need to specify
 that they are loading a subset of regions from an indexed BAM file, or they need
 to define a predicate to run over data stored in Parquet. Ideally, we would have
-implemented this so that a user would have give us a region or list of regions
+implemented this so that a user would have provided us a region or list of regions
 to filter, and we would have converted that query into predicates to push down
 into Parquet, or filters accelerated using the BAM index, or an in-memory scan.
 We see this as a logical extension over the work-in-progress described in
