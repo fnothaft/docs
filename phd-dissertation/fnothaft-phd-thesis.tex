@@ -3060,7 +3060,7 @@ cluster.
 \label{tab:accuracy}
 \begin{tabular}{ l | c c c c }
 \hline
- & GATK & Avocado & Mpileup & FreeBayes \\
+ & GATK3 & Avocado & Mpileup & FreeBayes \\
 \hline
 \hline
 SNP Recall & 99.9\% & 99.6\% & 96.8\% & 99.8\% \\
@@ -3081,7 +3081,11 @@ FreeBayes is approximately $1.7\times$ slower than Avocado, but this figure
 does not include the time cost of running ADAM's INDEL realigner, which adds
 6h36m of runtime to the cost of running Avocado. This means that the cumulative
 ADAM/Avocado pipeline takes 13h47m to run, which is slightly slower than
-FreeBayes.
+FreeBayes. We did not include the GATK4 in Table~\ref{tab:accuracy} because
+of an issue with exporting to VCF that caused bands of records to be lost, which
+falsely reduced recall. The precision of the GATK4's HaplotypeCaller is
+comparable to the GATK3's HaplotypeCaller, with a 98.9\% SNP calling precision
+and a 98.4\% INDEL calling precision.
 
 \section{Parallel Efficiency and Strong Scaling}
 \label{sec:parallel-efficiency}
