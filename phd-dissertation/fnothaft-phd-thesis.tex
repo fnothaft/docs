@@ -60,7 +60,7 @@ morestring=[b]"}
 
   In this dissertation, we describe the {ADAM} system for processing
   large genomic datasets using distributed computing. {ADAM} provides
-  a decouped stack-based architecture that can accomodiate many data formats,
+  a decoupled stack-based architecture that can accommodate many data formats,
   deployment models, and data access patterns. Additionally, {ADAM}
   defines schemas that describe common genomic datatypes. {ADAM}'s
   schemas and programming models enable the easy integration of disparate
@@ -90,11 +90,11 @@ morestring=[b]"}
   and Anthony led the AMP Genomics project and were instrumental in defining
   a vision where best practices from software engineering and distributed
   systems could be brought to bear on complex genomics problems. Throughout my
-  degree, I benefitted tremendously from Dave and Anthony's experience and acumen.
+  degree, I benefited tremendously from Dave and Anthony's experience and acumen.
 
   Most critically, Dave and Anthony assembled a fantastic team. I was fortunate
   to receive mentorship from both Kristal Curtis and Timothy Danford, which was
-  critical in shaping my research and engineering interests. I also benefitted
+  critical in shaping my research and engineering interests. I also benefited
   tremendously from working with Alyssa Morrow, Michael Heuer, Justin Paschall,
   Devin Petersohn, Taner Dagdelen, and Lisa Wu. I hope that they will all
   recognize their influence within this dissertation. Additionally, I would be
@@ -111,12 +111,12 @@ morestring=[b]"}
   Williams from Mount Sinai.
 
   All of the work done in this dissertation was released as open source
-  software, and I greatly benefitted from interacting with others in the open
+  software, and I greatly benefited from interacting with others in the open
   source community. The full list is much too long, but I would especially like
   to thank Neil Ferguson, Andy Petrella, Xavier Tordior, Deborah Siegel, and
   Denny Lee.
 
-  I have also benefitted from several mentors who I worked with prior to
+  I have also benefited from several mentors who I worked with prior to
   Berkeley, including William Dally, James Balfour, and Michael Linderman, who
   I worked with at Stanford, and Jacob Rael, who was my manager at Broadcom.
   I would especially like to thank Michael and Jacob. My time working with Jacob
@@ -134,7 +134,7 @@ morestring=[b]"}
   banter, or a fascinating distraction at the end of a long day.
   
   I owe a significant debt to my family. My parents have always encouraged my
-  academic interests and persuits, and their support has been invaluable. My
+  academic interests and pursuits, and their support has been invaluable. My
   brothers Daniel and John have been in graduate school concurrent with myself,
   and it has been valuable to chat with them and to compare and contrast our
   different disciplines, programs, and experiences.
@@ -161,10 +161,10 @@ morestring=[b]"}
 \label{chap:introduction}
 
 The rapid decrease in sequencing cost has made large scale sequencing
-tractible. The dramatic improvement in sequencing cost since the Human
+tractable. The dramatic improvement in sequencing cost since the Human
 Genome Project has enabled a human whole genome sequence~(WGS) to be
 generated and analyzed for under \$1,000 in total costs~\cite{nhgri}. Costs
-will continue to decrease for the forseeable future, as sequencing vendors like
+will continue to decrease for the foreseeable future, as sequencing vendors like
 Illumina unveil new sequencers such as the NovaSeq that provide even
 higher throughput while also decreasing cost, and as radically new
 sequencing technologies like Oxford Nanopore come online~\cite{jain17}.
@@ -180,7 +180,7 @@ demonstration: by sequencing more than 60,000 exomes, we have been able
 to better understand the impact of genomic variation on prion
 disease~\cite{minikel16} and cardiovascular disease~\cite{walsh16}, and to
 better characterize the effect of structural variation~\cite{ruderfer16}.
-However, this scale of data solves biological problems at the cost of techincal
+However, this scale of data solves biological problems at the cost of technical
 and logistical problems. Data storage and transfer has become a serious problem,
 and the focus of many researchers~\cite{fritz11, kozanitis11} and standards
 organizations~\cite{paten15}. Not only is the volume of data large, but
@@ -278,7 +278,7 @@ Big Data Genomics/{ADAM} project.
 \label{sec:economic-trends-population-scale}
 
 The need for tools capable of processing large genomic datasets is precipitated
-by the rise of popultation scale sequencing. While the raw data from a single
+by the rise of population scale sequencing. While the raw data from a single
 genome may be provide insight into the fitness of a single individual, genetic
 data is most meaningful when viewed in aggregate across large cohorts.
 For variants that do not have an obvious and severe pathogenic effect, our best
@@ -368,7 +368,7 @@ file formats onto distributed query
 architectures~({SegPig}~\cite{schumacher14} and
 {BioPig}~\cite{nordberg13}), but these implementations provide either
 poor programming models or inefficient implementations. By doing a clean-slate
-rearchitecture, we can eliminate architectural problems and provide better
+architecture, we can eliminate architectural problems and provide better
 user-facing query models with better performance.
 
 \section{Mapping Genomics onto Distributed Computing using {ADAM}}
@@ -377,7 +377,7 @@ user-facing query models with better performance.
 To address these problems, we developed {ADAM}, a comprehensive framework
 for processing genomic data using the {Apache Spark} framework for
 distributed computing. {ADAM} defines schemas for a full range of genomic
-datatypes, which provides a data-indepent query model. These schemas form the
+datatypes, which provides a data-independent query model. These schemas form the
 basis of a narrow waisted stack, which yields APIs that support both genomic
 query and metadata management. By extending {ADAM} onto {Apache
   Spark SQL}, these APIs can be used across multiple languages. Support for
@@ -510,12 +510,12 @@ In this process, flourescent dyes are attached to the DNA bases. The sequencer
 then takes an image of the dyes, which is then converted into the called bases.
 This process runs for a fixed number of cycles, which sets the length of the
 sequenced reads. To ensure that the bases from a single read show up in the same
-locations in the image betwen cycles, the ends of the reads are attached to
+locations in the image between cycles, the ends of the reads are attached to
 knobs that protrude from glass plates. At the end of each cycle, the dyes are
 washed off of the end of the read, which exposes the next base in the read for
 a new round of dyes to attach to. The probability that a base was sequenced
 correctly is determined by looking at the color and intensity of the base on
-the captured image. Illumina platforms are susceptible to single base substition
+the captured image. Illumina platforms are susceptible to single base substitution
 errors, which occur to a 0.5--2\% of bases. This error rate is problematic for
 variant calling, as we expect a variant to occur at one in every one thousand
 bases.
@@ -617,7 +617,7 @@ with the sequencing chemistry during that sequencing cycle). The base quality
 recalibration stage associates each base with error covariates, and then
 calculates the empirical error rate for the bases in that covariate by measuring
 the frequency with which bases in that covariate mismatch the reference genome.
-These error rates are then converted back into probabilites, which replace the
+These error rates are then converted back into probabilities, which replace the
 probabilities attached to the reads.
 
 We have chosen to focus on the read preprocessing algorithms used for variant
@@ -629,7 +629,7 @@ Atlas~\cite{weinstein13}. Additionally, the read preprocessing stages are
 computationally expensive. For a single human genome sequenced with
 an average of 60 reads covering each genomic position, it takes over 160 hours
 to align the reads, preprocess the reads, and call variants, with approximately
-110 of the hours spent preprocessing the reads. Finally, implementations of thes
+110 of the hours spent preprocessing the reads. Finally, implementations of these
 algorithms are available as part of the widely used {Genome Analysis
 Toolkit}~\cite{mckenna10, depristo11} and {ADAM}~\cite{massie13,
 nothaft15} libraries.
@@ -642,7 +642,7 @@ descend from formats that were developed during the 1,000 Genomes
 project~\cite{1kg}. Some of these formats are much older; many genomic feature
 file formats descend from the development of the University of California,
 Santa Cruz's (UCSC) Genome Browser~\cite{kent02}, which was developed as part
-of the Human Genome Project~\cite{lander01}. Informal specificiations for
+of the Human Genome Project~\cite{lander01}. Informal specifications for
 the FASTQ~\cite{cock10} and FASTA formats date back to at least the 1990s,
 through their use in the {phred}~\cite{ewing98} and
 {FASTA}/{FASTP}~\cite{pearson90} tools.
@@ -684,7 +684,7 @@ Although there exist myriad tools for analyzing genomic data, very few tools
 espouse a systematic architecture for traversing and processing genomic data.
 Instead, most tools are built around a UNIX-inspired philosophy that asserts
 that ``a tool should do a single task well''~\cite{rodriguez11}, and simply
-traverse a serial stream of data. The most promiment example of a genomic analysis
+traverse a serial stream of data. The most prominent example of a genomic analysis
 architecture is the quasi-map-reduce architecture employed by the legacy
 versions of the GATK~\cite{mckenna10}. This architecture uses an iterator-based
 model called a ``walker'' to traverse over data aligned to reference genome
@@ -880,7 +880,7 @@ systems have entered broad usage.
 
 There have been three waves of development focused on integrating single-node
 tools with distributed computing platforms. The first wave of development used
-{Apache Hadoop Streaming} as a simple mechanism for parallelising tools
+{Apache Hadoop Streaming} as a simple mechanism for parallelizing tools
 that had well defined chunking patterns. Examples of this approach include the
 {CloudBurst} aligner~\cite{schatz09}, which parallelized the
 {RMAP} aligner~\cite{smith08}, and
@@ -1163,7 +1163,7 @@ original goals that we adopted when building {ADAM}, as well as the goals
 that evolved for the {ADAM} ecosystem over time. From our original set
 of goals, we designed the stack architecture that we introduce in the next
 section~(\S\ref{sec:stack-architecture}). As we will see, the stack architecture
-made it easier for us accomodate the goals that evolved during the course of
+made it easier for us accommodate the goals that evolved during the course of
 the project.
 
 \subsection{Original Goals for {ADAM}}
@@ -1472,7 +1472,7 @@ its recent addition, the {GenomicRDD} API has been critical to achieving
 
 In the rest of this chapter, we explain the design decisions behind the
 {ADAM} architecture, with an eye towards how the architecture has
-evolved over the four years of the project. We discuss the specific tradeoffs
+evolved over the four years of the project. We discuss the specific trade-offs
 we needed to make in order to realize the stack architecture we had introduced,
 before diving into the schema design that we used to decouple {ADAM} from
 the genomics file formats. We review the genomics-specific query patterns
@@ -1542,7 +1542,7 @@ manuscript~\cite{nothaft15}, the evidence access and presentation layers~(5 and
 \item The evidence access layer originally assumed that other query systems like
   {Cloudera Impala}~\cite{kornacker15} would be able to interoperate with
   the {ADAM} schemas to load data. While this is still true, we have
-  deemphasized this view. Specifically, once data has been loaded using the
+  de-emphasized this view. Specifically, once data has been loaded using the
   {ADAM} schemas and saved into {Apache Parquet}, systems like
   {Impala} can interoperate with the data through the {ADAM}
   schemas. However, systems like {Impala} cannot interoperate with
@@ -1574,7 +1574,7 @@ manuscript~\cite{nothaft15}, the evidence access and presentation layers~(5 and
   very difficult to reason about when a state had been calculated, and thus what
   the performance of a call to an enriched class would be. Additionally, the
   implicit conversion pattern could not be supported across languages, and was
-  out of the scope of experise of the average bioinformatics programmer.
+  out of the scope of expertise of the average bioinformatics programmer.
   Instead, we surfaced transformations at the dataset level, which is closer to
   the level of abstraction expected by our average user.
 \end{itemize}
@@ -1599,7 +1599,7 @@ degradation.
 
 We made several high level choices when designing the schemas used in
 {ADAM}~\cite{massie13}. Over time, we have revised some of
-these design decisions. First, the schemas were originally fully denormalized.
+these design decisions. First, the schemas were originally fully de-normalized.
 Our rationale for this decision was that this would reduce the cost of metadata
 access while simplifying metadata distribution. We believed we would be able to
 gain these benefits without greatly increasing the cost of memory access because
@@ -1778,7 +1778,7 @@ being stored in a file header. Our rationale was that this metadata describes
 the processing lineage of the sample and is expected to have limited cardinality
 across all records, and thus would compresses extremely well.
 
-This metadata is string heavy, and benefitted strongly from column-oriented
+This metadata is string heavy, and benefited strongly from column-oriented
 decompression on disk. However, proper deserialization from disk proved to be
 difficult. Although the information consumes less than 5\% of space on disk, a
 poor deserializer implementation may replicate a string per field per record,
@@ -1788,7 +1788,7 @@ that was 200GB on disk would balloon into more than 5TB in memory. Additionally,
 implementing the deserializer conflicted with {Apache Spark}'s
 serialization architecture. {Spark} assumes that deserializers have
 limited state, and write to a stream that does not support seeks. While this is
-a reasonable assertion for row-oriented serialization techinques, this made it
+a reasonable assertion for row-oriented serialization techniques, this made it
 extremely difficult to implement a column-oriented serialization. Prior to
 eliminating the denormalized metadata from our schemas, this meant that we would
 have very efficient memory utilization immediately after reading from disk, as
@@ -2049,7 +2049,7 @@ caller~\cite{fromer12}. However, this approach works well for tools whose
 computation can be described as mapping over unaligned reads, or mapping over
 data aligned to a genomic locus range.
 
-\section{Accomodating Single-node Tools in {ADAM} With the {Pipe} API}
+\section{Accommodating Single-node Tools in {ADAM} With the {Pipe} API}
 \label{sec:pipe-api}
 
 The {pipe} API is an API in {ADAM} that provides a simple
@@ -2217,7 +2217,7 @@ a distributed system. These pre-processing stages include:
 
 \begin{enumerate}
 \item \textbf{Duplicate marking:} During the process of preparing DNA for sequencing, reads are duplicated
-erroreously during the sample preparation and polymerase chain reaction stages. Detection of duplicate reads
+erroneously during the sample preparation and polymerase chain reaction stages. Detection of duplicate reads
 requires matching all reads by their position and orientation after read alignment. Reads with identical position
 and orientation are assumed to be duplicates. When a group of duplicate reads is found, each read is scored,
 and all but the highest quality read are marked as duplicates.
@@ -2841,7 +2841,7 @@ the {GATK}'s INDEL realigner~\cite{depristo11}, and calculates the quality-score
 weighted Hamming edit distance between a set of reads, a consensus sequence~(a
 haplotype containing a potential INDEL variant), and the reference sequence. If
 the sum weighted edit distance between the reads and the consensus sequence
-represents a suffient improvement over the sum weighted edit distance between
+represents a sufficient improvement over the sum weighted edit distance between
 the reads and the reference genome, the read alignments are moved to their
 lowest weighted edit distance position relative to the consensus sequence.
 A detailed description of this algorithm can be found in~\S\ref{sec:indel-realignment-implementation}.
@@ -3340,7 +3340,7 @@ achieve both higher disk and CPU utilization.
     solid dark blue line is the average read bandwidth, and the solid light blue
     line is the average write bandwidth. The two solid lines are stacked. The
     dotted dark blue line is the maximum read bandwidth, and the dotted light
-    blue line is the maximum write bandiwdth. The two dotted lines are stacked.
+    blue line is the maximum write bandwidth. The two dotted lines are stacked.
     In the CPU utilization plot, the different colors represent the individual
     nodes in our cluster.}
   \label{fig:phase1}
@@ -3369,7 +3369,7 @@ genotyping phase is a substantially larger amount of the runtime.
     solid dark blue line is the average read bandwidth, and the solid light blue
     line is the average write bandwidth. The two solid lines are stacked. The
     dotted dark blue line is the maximum read bandwidth, and the dotted light
-    blue line is the maximum write bandiwdth. The two dotted lines are stacked.
+    blue line is the maximum write bandwidth. The two dotted lines are stacked.
     In the CPU utilization plot, the different colors represent the individual
     nodes in our cluster.}
   \label{fig:phase2}
@@ -3378,7 +3378,7 @@ genotyping phase is a substantially larger amount of the runtime.
 \section{Observations from Joint Variant Calling}
 \label{sec:joint-calling}
 
-One of the dissapointing outcomes of this work was that we were unable to
+One of the disappointing outcomes of this work was that we were unable to
 successfully joint variant call the Simons Genome Diversity data in a single run.
 We went through three iterations of our joint variant calling workflow:
 
@@ -3397,7 +3397,7 @@ discovered variants across all samples. After this, we then ran single-sample
 genotyping against the jointly discovered variants. While this approach is
 simplest, the number of discovered variants increases rapidly with population
 size, as shown in Figure~\ref{fig:variants-in-population}. As the number of
-variants increases, it is no longer tractible to broadcast these variants, as
+variants increases, it is no longer tractable to broadcast these variants, as
 is used in Avocado's default variant/read intersection strategy. While we could
 run a shuffle region join instead, this approach leads to an unacceptably large
 performance penalty due to skew in the reads.
@@ -3474,7 +3474,7 @@ the first and third jobs were unchanged. The second job was changed so that it
 would run separately on each sample. This reduced the volume of the shuffle
 during joint genotyping down to approximately 500GB, and allowed joint
 genotyping to successfully run to completion. Figure~\ref{fig:extract-joint-genotyping}
-depicts the disk and processor utilization during the single sample extrction
+depicts the disk and processor utilization during the single sample extraction
 phase (step 2), and Figure~\ref{fig:final-joint-genotyping} depicts the disk and
 processor utilization during the final phase of joint genotyping where genotypes
 were merged across all samples.
@@ -3489,7 +3489,7 @@ were merged across all samples.
     solid dark blue line is the average read bandwidth, and the solid light blue
     line is the average write bandwidth. The two solid lines are stacked. The
     dotted dark blue line is the maximum read bandwidth, and the dotted light
-    blue line is the maximum write bandiwdth. The two dotted lines are stacked.
+    blue line is the maximum write bandwidth. The two dotted lines are stacked.
     In the CPU utilization plot, the different colors represent the individual
     nodes in our cluster.}
   \label{fig:extract-joint-genotyping}
@@ -3505,7 +3505,7 @@ were merged across all samples.
     solid dark blue line is the average read bandwidth, and the solid light blue
     line is the average write bandwidth. The two solid lines are stacked. The
     dotted dark blue line is the maximum read bandwidth, and the dotted light
-    blue line is the maximum write bandiwdth. The two dotted lines are stacked.
+    blue line is the maximum write bandwidth. The two dotted lines are stacked.
     In the CPU utilization plot, the different colors represent the individual
     nodes in our cluster.}
   \label{fig:final-joint-genotyping}
@@ -3549,7 +3549,7 @@ described in~\S\ref{sec:pipe-api}, and the lazy binding optimization described
 in~\S\ref{sec:multi-language}. We can improve the performance of the region join
 and {pipe} APIs by eliminating shuffles when data is already presorted.
 We can also improve the performance of the {pipe} API by applying the
-lazy binding techinque to the various genomic file formats. Additionally, we
+lazy binding technique to the various genomic file formats. Additionally, we
 discuss how we can make it easier to understand the performance of distributed
 code in {Apache Spark}, and how we can make it easier to manipulate
 genomic metadata.
@@ -3731,7 +3731,7 @@ Although the reassembly algorithm introduced in~\S\ref{sec:indel-reassembly} can
 run on data that does not have known copy number, the {Avocado} genotyper
 described in~\S\ref{sec:genotyping-model} requires known copy number to call a
 variant. While this genotyping model can be used as a first step in a variant
-caller that assumes a popuation structure, it is not compatible with somatic
+caller that assumes a population structure, it is not compatible with somatic
 variant calling. In somatic mutation calling, we are looking for the variants
 that appear in one sequencing run from a sample that do not appear in another
 sequencing run from a sample. Typically, this technique is used to call mutations
@@ -3764,7 +3764,7 @@ if multiple variant callers confidently call the variant. While this approach
 can improve the accuracy of variant calling, it necessitates running multiple
 variant calling pipelines and can substantially increase computational cost.
 
-One approach that may be tractible is to use a machine learning approach to run
+One approach that may be tractable is to use a machine learning approach to run
 a limited consensus approach. A possible implementation might use a setup
 similar to the {GATK}'s~\cite{depristo11} variant quality score
 recalibration~(VQSR) algorithm, which fits a Gaussian mixture model to annotated
@@ -3967,8 +3967,8 @@ the contributions were significant, such as an instrumentation framework for
 tracing method-level performance in Spark jobs, performance improvements for
 parsing reference genomes, and signficant code style improvements. Additionally,
 our commitment to open source served as a positive marketing item for ADAM and
-the Big Data Genomics project. While we greatly benefitted from the open source
-community, we think that we could have benefitted even more. We discuss how we
+the Big Data Genomics project. While we greatly benefited from the open source
+community, we think that we could have benefited even more. We discuss how we
 could have better leveraged open source contributors later in this section.
 
 \subsubsection{Implementation: Compatibility}
@@ -4019,7 +4019,7 @@ exporting data from ADAM back to conventional bioinformatics formats did not
 materialize until 2016, and a pipeline to run alignment through variant calling
 on ADAM did not exist until early 2017. This omission made it impossible to use ADAM for
 anything other than exploratory data analysis, which drastically limited ADAM's
-utility. We would have benefitted from reducing our scope down even further. If
+utility. We would have benefited from reducing our scope down even further. If
 we had chosen to build our schemas, concordant import/export to legacy formats,
 and the pipe API early in the project, we could have very easily provided
 myriad genomics processing pipelines that were parallelized on Apache Spark,
@@ -4093,7 +4093,7 @@ libraries like Google's Protocol Buffers, or Apache Thrift, which led to the
 GA4GH dropping Avro. Additionally, it was difficult to reason about the cost
 of data in Avro, especially when reading from Parquet. The memory cost of a
 single record read from disk versus serialized over the wire would vary by up to an
-order of magnitude, which preciptated the year long refactor to our schemas
+order of magnitude, which precipitated the year long refactor to our schemas
 described in~\S\ref{sec:metadata} which resolved long term memory issues.
 Finally, Avro wound up being incompatible with broader industry trends, like
 the introduction of Spark SQL~\cite{armbrust15}, which meant that we had to add
@@ -4109,7 +4109,7 @@ their applications on other computational platforms, like Apache Hadoop MR.
 Additionally, Parquet has failed at times to deliver on its promises. While
 Parquet is based on the architecture used by Google's Dremel~\cite{melnik10}
 that is optimized for storing columnar data with nested layouts, Parquet has
-had dissapointing performance in the real world on nested data. At times, we
+had disappointing performance in the real world on nested data. At times, we
 have refactored schemas (especially highly nested schemas, like the Genotype
 schema) to work around performance anomalies in Parquet at the cost of a worse
 schema representation.
